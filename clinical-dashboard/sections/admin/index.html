@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - User Access</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    body {
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .page-content {
+      padding: 100px 40px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      margin-bottom: 30px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .users-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: #0f172a;
+      color: white;
+      padding: 16px 24px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .users-table th {
+      background: #f8fafc;
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .users-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .users-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .users-table tr:hover {
+      background: #f8fafc;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .user-email {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+
+    .user-email:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-owner {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-edit {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-review {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-user {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .badge-admin {
+      background: #fae8ff;
+      color: #86198f;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: white;
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      min-width: 140px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .last-updated {
+      text-align: right;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 16px;
+      padding: 0 24px 16px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">User Access Management</h1>
+      <p class="page-subtitle">Dashboard access list for BH-30643 Clinical Trial</p>
+    </div>
+
+    <div class="summary-stats">
+      <div class="stat-box">
+        <div class="stat-value" id="totalUsers">-</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="editUsers">-</div>
+        <div class="stat-label">Edit Access</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="reviewUsers">-</div>
+        <div class="stat-label">Review Access</div>
+      </div>
+    </div>
+
+    <div class="users-card">
+      <div class="card-header">Authorized Users</div>
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Job Title</th>
+            <th>Email</th>
+            <th>Permission</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Users will be populated by JavaScript -->
+        </tbody>
+      </table>
+      <div class="last-updated">Last updated: <span id="lastUpdated"></span></div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    renderNav('admin', 'users', '../../');
+
+    // =====================================================
+    // USER ACCESS LIST - HARD CODE USERS HERE
+    // =====================================================
+    const USERS = [
+      // Owner - has edit permission
+      {
+        name: 'Shawn Cui',
+        title: 'Programming Analyst, Clinical Trials',
+        email: 'shawn.cui@bhtherapeutics.com',
+        permission: 'edit',
+        role: 'owner'
+      },
+      {
+        name: 'Marina Noble',
+        title: 'VP, Drug Safety and Pharmacovigilance',
+        email: 'marina.noble@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Lena Zalutskaya',
+        title: 'Vice President, Clinical Development',
+        email: 'lena.zalutskaya@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Juliet Liu',
+        title: 'Director, Clinical Science',
+        email: 'juliet.liu@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Xin Huang',
+        title: 'Executive Director, Biostatistics',
+        email: 'xin.huang@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Jihao Zhou',
+        title: 'VP and Head of Biometrics',
+        email: 'Jihao.Zhou@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Sam Mao',
+        title: 'Executive Director, Statistical Programming',
+        email: 'sam.mao@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+      {
+        name: 'Dan Godoy',
+        title: 'Vice President, Clinical Data Science',
+        email: 'dan.godoy@bhtherapeutics.com',
+        permission: 'review',
+        role: 'user'
+      },
+
+      // =====================================================
+      // ADD MORE USERS BELOW - Copy and paste this template:
+      // {
+      //   name: 'First Last',
+      //   title: 'Job Title',
+      //   email: 'email@company.com',
+      //   permission: 'review',  // 'edit' or 'review'
+      //   role: 'user'           // 'user' or 'admin'
+      // },
+      // =====================================================
+
+      // Example users (uncomment and modify as needed):
+      // {
+      //   name: 'Jane Smith',
+      //   title: 'Clinical Data Manager',
+      //   email: 'jane.smith@company.com',
+      //   permission: 'review',
+      //   role: 'user'
+      // },
+      // {
+      //   name: 'John Doe',
+      //   title: 'Medical Monitor',
+      //   email: 'john.doe@company.com',
+      //   permission: 'review',
+      //   role: 'user'
+      // },
+
+    ];
+
+    // =====================================================
+    // DO NOT MODIFY BELOW THIS LINE
+    // =====================================================
+
+    function getBadgeClass(type, value) {
+      if (type === 'permission') {
+        return value === 'edit' ? 'badge-edit' : 'badge-review';
+      }
+      if (type === 'role') {
+        if (value === 'owner') return 'badge-owner';
+        if (value === 'admin') return 'badge-admin';
+        return 'badge-user';
+      }
+      return '';
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      
+      if (USERS.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:40px;">No users configured</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = USERS.map(user => `
+        <tr>
+          <td><span class="user-name">${user.name}</span></td>
+          <td>${user.title}</td>
+          <td><a href="mailto:${user.email}" class="user-email">${user.email}</a></td>
+          <td><span class="badge ${getBadgeClass('permission', user.permission)}">${user.permission}</span></td>
+          <td><span class="badge ${getBadgeClass('role', user.role)}">${user.role}</span></td>
+        </tr>
+      `).join('');
+
+      // Update stats
+      document.getElementById('totalUsers').textContent = USERS.length;
+      document.getElementById('editUsers').textContent = USERS.filter(u => u.permission === 'edit').length;
+      document.getElementById('reviewUsers').textContent = USERS.filter(u => u.permission === 'review').length;
+
+      // Update last updated date
+      document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', renderUsers);
+  </script>
+</body>
+</html>

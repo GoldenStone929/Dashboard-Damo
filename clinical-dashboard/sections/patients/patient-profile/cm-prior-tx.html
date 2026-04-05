@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Prior Cancer Treatment</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .patient-title { font-size: 28px; font-weight: 700; color: #2C3E50; }
+    .patient-subtitle { font-size: 20px; font-style: italic; color: #7F8C8D; margin-bottom: 24px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    /* Table matching R Section 4.5 styling */
+    .prior-tx-table { width: 100%; border-collapse: collapse; }
+    .prior-tx-table th { background: #34495E; color: white; font-weight: bold; font-size: 16px; padding: 12px 10px; text-align: center; }
+    .prior-tx-table td { padding: 12px 10px; font-size: 15px; color: #34495E; border: 1px solid #D3D3D3; }
+    /* R: line_colors <- c("1" = "#E8F5E9", "2" = "#E0F7FA", ...) */
+    .line-1 { background: #E8F5E9; }
+    .line-2 { background: #E0F7FA; }
+    .line-3 { background: #FFF9C4; }
+    .line-4 { background: #F3E5F5; }
+    .line-5 { background: #FFE0B2; }
+    .line-6 { background: #FFCDD2; }
+    .pagination { display: flex; gap: 8px; margin-top: 20px; justify-content: center; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; }
+    .pagination button.active { background: #34495E; color: white; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab active">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content">
+    <h1 class="patient-title" id="pageTitle">Prior Cancer Treatment</h1>
+    <p class="patient-subtitle" id="patientSubtitle">Subject: Loading...</p>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <div class="card">
+      <div id="tableContainer"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-cm-prior-tx', '../../../');
+    let cmpcData = [];
+    let currentSubject = null, currentPage = 1;
+    const ROWS_PER_PAGE = 12; // R: rows_per_page <- 12L
+    
+    // R: parse_sas_date_cmpc function
+    function parseSasDate(str) {
+      if (!str) return null;
+      str = str.trim().split(':')[0];
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      let match = str.match(/^(\d{1,2})([A-Z]{3})(\d{4})$/i);
+      if (match) return new Date(parseInt(match[3]), months[match[2].toUpperCase()], parseInt(match[1]));
+      match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (match) return new Date(parseInt(match[1]), parseInt(match[2])-1, parseInt(match[3]));
+      const num = parseFloat(str);
+      if (!isNaN(num)) return new Date(1960, 0, 1 + num);
+      return null;
+    }
+    // R: fmt_date_cmpc <- function(d) ifelse(is.na(d), "N/A", format(d, "%B %d, %Y"))
+    function formatDate(date) { return date ? date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'; }
+    // R: clean_chr_cmpc <- function(x) ifelse(is.na(x) | trimws(x) == "", "N/A", x)
+    function cleanValue(val) { return (!val || val.trim() === '') ? 'N/A' : val.trim(); }
+    
+    async function loadData() {
+      // Load only cmpc.csv file
+      const data = await new Promise(res => {
+        Papa.parse('../../../data/cmpc.CSV', { 
+          download: true, 
+          header: true, 
+          skipEmptyLines: true, 
+          complete: r => res(r.data), 
+          error: (err) => {
+            console.error('Error loading cmpc.CSV:', err);
+            res([]);
+          }
+        });
+      });
+      
+      if (!data || data.length === 0) {
+        console.warn('No data loaded from cmpc.CSV');
+        return;
+      }
+      
+      console.log('Loaded cmpc.CSV:', data.length, 'rows');
+      console.log('Sample columns:', Object.keys(data[0]));
+      
+      // Group by Subject and assign Line numbers based on order
+      const subjectGroups = {};
+      data.forEach(row => {
+        const subject = row.Subject || row.subject || row.SUBJECT || '';
+        if (!subject) return;
+        
+        if (!subjectGroups[subject]) {
+          subjectGroups[subject] = [];
+        }
+        subjectGroups[subject].push(row);
+      });
+      
+      // Process each subject and assign Line numbers
+      Object.keys(subjectGroups).forEach(subject => {
+        const rows = subjectGroups[subject];
+        // Sort by start date if available, otherwise by record order
+        rows.sort((a, b) => {
+          const dateA = parseSasDate(a.CMSTDAT || a.CMSTDAT_INT);
+          const dateB = parseSasDate(b.CMSTDAT || b.CMSTDAT_INT);
+          if (dateA && dateB) return dateA - dateB;
+          if (dateA) return -1;
+          if (dateB) return 1;
+          return 0;
+        });
+        
+        rows.forEach((row, index) => {
+          cmpcData.push({
+            Subject: subject,
+            Line: index + 1,
+            RecordPosition: row.RecordPosition || '',
+            Cycle: row.Folder || row.FOLDER || '',
+            Settings: row.TRTSTT_STD || row.TRTSTT || '',
+            StartDate: parseSasDate(row.CMSTDAT || row.CMSTDAT_INT),
+            EndDate: parseSasDate(row.CMENDAT || row.CMENDAT_INT),
+            Therapy: row.CMSCAT_STD || row.CMSCAT || '',
+            Medication: row.CMTRT_product || row.CMTRT || ''
+          });
+        });
+      });
+      
+      console.log('Processed cmpcData:', cmpcData.length, 'rows');
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(cmpcData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      if (!subjects.length) { document.getElementById('tableContainer').innerHTML = '<div class="no-data">No prior cancer treatment data</div>'; return; }
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; currentPage = 1; history.replaceState(null, '', `?id=${currentSubject}`); renderTable(); });
+      renderTable();
+    }
+    
+    function renderTable() {
+      const container = document.getElementById('tableContainer');
+      const subj = currentSubject;
+      document.getElementById('patientSubtitle').textContent = `Subject: ${subj}`;
+      
+      // R: pd <- cmpc_dat %>% filter(Subject == subj) %>% arrange(Line, CMSTDAT_date, CMENDAT_date, CMGRPID)
+      let data = cmpcData.filter(r => r.Subject === subj).sort((a, b) => a.Line - b.Line || (a.StartDate || 0) - (b.StartDate || 0));
+      
+      if (!data.length) { container.innerHTML = '<div class="no-data">No prior cancer treatment data</div>'; document.getElementById('pagination').innerHTML = ''; return; }
+      
+      const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
+      const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+      const pageData = data.slice(startIdx, startIdx + ROWS_PER_PAGE);
+      
+      document.getElementById('pageTitle').textContent = `Prior Cancer Treatment${totalPages > 1 ? ` (Page ${currentPage}/${totalPages})` : ''}`;
+      
+      let html = `<table class="prior-tx-table"><thead><tr>
+        <th style="width:6%">Line</th><th style="width:12%">RecordPosition</th><th style="width:10%">Cycle</th>
+        <th style="width:12%">Settings</th><th style="width:15%">Start Date</th><th style="width:15%">End Date</th>
+        <th style="width:12%">Therapy</th><th style="width:18%">Medication</th>
+      </tr></thead><tbody>`;
+      
+      // Create a mapping of RecordPosition to color class (1-6)
+      const positionColorMap = {};
+      const uniquePositions = [...new Set(pageData.map(r => r.RecordPosition).filter(p => p))];
+      uniquePositions.forEach((pos, idx) => {
+        positionColorMap[pos] = (idx % 6) + 1; // Cycle through colors 1-6
+      });
+      
+      for (const row of pageData) {
+        const recordPos = row.RecordPosition || '';
+        const colorClass = recordPos && positionColorMap[recordPos] ? `line-${positionColorMap[recordPos]}` : '';
+        html += `<tr class="${colorClass}"><td>${row.Line}</td><td>${cleanValue(row.RecordPosition)}</td><td>${cleanValue(row.Cycle)}</td><td>${cleanValue(row.Settings)}</td><td>${formatDate(row.StartDate)}</td><td>${formatDate(row.EndDate)}</td><td>${cleanValue(row.Therapy)}</td><td>${cleanValue(row.Medication)}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      
+      let pagHtml = '';
+      if (totalPages > 1) {
+        pagHtml += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Prev</button>`;
+        for (let p = 1; p <= totalPages; p++) pagHtml += `<button class="${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        pagHtml += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next →</button>`;
+      }
+      document.getElementById('pagination').innerHTML = pagHtml;
+    }
+    
+    function goToPage(page) { currentPage = page; renderTable(); }
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waterfall — Best mAF % Change</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <script src="../../assets/js/mutation-lock.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+    .page-content { margin-top: 60px; padding: 20px; }
+
+    .page-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%); color: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .page-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+    .page-header p { opacity: 0.85; font-size: 0.95rem; }
+
+    .stats-panel { max-width: 1400px; margin: 0 auto 16px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stats-grid { display: flex; flex-direction: column; gap: 10px; }
+    .stats-row-label { font-size: 0.72rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .stat-card { padding: 12px; border-radius: 8px; text-align: center; transition: all 0.2s; border: 2px solid transparent; min-width: 110px; flex: 1; }
+    .stat-card.info { background: #f8f9fb; cursor: default; border: 1px dashed #d5dbe1; }
+    .stat-card.info .stat-value { color: #5f6b7a; font-size: 1.4rem; }
+    .stat-card.info .stat-label { color: #8e99a4; }
+    .stat-card.highlight { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 2px solid #3498db; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; color: #2c3e50; }
+    .stat-label { font-size: 0.78rem; color: #7f8c8d; margin-top: 2px; }
+
+    .chart-panel { max-width: 1400px; margin: 0 auto 16px; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 2px solid #bdc3c7; }
+    .chart-scroll { overflow-x: auto; overflow-y: hidden; }
+    .chart-wrapper { position: relative; height: 480px; min-width: 600px; }
+
+    .legend-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 12px 0 4px; font-size: 0.8rem; border-top: 1px solid #ecf0f1; margin-top: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 18px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
+    .legend-swatch.outline { background: transparent; border: 2.5px solid #E31A1C; }
+    .legend-nd { color: #C62828; font-weight: 700; font-size: 0.85rem; margin-right: 2px; }
+
+    .methodology { max-width: 1400px; margin: 0 auto 16px; padding: 14px 18px; background: #fefefe; border-left: 4px solid #3498db; border-radius: 0 8px 8px 0; font-size: 0.78rem; color: #555; line-height: 1.6; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+    .table-panel { max-width: 1400px; margin: 0 auto 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 2px solid #bdc3c7; overflow: hidden; }
+    .table-header { padding: 14px 18px; font-size: 1rem; font-weight: 700; color: #2c3e50; border-bottom: 2px solid #bdc3c7; }
+    .table-scroll { overflow: auto; max-height: 600px; }
+    .detail-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .detail-table thead th { background: #2c3e50; color: white; padding: 8px 10px; text-align: left; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+    .detail-table tbody td { padding: 6px 10px; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }
+    .detail-table tbody tr:hover { background: #f0f4ff; }
+    .detail-table tbody tr.row-evaluable { }
+    .detail-table tbody tr.row-clearance { background: #fff8e1; }
+    .detail-table tbody tr.row-ne { color: #999; }
+    .detail-table .val-positive { color: #c0392b; font-weight: 600; }
+    .detail-table .val-negative { color: #27ae60; font-weight: 600; }
+    .detail-table .val-nd { color: #C62828; font-weight: 600; }
+    .detail-table .val-ne { color: #bbb; font-style: italic; }
+    .detail-table .val-clearance { color: #e67e22; font-weight: 600; }
+    .badge-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+    .badge-eval { background: #e8f5e9; color: #2e7d32; }
+    .badge-ne { background: #fce4ec; color: #c62828; }
+
+    .loading { text-align: center; padding: 60px; color: #7f8c8d; }
+    .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 3px solid #3498db; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 900px) { .chart-wrapper { height: 380px; } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Waterfall — Best % Change from Baseline in mAF</h1>
+      <p>Driver = non-VUS mutation with highest mAF at Cycle 1. Best mAF = minimum driver mAF post-baseline (C2+).</p>
+    </div>
+
+    <div id="statsPanel" class="stats-panel" style="display:none;">
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div class="methodology">
+      <strong>Methodology:</strong>
+      Driver mutation = non-VUS mutation with highest AF at C1 (VUS fallback if none).
+      Best mAF = minimum driver AF at C2+ (ties: earliest visit).
+      % Change = (Best − Baseline) / Baseline × 100.
+      ctDNA clearance: best AF ≤ 0.01% (ND), bar forced to −100%.
+      Red outline = patient has any C797S/Y mutation and baseline driver AF &lt; 10%.
+    </div>
+
+    <div id="waterfallExportBlock" class="chart-panel" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div style="font-size:1.05rem; font-weight:700; color:#2c3e50;" id="chartTitle">Waterfall Plot</div>
+        <button class="export-btn" onclick="showBlockExportDialog('waterfallExportBlock','Waterfall_Best_AF')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+      </div>
+      <div class="chart-scroll">
+        <div class="chart-wrapper" id="chartWrapper"><canvas id="waterfallCanvas"></canvas></div>
+      </div>
+      <div class="legend-bar" id="legendBar"></div>
+    </div>
+
+    <div id="tablePanel" class="table-panel" style="display:none;">
+      <div class="table-header" id="tableTitle">Patient Listing</div>
+      <div class="table-scroll" id="tableScroll"></div>
+    </div>
+
+    <div id="loadingIndicator" class="loading" style="display:none;">Processing waterfall data...</div>
+  </div>
+
+<script>
+const ND_VALUE = 0.01;
+const VISIT_MAPPING = {
+  'PH1 C0 D-1': 'C1', 'C0D-1': 'C1',
+  'PH1 C2 D1': 'C2', 'C2D1': 'C2',
+  'C3D1': 'C3', 'C5D1': 'C5', 'C7D1': 'C7'
+};
+const STATUS_ORDER = [
+  'Evaluable', 'ctDNA Not Detected', 'Baseline ND',
+  'No Post-Baseline', 'No Baseline (C1)', 'No Tracked Mutation',
+  'Baseline AF Missing', 'No ctDNA Data'
+];
+
+let waterfallChart = null;
+let allResults = [];
+let plotData = [];
+
+function mapVisit(v) {
+  const s = (v || '').trim();
+  return VISIT_MAPPING[s] || s.toUpperCase().replace(/\s+/g, '');
+}
+
+function findCol(row, candidates) {
+  if (!row) return null;
+  const keys = Object.keys(row);
+  for (const c of candidates) { if (keys.includes(c)) return c; }
+  for (const c of candidates) {
+    const norm = c.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    for (const k of keys) { if (k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === norm) return k; }
+  }
+  return null;
+}
+
+function processWaterfall(rawData) {
+  if (!rawData || !rawData.length) return [];
+
+  const cols = {
+    subject: findCol(rawData[0], ['Subject', 'SUBJID', 'subject']),
+    visit: findCol(rawData[0], ['Visit', 'visit', 'VISIT']),
+    gene: findCol(rawData[0], ['Gene', 'gene', 'GENE']),
+    pHGVS: findCol(rawData[0], ['p.HGVS', 'p_HGVS', 'pHGVS']),
+    af: findCol(rawData[0], ['AF', 'af', 'Af']),
+    category: findCol(rawData[0], ['mutation...Category', 'mutation - Category', 'mutation_Category', 'mutationCategory', 'mutation___Category', 'Mutation Category'])
+  };
+
+  let data = rawData.map(r => ({
+    Subject: (r[cols.subject] || '').trim(),
+    Visit: mapVisit(r[cols.visit]),
+    Gene: (r[cols.gene] || '').trim(),
+    pHGVS: (r[cols.pHGVS] || '').trim(),
+    AF: parseFloat(r[cols.af]),
+    category: (r[cols.category] || '').trim()
+  })).filter(r => r.Subject && /^C\d+$/.test(r.Visit));
+
+  data = data.filter(r => r.Gene !== 'Fail' && r.pHGVS && r.pHGVS !== 'NULL');
+  data = data.map(r => ({
+    ...r,
+    AF: (!isFinite(r.AF) || r.AF <= 0 || r.AF < ND_VALUE) ? ND_VALUE : r.AF,
+    visitNum: parseInt(r.Visit.slice(1))
+  }));
+
+  const c797syPatients = new Set();
+  data.forEach(r => { if (/C797[SY]/i.test(r.pHGVS)) c797syPatients.add(r.Subject); });
+
+  const patients = [...new Set(data.map(r => r.Subject))];
+  const results = [];
+
+  for (const subj of patients) {
+    const pd = data.filter(r => r.Subject === subj);
+    const c1 = pd.filter(r => r.Visit === 'C1');
+    const postC1 = pd.filter(r => r.visitNum > 1);
+    const hasBaseline = c1.length > 0;
+    const hasPostBL = postC1.length > 0;
+
+    let candidates = c1.filter(r => r.category !== 'VUS');
+    if (candidates.length === 0) candidates = c1.slice();
+    candidates.sort((a, b) => b.AF - a.AF || a.Gene.localeCompare(b.Gene) || a.pHGVS.localeCompare(b.pHGVS));
+    const driver = candidates.length > 0 ? candidates[0] : null;
+
+    let baselineAF = null, bestAF = null, bestVisit = null;
+    if (driver) {
+      const dC1 = c1.filter(r => r.Gene === driver.Gene && r.pHGVS === driver.pHGVS);
+      if (dC1.length > 0) baselineAF = Math.max(...dC1.map(r => r.AF));
+
+      const dPost = postC1.filter(r => r.Gene === driver.Gene && r.pHGVS === driver.pHGVS);
+      if (dPost.length > 0) {
+        dPost.sort((a, b) => a.AF - b.AF || a.visitNum - b.visitNum);
+        bestAF = dPost[0].AF;
+        bestVisit = dPost[0].Visit;
+      }
+    }
+
+    const baseND = baselineAF !== null && baselineAF <= ND_VALUE;
+    const bestND = bestAF !== null && bestAF <= ND_VALUE;
+
+    let status;
+    if (!hasBaseline) status = 'No Baseline (C1)';
+    else if (!driver) status = 'No Tracked Mutation';
+    else if (baselineAF === null) status = 'Baseline AF Missing';
+    else if (baseND && (bestAF === null || bestND)) status = 'ctDNA Not Detected';
+    else if (baseND) status = 'Baseline ND';
+    else if (!hasPostBL || bestAF === null) status = 'No Post-Baseline';
+    else status = 'Evaluable';
+
+    const isComp = status === 'Evaluable' && !baseND && !bestND;
+    const clearance = status === 'Evaluable' && bestAF !== null && bestND;
+
+    let pctChange = null, deltaAF = null;
+    if (isComp && baselineAF > 0) {
+      pctChange = (bestAF - baselineAF) / baselineAF * 100;
+      deltaAF = baselineAF - bestAF;
+    }
+
+    let barValue = null;
+    if (clearance) barValue = -100;
+    else if (pctChange !== null) barValue = pctChange;
+
+    results.push({
+      Subject: subj, status,
+      driverGene: driver ? driver.Gene : null,
+      driverPHGVS: driver ? driver.pHGVS : null,
+      driverCategory: driver ? driver.category : null,
+      baselineAF, bestAF, bestVisit,
+      isComp, clearance, deltaAF, pctChange, barValue,
+      hasC797SY: c797syPatients.has(subj),
+      c797syLowFlag: c797syPatients.has(subj) && baselineAF !== null && baselineAF < 10
+    });
+  }
+
+  results.sort((a, b) => {
+    const ia = STATUS_ORDER.indexOf(a.status), ib = STATUS_ORDER.indexOf(b.status);
+    if (ia !== ib) return ia - ib;
+    if (a.barValue !== null && b.barValue !== null) return b.barValue - a.barValue;
+    if (a.barValue !== null) return -1;
+    if (b.barValue !== null) return 1;
+    return a.Subject.localeCompare(b.Subject, undefined, { numeric: true });
+  });
+
+  return results;
+}
+
+function renderStats() {
+  const nTotal = allResults.length;
+  const eval_ = allResults.filter(r => r.status === 'Evaluable');
+  const nEval = eval_.length;
+  const nNE = nTotal - nEval;
+  const nComp = allResults.filter(r => r.isComp).length;
+  const nClear = allResults.filter(r => r.clearance).length;
+  const nC797 = allResults.filter(r => r.c797syLowFlag).length;
+
+  const statusCounts = {};
+  allResults.forEach(r => { statusCounts[r.status] = (statusCounts[r.status] || 0) + 1; });
+
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = `
+    <div class="stats-row-label">Evaluability</div>
+    <div class="stats-row">
+      <div class="stat-card highlight"><div class="stat-value">${nTotal}</div><div class="stat-label">Total Patients</div></div>
+      <div class="stat-card highlight"><div class="stat-value">${nEval}</div><div class="stat-label">Evaluable</div></div>
+      <div class="stat-card info"><div class="stat-value">${nComp}</div><div class="stat-label">Comparable</div></div>
+      <div class="stat-card info"><div class="stat-value">${nClear}</div><div class="stat-label">ctDNA Clearance</div></div>
+      <div class="stat-card info"><div class="stat-value">${nC797}</div><div class="stat-label">C797S/Y + AF&lt;10%</div></div>
+      <div class="stat-card info"><div class="stat-value">${nNE}</div><div class="stat-label">Non-Evaluable</div></div>
+    </div>
+    <div class="stats-row-label">Non-Evaluable Breakdown</div>
+    <div class="stats-row">
+      ${STATUS_ORDER.filter(s => s !== 'Evaluable').map(s =>
+        `<div class="stat-card info"><div class="stat-value">${statusCounts[s] || 0}</div><div class="stat-label">${s}</div></div>`
+      ).join('')}
+    </div>
+  `;
+  document.getElementById('statsPanel').style.display = 'block';
+}
+
+const ndLabelPlugin = {
+  id: 'ndLabels',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data) return;
+    meta.data.forEach((bar, i) => {
+      if (i >= plotData.length || !plotData[i].clearance) return;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#C62828';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText('ND', bar.x, bar.y + 3);
+      ctx.restore();
+    });
+  }
+};
+
+function renderChart() {
+  plotData = allResults.filter(r => r.status === 'Evaluable');
+  plotData.sort((a, b) => (b.barValue ?? 0) - (a.barValue ?? 0));
+
+  if (plotData.length === 0) {
+    document.getElementById('waterfallExportBlock').style.display = 'block';
+    document.getElementById('chartWrapper').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#95a5a6;font-style:italic;">No evaluable patients for waterfall plot.</div>';
+    return;
+  }
+
+  const nComp = allResults.filter(r => r.isComp).length;
+  const nClear = allResults.filter(r => r.clearance).length;
+  const nNE = allResults.filter(r => r.status !== 'Evaluable').length;
+  document.getElementById('chartTitle').textContent =
+    `Waterfall Plot — Evaluable n=${plotData.length} (Comparable: ${nComp}, Clearance: ${nClear}) | Non-evaluable: ${nNE} | Total N=${allResults.length}`;
+
+  const minBarPx = 32;
+  const calcWidth = Math.max(600, plotData.length * minBarPx + 80);
+  document.getElementById('chartWrapper').style.width = calcWidth + 'px';
+
+  const labels = plotData.map(d => d.Subject);
+  const values = plotData.map(d => d.barValue ?? 0);
+  const bgColors = plotData.map(d => (d.baselineAF !== null && d.baselineAF >= 10) ? '#1E90FF' : '#87CEEB');
+  const bdColors = plotData.map(d => d.c797syLowFlag ? '#E31A1C' : 'rgba(80,80,80,0.35)');
+  const bdWidths = plotData.map(d => d.c797syLowFlag ? 2.5 : 0.5);
+
+  const yVals = values.filter(v => v !== 0);
+  const yMin = yVals.length ? Math.min(...yVals) : -10;
+  const yMax = yVals.length ? Math.max(...yVals) : 10;
+  const yPad = Math.max(Math.abs(yMin), Math.abs(yMax)) * 0.15;
+  const yRange = [Math.min(yMin - yPad, -5), Math.max(yMax + yPad, 5)];
+
+  const ctx = document.getElementById('waterfallCanvas').getContext('2d');
+  if (waterfallChart) waterfallChart.destroy();
+
+  waterfallChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bgColors,
+        borderColor: bdColors,
+        borderWidth: bdWidths,
+        barPercentage: 0.82,
+        categoryPercentage: 0.92
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0] ? items[0].label : '',
+            label: item => {
+              const d = plotData[item.dataIndex];
+              if (!d) return '';
+              const lines = [];
+              lines.push(`Driver: ${d.driverGene} ${d.driverPHGVS}`);
+              lines.push(`Category: ${d.driverCategory || '—'}`);
+              const fmtAF = v => (v === null) ? '—' : (v <= ND_VALUE ? 'ND' : v.toFixed(2) + '%');
+              lines.push(`Baseline AF: ${fmtAF(d.baselineAF)}`);
+              lines.push(`Best AF: ${fmtAF(d.bestAF)} (${d.bestVisit || '—'})`);
+              if (d.clearance) lines.push('% Change: ctDNA clearance (−100%)');
+              else if (d.pctChange !== null) lines.push(`% Change: ${d.pctChange > 0 ? '+' : ''}${d.pctChange.toFixed(1)}%`);
+              if (d.hasC797SY) lines.push('⚠ C797S/Y detected');
+              return lines;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Subject', font: { size: 11, weight: 'bold' } },
+          grid: { display: false },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: { maxRotation: 90, minRotation: 90, font: { size: 8 }, autoSkip: false }
+        },
+        y: {
+          min: yRange[0], max: yRange[1],
+          title: { display: true, text: 'Best % Change from Baseline (%)', font: { size: 11, weight: 'bold' } },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: {
+            font: { size: 10 },
+            callback: v => (v > 0 ? '+' + v + '%' : v + '%')
+          }
+        }
+      }
+    },
+    plugins: [ndLabelPlugin]
+  });
+
+  const lb = document.getElementById('legendBar');
+  lb.innerHTML = `
+    <div class="legend-item"><span class="legend-swatch" style="background:#87CEEB"></span> Baseline Driver AF &lt; 10%</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#1E90FF"></span> Baseline Driver AF ≥ 10%</div>
+    <div class="legend-item"><span class="legend-swatch outline"></span> C797S/Y + Driver AF &lt; 10%</div>
+    <div class="legend-item"><span class="legend-nd">ND</span> ctDNA clearance (best = ND, bar = −100%)</div>
+  `;
+
+  document.getElementById('waterfallExportBlock').style.display = 'block';
+}
+
+function renderTable() {
+  const fmtAF = v => (v === null || v === undefined) ? '—' : (v <= ND_VALUE ? 'ND' : v.toFixed(2) + '%');
+
+  let html = '<table class="detail-table"><thead><tr>';
+  html += '<th>#</th><th>Subject</th><th>Status</th><th>Driver Mutation</th><th>Category</th>';
+  html += '<th>Base mAF</th><th>Best mAF</th><th>Best Cycle</th><th>Δ AF</th><th>% Change</th><th>Clearance</th>';
+  html += '</tr></thead><tbody>';
+
+  allResults.forEach((d, i) => {
+    const isEval = d.status === 'Evaluable';
+    const rowCls = d.clearance ? 'row-clearance' : (isEval ? 'row-evaluable' : 'row-ne');
+    const statusBadge = isEval
+      ? '<span class="badge-status badge-eval">Evaluable</span>'
+      : `<span class="badge-status badge-ne">${d.status}</span>`;
+    const driverDisp = d.driverGene ? `${d.driverGene} ${d.driverPHGVS}` : '—';
+    const catDisp = d.driverCategory || '—';
+    const baseDisp = fmtAF(d.baselineAF);
+    const bestDisp = fmtAF(d.bestAF);
+    const cycleDisp = d.bestVisit || '—';
+
+    let deltaDisp;
+    if (d.isComp) { deltaDisp = d.deltaAF.toFixed(4); }
+    else if (d.clearance) { deltaDisp = '<span class="val-nd">ND</span>'; }
+    else { deltaDisp = '<span class="val-ne">—</span>'; }
+
+    let changeDisp;
+    if (d.isComp && d.pctChange > 0) { changeDisp = `<span class="val-positive">+${d.pctChange.toFixed(1)}%</span>`; }
+    else if (d.isComp) { changeDisp = `<span class="val-negative">${d.pctChange.toFixed(1)}%</span>`; }
+    else if (d.clearance) { changeDisp = '<span class="val-clearance">−100%*</span>'; }
+    else { changeDisp = '<span class="val-ne">NE</span>'; }
+
+    const clearDisp = d.clearance ? '<span class="val-clearance">Yes</span>' : '';
+
+    html += `<tr class="${rowCls}"><td>${i + 1}</td><td>${d.Subject}</td><td>${statusBadge}</td>`;
+    html += `<td>${driverDisp}</td><td>${catDisp}</td>`;
+    html += `<td>${baseDisp}</td><td>${bestDisp}</td><td>${cycleDisp}</td>`;
+    html += `<td>${deltaDisp}</td><td>${changeDisp}</td><td>${clearDisp}</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableScroll').innerHTML = html;
+  document.getElementById('tableTitle').textContent = `Patient Listing — Waterfall Analysis (N = ${allResults.length})`;
+  document.getElementById('tablePanel').style.display = 'block';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof initBlockExportDialog === 'function') {
+    initBlockExportDialog();
+    setBlockExportPrefix('Waterfall');
+  }
+  document.getElementById('loadingIndicator').style.display = 'block';
+
+  fetch('../../data/G360_Filtered.csv')
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(csv => {
+      Papa.parse(csv, {
+        header: true, skipEmptyLines: true,
+        complete: function(results) {
+          try {
+            allResults = processWaterfall(results.data);
+            if (allResults.length === 0) {
+              alert('No valid data found in G360_Filtered.csv for waterfall analysis.');
+              document.getElementById('loadingIndicator').style.display = 'none';
+              return;
+            }
+            renderStats();
+            renderChart();
+            renderTable();
+            document.getElementById('loadingIndicator').style.display = 'none';
+          } catch (err) {
+            console.error('Processing error:', err);
+            alert('Error: ' + err.message);
+            document.getElementById('loadingIndicator').style.display = 'none';
+          }
+        },
+        error: function(err) {
+          alert('CSV parse error: ' + err.message);
+          document.getElementById('loadingIndicator').style.display = 'none';
+        }
+      });
+    })
+    .catch(err => {
+      alert('Error loading G360_Filtered.csv: ' + err.message);
+      document.getElementById('loadingIndicator').style.display = 'none';
+    });
+});
+</script>
+
+<script src="../../assets/js/nav.js"></script>
+<script>
+if (typeof renderNav === 'function') renderNav('mutation', 'waterfall', '../../');
+</script>
+</body>
+</html>

@@ -1,0 +1,3012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Prevent browser caching -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Laboratory Abnormalities Worsening from Baseline</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script>
+    // Clear cache on page load
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+    // Force reload from server (not cache) if this is a refresh
+    if (performance.navigation && performance.navigation.type === 1) {
+      // This is a refresh - already handled by meta tags
+      console.log('Page refreshed - cache disabled via meta tags');
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #2c3e50;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      width: fit-content;
+      max-width: 100%;
+      min-width: 1100px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 1.4rem;
+      color: #2c3e50;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    
+    .subtitle {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    
+    /* Summary Stats */
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: #7f8c8d;
+      margin-bottom: 4px;
+    }
+    
+    .stat-card .value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .stat-card .value.highlight {
+      color: #e74c3c;
+    }
+    
+    /* Table Container */
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .row-toggle-cell {
+      width: 46px;
+      text-align: center;
+    }
+
+    .row-toggle {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .secondary-table {
+      margin-top: 16px;
+      border-top: 1px solid #e1e8ed;
+      padding-top: 12px;
+    }
+
+    .secondary-table-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+    
+    .table-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #2c3e50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .table-title-note {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #6b7280;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .table-title-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .export-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    
+    th {
+      background: #34495e;
+      color: white;
+      padding: 10px 14px;
+      text-align: center;
+      font-weight: 500;
+      border: 1px solid #2c3e50;
+    }
+
+    th.group-header {
+      background: #4f6b8a;
+      font-size: 0.8rem;
+    }
+
+    th.sub-header {
+      background: #5c7695;
+      font-size: 0.75rem;
+    }
+    
+    th:first-child {
+      text-align: left;
+    }
+    
+    td {
+      padding: 9px 14px;
+      border: 1px solid #e1e8ed;
+      text-align: center;
+    }
+    
+    td:first-child {
+      text-align: left;
+    }
+    
+    tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    .category-row {
+      background: #ecf0f1 !important;
+      font-weight: 600;
+    }
+    
+    .category-row td {
+      color: #2c3e50;
+      padding: 7px 14px;
+    }
+    
+    /* Clickable cells */
+    td.clickable {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    
+    td.clickable:hover {
+      background: #d5e8f7 !important;
+    }
+    
+    td.clickable.active {
+      background: #3498db !important;
+      color: white;
+    }
+
+    td.not-available {
+      color: #6b7280;
+      font-style: italic;
+      background: #f8f9fa;
+      text-align: center;
+    }
+    
+    /* Detail Listing */
+    .detail-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    
+    .detail-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .detail-close {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .detail-close:hover {
+      background: #c0392b;
+    }
+    
+    .detail-table {
+      font-size: 0.82rem;
+    }
+    
+    .detail-table th {
+      background: #7f8c8d;
+      padding: 8px 10px;
+    }
+    
+    .detail-table td {
+      padding: 6px 10px;
+    }
+
+    .baseline-abnormal {
+      color: #c0392b;
+      font-weight: 600;
+    }
+    
+    /* Footnotes */
+    .footnotes {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #e1e8ed;
+      font-size: 0.75rem;
+      color: #7f8c8d;
+      line-height: 1.7;
+    }
+    
+    .footnotes p {
+      margin-bottom: 1px;
+    }
+    
+    /* Loading / Error States */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #7f8c8d;
+      font-size: 1rem;
+    }
+    
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-msg {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c00;
+      padding: 16px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+
+    .controls-panel {
+      background: white;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 220px;
+    }
+
+    .control-group.horizontal {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      min-width: 360px;
+    }
+
+    .control-group.horizontal label {
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+
+    .dose-group-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dose-pill {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #1e293b;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dose-pill.active {
+      background: #3498db;
+      border-color: #3498db;
+      color: white;
+    }
+
+    .dose-group-wrap {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #ffffff;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 13px;
+    }
+
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+      color: #2c3e50;
+    }
+
+    .btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      background: #3498db;
+      color: white;
+    }
+
+    .btn:hover { background: #2f86c9; }
+
+    .btn.export-btn {
+      background: #e11d48;
+    }
+
+    .btn.export-btn:hover {
+      background: #be123c;
+    }
+    
+    /* Missing Data Table */
+    #missingDataContainer {
+      margin-top: 20px;
+    }
+    
+    #missingDataTable {
+      font-size: 0.88rem;
+    }
+    
+    #missingDataTable th {
+      background: #34495e;
+      color: white;
+      padding: 10px 14px;
+      text-align: center;
+      font-weight: 500;
+      border: 1px solid #2c3e50;
+    }
+    
+    #missingDataTable td {
+      padding: 9px 14px;
+      border: 1px solid #e1e8ed;
+      text-align: center;
+    }
+    
+    #missingDataTable tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    #closeMissingDataBtn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    #closeMissingDataBtn:hover {
+      background: #c0392b;
+    }
+    
+    .hidden { display: none; }
+
+    .unit-test-container {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .unit-test-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .unit-test-summary {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .unit-test-pass {
+      color: #047857;
+      font-weight: 600;
+    }
+
+    .unit-test-fail {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    .unit-test-list {
+      font-size: 0.83rem;
+      margin-left: 18px;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <div class="container">
+      <h1 id="pageTitle">Laboratory Abnormalities Worsening from Baseline</h1>
+      <p class="subtitle">CTCAE v5.0 Grading • Safety Analysis Set • Click cells to view details</p>
+      
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label for="patientPopulationFilter">Patient Population</label>
+          <select id="patientPopulationFilter">
+            <option value="all">All Patients</option>
+            <option value="dose-escalation">Dose Escalation</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="gradeViewSelect">Grade Columns</label>
+          <select id="gradeViewSelect">
+            <option value="summary">Any Grade + Grade ≥3</option>
+            <option value="by-grade">Grade 1-4</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button class="btn" id="toggleDoseColumns" type="button">Hide Dose</button>
+        </div>
+        <div class="control-group">
+          <label for="viewModeSelect">View Mode</label>
+          <select id="viewModeSelect">
+            <option value="worsening">Worsening from Baseline</option>
+            <option value="all">All Post-Tx Grades</option>
+          </select>
+        </div>
+        <div class="dose-group-wrap">
+          <div class="control-group horizontal">
+            <label for="doseGroupSelect">Dose Group Selection</label>
+            <div id="doseGroupSelect" class="dose-group-row"></div>
+          </div>
+          <button class="btn" id="applyDoseGroup">Apply</button>
+        </div>
+      </div>
+
+      <div id="unitTestContainer" class="unit-test-container hidden">
+        <div class="unit-test-title">CTCAE v5.0 Unit Test Report</div>
+        <div id="unitTestSummary" class="unit-test-summary"></div>
+        <ul id="unitTestFailures" class="unit-test-list"></ul>
+      </div>
+      
+      <div id="loadingState" class="loading">
+        <div class="loading-spinner"></div>
+        Loading data from CSV files...
+      </div>
+      
+      <div id="errorState" class="error-msg hidden"></div>
+      
+      <!-- Summary Stats -->
+      <div class="summary-stats hidden" id="summaryStats">
+        <div class="stat-card">
+          <div class="label">Safety Analysis Set (N)</div>
+          <div class="value" id="bigN">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label" id="worseningLabel">Subjects with Worsening</div>
+          <div class="value highlight" id="nWorsening">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Grade ≥3 Events</div>
+          <div class="value highlight" id="nGrade3Plus">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Analytes Analyzed</div>
+          <div class="value" id="nAnalytes">-</div>
+        </div>
+      </div>
+      
+      <!-- Summary Table -->
+      <div class="table-container hidden" id="resultsContainer">
+        <div class="table-title" id="tableTitle">
+          <span>Table X. Laboratory Abnormalities Worsening from Baseline</span>
+          <div class="table-title-actions">
+            <span class="table-title-note">Dose group from DM.ARM</span>
+            <button class="btn export-btn" id="exportTableImage" type="button">Export Image</button>
+            <button class="btn" id="showMissingDataBtn" type="button" style="background: #f59e0b;">Show Missing Data</button>
+          </div>
+        </div>
+        <table id="resultsTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+
+        <div class="secondary-table hidden" id="hiddenTableContainer">
+          <div class="secondary-table-title">Hidden Definitions (unchecked)</div>
+          <table id="hiddenResultsTable">
+            <thead id="hiddenTableHead"></thead>
+            <tbody id="hiddenTableBody"></tbody>
+          </table>
+        </div>
+        
+        <div class="footnotes">
+          <p>────────────────────────────────────────────────────────────────</p>
+          <p>NCI CTCAE v5.0</p>
+          <p>Not Available = CTCAE v5.0 does not define Grade 4 criteria for this analyte</p>
+          <p>N = number of patients in Safety Analysis Set (received at least one dose)</p>
+          <p>n = number of patients with worsening from baseline</p>
+          <p>% = (n/N) × 100</p>
+          <p>Worsening from baseline: Post-treatment CTCAE grade > Baseline CTCAE grade</p>
+          <p>Each subject counted once per analyte using worst post-treatment value</p>
+          <p>&nbsp;&nbsp;- Increased parameters (BILI, ALT, AST, ALP): Maximum post-treatment value</p>
+          <p>&nbsp;&nbsp;- Decreased parameters (NEUT, PLAT, GLUC): Minimum post-treatment value</p>
+          <p>&nbsp;&nbsp;- Bidirectional parameters (K, SODIUM, CA): Worst post-treatment CTCAE grade</p>
+          <p>Baseline: C0D1 visit (if missing, use SCRN)</p>
+          <p>────────────────────────────────────────────────────────────────</p>
+          <p><strong>Data Source Logic:</strong></p>
+          <p>&nbsp;&nbsp;- <strong>CTCAE Grading:</strong> Uses Standard (SI) values whenever available</p>
+          <p>&nbsp;&nbsp;- <strong>Local Lab fallback:</strong> Allowed only for ratio-safe analytes (e.g. ALT/AST/BILI/ALP/GGT/CREAT/LIPASE/AMYLASE/INR/APTT/PT/PTT)</p>
+          <p>&nbsp;&nbsp;- <strong>Absolute-threshold analytes (e.g. GLUC/HGB/CHOL/TRIG/URATE/K/SODIUM/CA):</strong> Do not use Local Lab fallback without standardized units</p>
+          <p>&nbsp;&nbsp;- <strong>Increase analytes (ALT, AST, BILI, ALP, etc.):</strong> Require Value + ULN</p>
+          <p>&nbsp;&nbsp;- <strong>Decrease analytes (NEUT, PLAT, HGB, etc.):</strong> Require Value + LLN</p>
+          <p>&nbsp;&nbsp;- <strong>Bidirectional analytes (K, SODIUM, CA, etc.):</strong> Require Value + ULN + LLN</p>
+          <p>&nbsp;&nbsp;- Records missing required reference ranges are excluded from analysis</p>
+        </div>
+      </div>
+      
+      <!-- Missing Data Table Container -->
+      <div class="table-container hidden" id="missingDataContainer">
+        <div class="table-title">
+          <span>Patients with Missing Data</span>
+          <div class="table-title-actions">
+            <button class="detail-close" id="closeMissingDataBtn" type="button">✕ Close</button>
+          </div>
+        </div>
+        <table id="missingDataTable">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Analyte</th>
+              <th>Missing LLN</th>
+              <th>Missing ULN</th>
+              <th>Missing Pre-treatment Value</th>
+              <th>No Post-treatment Value</th>
+            </tr>
+          </thead>
+          <tbody id="missingDataBody"></tbody>
+        </table>
+      </div>
+      
+      <!-- Detail Listing (shown when clicking a cell) -->
+      <div class="detail-container hidden" id="detailContainer">
+        <div class="detail-header">
+          <div class="detail-title" id="detailTitle">Detail Listing</div>
+          <button class="detail-close" onclick="hideDetail()">✕ Close</button>
+        </div>
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Dose Group</th>
+              <th>Analyte</th>
+              <th>Baseline Value</th>
+              <th>Baseline Grade</th>
+              <th>Baseline Abnormal (Y/N)</th>
+              <th>Post-Tx Value</th>
+              <th>Post-Tx Grade</th>
+              <th>ULN/LLN</th>
+              <th>xULN</th>
+              <th>Folder</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'ctcae-grade-summary', '../../');
+    }
+  </script>
+  <script>
+// ============================================
+// CTCAE v5.0 GRADING FUNCTIONS
+// ============================================
+
+// Analyte name mapping - complete list from ctcae-labs.html
+const ANALYTE_NAME_MAP = {
+  'Alanine aminotransferase': 'ALT',
+  'Alanine aminotransferase; ALT': 'ALT',
+  'Aspartate aminotransferase': 'AST',
+  'Aspartate aminotransferase; AST': 'AST',
+  'Bilirubin': 'BILI',
+  'Bilirubin; BILI': 'BILI',
+  'Alkaline phosphatase': 'ALP',
+  'Alkaline phosphatase; ALP': 'ALP',
+  'Gamma-glutamyltransferase; GGT': 'GGT',
+  'Lactate Dehydrogenase; LDH': 'LDH',
+  'Creatinine; CREAT': 'CREAT',
+  'Urea Nitrogen; UREAN': 'UREAN',
+  'Urate; URATE': 'URATE',
+  'Albumin; ALB': 'ALB',
+  'Protein; PROT': 'PROT',
+  'Potassium; K': 'K',
+  'Sodium; SODIUM': 'SODIUM',
+  'Calcium; CA': 'CA',
+  'Magnesium; MG': 'MG',
+  'Phosphate; PHOS': 'PHOS',
+  'Chloride; CL': 'CL',
+  'Bicarbonate; BICARB': 'BICARB',
+  'Carbon Dioxide; CO2': 'CO2',
+  'Glucose; GLUC': 'GLUC',
+  'Amylase; AMYLASE': 'AMYLASE',
+  'Lipase; LIPASET': 'LIPASE',
+  'Lipase; LIPASE': 'LIPASE',
+  'Cholesterol; CHOL': 'CHOL',
+  'Triglycerides; TRIG': 'TRIG',
+  'Activated Partial Thromboplastin Time; APTT': 'APTT',
+  'Prothrombin Intl. Normalized Ratio; INR': 'INR',
+  'Prothrombin Time; PT': 'PT',
+  'Partial Thromboplastin Time; PTT': 'PTT',
+  'Fibrinogen; FIB': 'FIB',
+  'Leukocytes; WBC': 'WBC',
+  'Erythrocytes; RBC': 'RBC',
+  'Hemoglobin; HGB': 'HGB',
+  'Hematocrit; HCT': 'HCT',
+  'Platelets; PLAT': 'PLAT',
+  'Neutrophils; NEUT': 'NEUT',
+  'Lymphocytes; LYM': 'LYM',
+  'Monocytes; MONO': 'MONO',
+  'Eosinophils; EOS': 'EOS',
+  'Basophils; BASO': 'BASO',
+  'CD4; CD4': 'CD4'
+};
+
+function getAnalyteShortName(fullName) {
+  if (ANALYTE_NAME_MAP[fullName]) return ANALYTE_NAME_MAP[fullName];
+  if (fullName.includes(';')) {
+    return fullName.split(';').pop().trim();
+  }
+  return fullName;
+}
+
+function getBaselineStatus(analyte, baselineValue, stdLow, stdHigh) {
+  const shortName = getAnalyteShortName(analyte);
+
+  if (baselineValue == null) return 'NormalBaseline';
+
+  // ALT/AST/ALP/BILI: only check ULN (baseline > ULN = abnormal)
+  // Low values are still considered "normal baseline" for these increase-direction analytes
+  if (['ALT', 'AST', 'ALP', 'BILI', 'GGT', 'CREAT', 'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'CHOL', 'TRIG', 'URATE'].includes(shortName)) {
+    if (stdHigh == null) return 'NormalBaseline'; // no ULN = assume normal
+    return baselineValue > stdHigh ? 'AbnormalBaseline' : 'NormalBaseline';
+  }
+
+  // NEUT/PLAT/WBC/LYM/HGB etc (decrease direction): only check LLN (baseline < LLN = abnormal)
+  if (['NEUT', 'PLAT', 'WBC', 'LYM', 'HGB', 'CD4', 'MG', 'PHOS', 'ALB', 'FIB'].includes(shortName)) {
+    if (stdLow == null) return 'NormalBaseline'; // no LLN = assume normal
+    return baselineValue < stdLow ? 'AbnormalBaseline' : 'NormalBaseline';
+  }
+
+  // Bidirectional (K, SODIUM, CA, GLUC): check both LLN and ULN
+  if (stdLow != null && stdHigh != null) {
+    return (baselineValue >= stdLow && baselineValue <= stdHigh) ? 'NormalBaseline' : 'AbnormalBaseline';
+  }
+  return 'NormalBaseline';
+}
+
+/**
+ * Get CTCAE grading configuration for an analyte
+ * @param {string} analyte - Analyte name or short name
+ * @param {number} baselineValue - Baseline value for fold-change calculations
+ * @param {number} stdLow - LLN for baseline status determination
+ * @param {number} stdHigh - ULN for baseline status determination
+ * @param {string} stdUnit - Unit (optional)
+ * @param {number} thresholdLLN - LLN for grading thresholds (if different from stdLow)
+ * @param {number} thresholdULN - ULN for grading thresholds (if different from stdHigh)
+ */
+function getCTCAEGrades(analyte, baselineValue, stdLow, stdHigh, stdUnit = null, thresholdLLN = null, thresholdULN = null) {
+  const shortName = getAnalyteShortName(analyte);
+  // Use stdLow/stdHigh for baseline normal/abnormal determination
+  // ALT/AST/ALP/BILI: only check ULN; NEUT/PLAT: only check LLN
+  const baselineStatus = getBaselineStatus(analyte, baselineValue, stdLow, stdHigh);
+  
+  // Use threshold values for grading calculations (fall back to status values if not provided)
+  const gradeLLN = thresholdLLN != null ? thresholdLLN : stdLow;
+  const gradeULN = thresholdULN != null ? thresholdULN : stdHigh;
+  
+  let grades = { grades: [], direction: null, term: null, note: null };
+
+  // ALT / AST
+  // Use gradeULN for grading thresholds (post's ULN), baselineStatus determined by baseline's ULN
+  if (shortName === 'ALT' || shortName === 'AST') {
+    if (baselineStatus === 'NormalBaseline') {
+      grades.grades = [
+        { grade: 'Grade1', low: gradeULN, high: 3.0 * gradeULN },
+        { grade: 'Grade2', low: 3.0 * gradeULN, high: 5.0 * gradeULN },
+        { grade: 'Grade3', low: 5.0 * gradeULN, high: 20.0 * gradeULN },
+        { grade: 'Grade4', low: 20.0 * gradeULN, high: Infinity }
+      ];
+    } else {
+      // Abnormal baseline: use fold-change from baseline value
+      grades.grades = [
+        { grade: 'Grade1', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+        { grade: 'Grade2', low: 3.0 * baselineValue, high: 5.0 * baselineValue },
+        { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+        { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+      ];
+    }
+    grades.direction = 'increase';
+    grades.term = `${shortName} increased`;
+  }
+
+  // ALP
+  else if (shortName === 'ALP') {
+    if (baselineStatus === 'NormalBaseline') {
+      grades.grades = [
+        { grade: 'Grade1', low: gradeULN, high: 2.5 * gradeULN },
+        { grade: 'Grade2', low: 2.5 * gradeULN, high: 5.0 * gradeULN },
+        { grade: 'Grade3', low: 5.0 * gradeULN, high: 20.0 * gradeULN },
+        { grade: 'Grade4', low: 20.0 * gradeULN, high: Infinity }
+      ];
+    } else {
+      grades.grades = [
+        { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+        { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+        { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+        { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+      ];
+    }
+    grades.direction = 'increase';
+    grades.term = 'ALP increased';
+  }
+
+  // GGT
+  else if (shortName === 'GGT') {
+    if (baselineStatus === 'NormalBaseline') {
+      grades.grades = [
+        { grade: 'Grade1', low: gradeULN, high: 2.5 * gradeULN },
+        { grade: 'Grade2', low: 2.5 * gradeULN, high: 5.0 * gradeULN },
+        { grade: 'Grade3', low: 5.0 * gradeULN, high: 20.0 * gradeULN },
+        { grade: 'Grade4', low: 20.0 * gradeULN, high: Infinity }
+      ];
+    } else {
+      grades.grades = [
+        { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+        { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+        { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+        { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+      ];
+    }
+    grades.direction = 'increase';
+    grades.term = 'GGT increased';
+  }
+
+  // Bilirubin
+  else if (shortName === 'BILI') {
+    if (baselineStatus === 'NormalBaseline') {
+      grades.grades = [
+        { grade: 'Grade1', low: gradeULN, high: 1.5 * gradeULN },
+        { grade: 'Grade2', low: 1.5 * gradeULN, high: 3.0 * gradeULN },
+        { grade: 'Grade3', low: 3.0 * gradeULN, high: 10.0 * gradeULN },
+        { grade: 'Grade4', low: 10.0 * gradeULN, high: Infinity }
+      ];
+    } else {
+      grades.grades = [
+        { grade: 'Grade1', low: baselineValue, high: 1.5 * baselineValue },
+        { grade: 'Grade2', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+        { grade: 'Grade3', low: 3.0 * baselineValue, high: 10.0 * baselineValue },
+        { grade: 'Grade4', low: 10.0 * baselineValue, high: Infinity }
+      ];
+    }
+    grades.direction = 'increase';
+    grades.term = 'Blood bilirubin increased';
+  }
+
+  // Creatinine
+  else if (shortName === 'CREAT') {
+    grades.grades = [
+      { grade: 'Grade1', low: gradeULN, high: 1.5 * gradeULN },
+      { grade: 'Grade2', low: 1.5 * gradeULN, high: 3.0 * gradeULN },
+      { grade: 'Grade3', low: 3.0 * gradeULN, high: 6.0 * gradeULN },
+      { grade: 'Grade4', low: 6.0 * gradeULN, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = 'Creatinine increased';
+  }
+
+  // Platelets - use gradeLLN for Grade 1 upper boundary
+  // CTCAE: only needs LLN (not ULN). If LLN missing, skip Grade 1 but Grade 2-4 still work
+  else if (shortName === 'PLAT') {
+    grades.grades = [];
+    // Grade 1 only if LLN is available (CTCAE: <LLN and ≥75)
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 75, high: gradeLLN });
+    }
+    // Grade 2-4 use fixed thresholds, always available
+    grades.grades.push({ grade: 'Grade2', low: 50, high: 75 });
+    grades.grades.push({ grade: 'Grade3', low: 25, high: 50 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 25 });
+    grades.direction = 'decrease';
+    grades.term = 'Platelet count decreased';
+  }
+
+  // Neutrophils - use gradeLLN for Grade 1 upper boundary
+  // CTCAE: only needs LLN (not ULN). If LLN missing, skip Grade 1 but Grade 2-4 still work
+  else if (shortName === 'NEUT') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 1.5, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 1.0, high: 1.5 });
+    grades.grades.push({ grade: 'Grade3', low: 0.5, high: 1.0 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 0.5 });
+    grades.direction = 'decrease';
+    grades.term = 'Neutrophil count decreased';
+  }
+
+  // WBC - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'WBC') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 3.0, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 2.0, high: 3.0 });
+    grades.grades.push({ grade: 'Grade3', low: 1.0, high: 2.0 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 1.0 });
+    grades.direction = 'decrease';
+    grades.term = 'White blood cell decreased';
+  }
+
+  // Lymphocytes - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'LYM') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 0.8, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 0.5, high: 0.8 });
+    grades.grades.push({ grade: 'Grade3', low: 0.2, high: 0.5 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 0.2 });
+    grades.direction = 'decrease';
+    grades.term = 'Lymphocyte count decreased';
+  }
+
+  // Hemoglobin - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'HGB') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 100, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 80, high: 100 });
+    grades.grades.push({ grade: 'Grade3', low: 0, high: 80 });
+    grades.direction = 'decrease';
+    grades.term = 'Anemia';
+    grades.note = 'G4 is clinical (life-threatening), not a numeric threshold';
+  }
+
+  // Potassium (Bidirectional) - use gradeLLN/gradeULN for boundaries
+  else if (shortName === 'K') {
+    grades.grades = [
+      { grade: 'Grade1_low', low: 3.0, high: gradeLLN },
+      { grade: 'Grade3_low', low: 2.5, high: 3.0 },
+      { grade: 'Grade4_low', low: 0, high: 2.5 },
+      { grade: 'Grade1_high', low: gradeULN, high: 5.5 },
+      { grade: 'Grade2_high', low: 5.5, high: 6.0 },
+      { grade: 'Grade3_high', low: 6.0, high: 7.0 },
+      { grade: 'Grade4_high', low: 7.0, high: Infinity }
+    ];
+    grades.direction = 'bidirectional';
+    grades.lowTerm = 'Hypokalemia';
+    grades.highTerm = 'Hyperkalemia';
+  }
+
+  // Sodium (Bidirectional) - use gradeLLN/gradeULN for boundaries
+  else if (shortName === 'SODIUM') {
+    grades.grades = [
+      { grade: 'Grade1_low', low: 130, high: gradeLLN },
+      { grade: 'Grade3_low', low: 120, high: 130 },
+      { grade: 'Grade4_low', low: 0, high: 120 },
+      { grade: 'Grade1_high', low: gradeULN, high: 150 },
+      { grade: 'Grade2_high', low: 150, high: 155 },
+      { grade: 'Grade3_high', low: 155, high: 160 },
+      { grade: 'Grade4_high', low: 160, high: Infinity }
+    ];
+    grades.direction = 'bidirectional';
+    grades.lowTerm = 'Hyponatremia';
+    grades.highTerm = 'Hypernatremia';
+  }
+
+  // Calcium (Bidirectional) - use gradeLLN/gradeULN for boundaries
+  else if (shortName === 'CA') {
+    grades.grades = [
+      { grade: 'Grade1_low', low: 2.0, high: gradeLLN },
+      { grade: 'Grade2_low', low: 1.75, high: 2.0 },
+      { grade: 'Grade3_low', low: 1.5, high: 1.75 },
+      { grade: 'Grade4_low', low: 0, high: 1.5 },
+      { grade: 'Grade1_high', low: gradeULN, high: 2.88 },
+      { grade: 'Grade2_high', low: 2.88, high: 3.13 },
+      { grade: 'Grade3_high', low: 3.13, high: 3.38 },
+      { grade: 'Grade4_high', low: 3.38, high: Infinity }
+    ];
+    grades.direction = 'bidirectional';
+    grades.lowTerm = 'Hypocalcemia';
+    grades.highTerm = 'Hypercalcemia';
+  }
+
+  // Magnesium - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'MG') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 0.5, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 0.4, high: 0.5 });
+    grades.grades.push({ grade: 'Grade3', low: 0.3, high: 0.4 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 0.3 });
+    grades.direction = 'decrease';
+    grades.term = 'Hypomagnesemia';
+  }
+
+  // Phosphate - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'PHOS') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 0.8, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 0.6, high: 0.8 });
+    grades.grades.push({ grade: 'Grade3', low: 0.3, high: 0.6 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 0.3 });
+    grades.direction = 'decrease';
+    grades.term = 'Hypophosphatemia';
+  }
+
+  // Glucose (Hypoglycemia only) - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'GLUC') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1_low', low: 3.0, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2_low', low: 2.2, high: 3.0 });
+    grades.grades.push({ grade: 'Grade3_low', low: 1.7, high: 2.2 });
+    grades.grades.push({ grade: 'Grade4_low', low: 0, high: 1.7 });
+    grades.direction = 'decrease';
+    grades.term = 'Hypoglycemia';
+    grades.note = 'Hyperglycemia grading requires clinical assessment; numeric-only grading not applied.';
+  }
+
+  // Lipase / Amylase - use gradeULN for thresholds
+  else if (shortName === 'LIPASE' || shortName === 'AMYLASE') {
+    grades.grades = [
+      { grade: 'Grade1', low: gradeULN, high: 1.5 * gradeULN },
+      { grade: 'Grade2', low: 1.5 * gradeULN, high: 2.0 * gradeULN },
+      { grade: 'Grade3', low: 2.0 * gradeULN, high: 5.0 * gradeULN },
+      { grade: 'Grade4', low: 5.0 * gradeULN, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = `${shortName} increased`;
+  }
+
+  // INR (fixed thresholds, no LLN/ULN dependency)
+  else if (shortName === 'INR') {
+    grades.grades = [
+      { grade: 'Grade1', low: 1.2, high: 1.5 },
+      { grade: 'Grade2', low: 1.5, high: 2.5 },
+      { grade: 'Grade3', low: 2.5, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = 'INR increased';
+  }
+
+  // APTT / PT / PTT - use gradeULN for thresholds
+  else if (shortName === 'APTT' || shortName === 'PT' || shortName === 'PTT') {
+    grades.grades = [
+      { grade: 'Grade1', low: gradeULN, high: 1.5 * gradeULN },
+      { grade: 'Grade2', low: 1.5 * gradeULN, high: 2.5 * gradeULN },
+      { grade: 'Grade3', low: 2.5 * gradeULN, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = `${shortName} prolonged`;
+  }
+
+  // Fibrinogen - all grades depend on LLN (as fractions of LLN)
+  // If LLN missing, grading is not possible
+  else if (shortName === 'FIB') {
+    if (gradeLLN != null) {
+      grades.grades = [
+        { grade: 'Grade1', low: 0.75 * gradeLLN, high: gradeLLN },
+        { grade: 'Grade2', low: 0.5 * gradeLLN, high: 0.75 * gradeLLN },
+        { grade: 'Grade3', low: 0.25 * gradeLLN, high: 0.5 * gradeLLN },
+        { grade: 'Grade4', low: 0, high: 0.25 * gradeLLN }
+      ];
+    } else {
+      grades.grades = [];
+    }
+    grades.direction = 'decrease';
+    grades.term = 'Fibrinogen decreased';
+  }
+
+  // Albumin - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'ALB') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 30, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 20, high: 30 });
+    grades.grades.push({ grade: 'Grade3', low: 0, high: 20 });
+    grades.direction = 'decrease';
+    grades.term = 'Hypoalbuminemia';
+  }
+
+  // LDH - no quantitative CTCAE grading
+  else if (shortName === 'LDH') {
+    grades.note = 'CTCAE v5.0 does not provide quantitative grading criteria for LDH';
+  }
+
+  // Cholesterol - use gradeULN for Grade 1 lower boundary
+  else if (shortName === 'CHOL') {
+    grades.grades = [
+      { grade: 'Grade1', low: gradeULN, high: 7.76 },
+      { grade: 'Grade2', low: 7.76, high: 10.35 },
+      { grade: 'Grade3', low: 10.35, high: 12.93 },
+      { grade: 'Grade4', low: 12.93, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = 'Cholesterol high';
+  }
+
+  // Triglycerides (fixed thresholds per CTCAE)
+  else if (shortName === 'TRIG') {
+    grades.grades = [
+      { grade: 'Grade1', low: 1.71, high: 3.42 },
+      { grade: 'Grade2', low: 3.42, high: 5.7 },
+      { grade: 'Grade3', low: 5.7, high: 11.4 },
+      { grade: 'Grade4', low: 11.4, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = 'Hypertriglyceridemia';
+  }
+
+  // Urate - use gradeULN for Grade 1 lower boundary
+  else if (shortName === 'URATE') {
+    grades.grades = [
+      { grade: 'Grade1', low: gradeULN, high: 595 },
+      { grade: 'Grade3', low: 595, high: Infinity }
+    ];
+    grades.direction = 'increase';
+    grades.term = 'Hyperuricemia';
+  }
+
+  // CD4 - use gradeLLN for Grade 1 upper boundary
+  else if (shortName === 'CD4') {
+    grades.grades = [];
+    if (gradeLLN != null) {
+      grades.grades.push({ grade: 'Grade1', low: 0.5, high: gradeLLN });
+    }
+    grades.grades.push({ grade: 'Grade2', low: 0.2, high: 0.5 });
+    grades.grades.push({ grade: 'Grade3', low: 0.05, high: 0.2 });
+    grades.grades.push({ grade: 'Grade4', low: 0, high: 0.05 });
+    grades.direction = 'decrease';
+    grades.term = 'CD4 lymphocytes decreased';
+  }
+
+  // Default - no CTCAE grading
+  else {
+    grades.note = `CTCAE v5.0 does not provide quantitative grading criteria for: ${shortName}`;
+  }
+
+  return grades;
+}
+
+function getGradeForValue(value, grades, stdLow, stdHigh, direction) {
+  // Check if value is in normal range
+  // For decrease direction: only LLN matters (value >= LLN means normal)
+  // For increase direction: only ULN matters (value <= ULN means normal)
+  // For bidirectional: both matter
+  if (direction === 'decrease') {
+    // NEUT/PLAT: normal if value >= LLN (ULN not needed)
+    if (stdLow != null && value >= stdLow) return 'Normal';
+  } else if (direction === 'increase') {
+    // ALT/AST/BILI: normal if value <= ULN (LLN not needed)
+    if (stdHigh != null && value <= stdHigh) return 'Normal';
+  } else if (direction === 'bidirectional') {
+    // K/Na/Ca: normal if between LLN and ULN
+    if (stdLow != null && stdHigh != null && value >= stdLow && value <= stdHigh) return 'Normal';
+  }
+  
+  for (const g of grades) {
+    const gradeClean = g.grade.replace(/_low|_high/, '');
+    if (direction === 'decrease') {
+      if (value < g.high && value >= g.low) return gradeClean;
+    } else if (direction === 'increase') {
+      if (value > g.low && value <= g.high) return gradeClean;
+    } else if (direction === 'bidirectional') {
+      if (g.grade.includes('_low') && (stdLow == null || value < stdLow)) {
+        if (value < g.high && value >= g.low) return gradeClean;
+      } else if (g.grade.includes('_high') && (stdHigh == null || value > stdHigh)) {
+        if (value > g.low && value <= g.high) return gradeClean;
+      }
+    }
+  }
+  return 'Normal';
+}
+
+// Convert grade string to numeric grade (0-4)
+function gradeStringToNumber(gradeStr) {
+  if (gradeStr === 'Normal') return 0;
+  const match = gradeStr.match(/Grade(\d+)/);
+  return match ? parseInt(match[1]) : 0;
+}
+
+const CTCAE = {
+  /**
+   * Calculate CTCAE grade for a lab value
+   * @param {string} analyteGroup - The analyte short name (e.g., 'ALT', 'BILI')
+   * @param {number} value - The lab value to grade
+   * @param {number} ULN - Upper limit of normal for the current record (used for grading thresholds)
+   * @param {number} LLN - Lower limit of normal for the current record (used for grading thresholds)
+   * @param {number} baseline - Baseline value (null if calculating baseline grade)
+   * @param {number} baselineLLN - Baseline record's LLN (for baseline normal/abnormal determination)
+   * @param {number} baselineULN - Baseline record's ULN (for baseline normal/abnormal determination)
+   */
+  calculate(analyteGroup, value, ULN, LLN, baseline, baselineLLN = null, baselineULN = null) {
+    // For baselineStatus determination, use baseline's own LLN/ULN if provided
+    // Otherwise fall back to current record's LLN/ULN
+    const statusLLN = baselineLLN != null ? baselineLLN : LLN;
+    const statusULN = baselineULN != null ? baselineULN : ULN;
+    
+    // Get CTCAE grades configuration
+    // Pass BOTH: status LLN/ULN for baseline normal/abnormal determination
+    // AND current record's LLN/ULN for grading thresholds
+    const ctcaeGrades = getCTCAEGrades(analyteGroup, baseline, statusLLN, statusULN, null, LLN, ULN);
+    
+    if (!ctcaeGrades.grades || ctcaeGrades.grades.length === 0) {
+      return null;
+    }
+    
+    // Get grade string (uses current record's LLN/ULN for grading thresholds)
+    const gradeStr = getGradeForValue(value, ctcaeGrades.grades, LLN, ULN, ctcaeGrades.direction);
+    
+    // Convert to numeric grade
+    return gradeStringToNumber(gradeStr);
+  }
+};
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+const ANALYTE_CONFIG = {
+  order: ['BILI', 'ALT', 'AST', 'ALP', 'GGT', 'LDH', 'CREAT', 'NEUT', 'PLAT', 'WBC', 'LYM', 'HGB', 'K', 'SODIUM', 'CA', 'MG', 'PHOS', 'GLUC', 'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'FIB', 'ALB', 'CHOL', 'TRIG', 'URATE', 'CD4'],
+  display: {
+    BILI: 'Blood bilirubin increased',
+    ALT: 'Alanine aminotransferase increased',
+    AST: 'Aspartate aminotransferase increased',
+    ALP: 'Alkaline phosphatase increased',
+    GGT: 'Gamma-glutamyltransferase increased',
+    LDH: 'Lactate dehydrogenase increased',
+    CREAT: 'Creatinine increased',
+    NEUT: 'Neutrophil count decreased',
+    PLAT: 'Platelet count decreased',
+    WBC: 'White blood cell decreased',
+    LYM: 'Lymphocyte count decreased',
+    HGB: 'Anemia',
+    K: 'Potassium abnormality',
+    SODIUM: 'Sodium abnormality',
+    CA: 'Calcium abnormality',
+    MG: 'Hypomagnesemia',
+    PHOS: 'Hypophosphatemia',
+    GLUC: 'Glucose abnormality',
+    LIPASE: 'Lipase increased',
+    AMYLASE: 'Amylase increased',
+    INR: 'INR increased',
+    APTT: 'APTT prolonged',
+    PT: 'PT prolonged',
+    PTT: 'PTT prolonged',
+    FIB: 'Fibrinogen decreased',
+    ALB: 'Hypoalbuminemia',
+    CHOL: 'Cholesterol high',
+    TRIG: 'Hypertriglyceridemia',
+    URATE: 'Hyperuricemia',
+    CD4: 'CD4 lymphocytes decreased'
+  },
+  worstDirection: {
+    BILI: 'max', ALT: 'max', AST: 'max', ALP: 'max', GGT: 'max', LDH: 'max', CREAT: 'max',
+    NEUT: 'min', PLAT: 'min', WBC: 'min', LYM: 'min', HGB: 'min', MG: 'min', PHOS: 'min',
+    FIB: 'min', ALB: 'min', CD4: 'min',
+    K: 'worst_grade', SODIUM: 'worst_grade', CA: 'worst_grade', GLUC: 'min',
+    LIPASE: 'max', AMYLASE: 'max', INR: 'max', APTT: 'max', PT: 'max', PTT: 'max',
+    CHOL: 'max', TRIG: 'max', URATE: 'max'
+  }
+};
+
+const PRE_TREATMENT_VISITS = ['SCRN', 'C0D1'];
+
+// Normalize folder names to handle variations (C0D01 -> C0D1, etc.)
+function normalizeFolder(x) {
+  let f = String(x || '').trim().toUpperCase().replace(/\s+/g, '');
+  // Handle common variations
+  if (f === 'C0D01' || f === 'C01D1' || f === 'C0D001') f = 'C0D1';
+  if (f === 'SCREEN' || f === 'SCREENING') f = 'SCRN';
+  return f;
+}
+
+// Data file paths (relative to HTML file - updated for sections/labs directory)
+const CACHE_BUSTER = `v=${Date.now()}`;
+const DATA_FILES = {
+  lab: `../../data/lab.CSV?${CACHE_BUSTER}`,
+  lblh: `../../data/lblh.CSV?${CACHE_BUSTER}`,
+  dm: `../../data/dm.CSV?${CACHE_BUSTER}`,
+  dsen: `../../data/dsen.CSV?${CACHE_BUSTER}`
+};
+
+// Global storage for worsening records (for detail view)
+let WORSENING_DATA = [];
+let BIG_N_GLOBAL = 0;
+let BIG_N_TOTAL_GLOBAL = 0;
+let DOSE_LEVEL_LOOKUP = {}; // Map of subject -> dose level
+let ALL_WORSENING_DATA = []; // Store all worsening data before filtering
+let LAST_RESULT = null;
+let SELECTED_ARMS = [];
+let HIDDEN_DEFINITIONS = [];
+let GRADE_VIEW = 'summary';
+let SHOW_DOSE = true;
+let VIEW_MODE = 'worsening';
+let ALL_GRADED_DATA = [];
+let DEFAULT_ARMS_APPLIED = false;
+// Store data for missing data analysis
+let GLOBAL_LAB_RECORDS = [];
+let GLOBAL_BASELINE_VALUES = new Map();
+let GLOBAL_POST_TREATMENT = [];
+let GLOBAL_VALID_SUBJECTS = new Set();
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function parseNumber(val) {
+  if (val == null || val === '') return null;
+  const str = String(val).trim();
+  const match = str.match(/-?\d+(?:\.\d+)?/);
+  return match ? parseFloat(match[0]) : null;
+}
+
+function parseSASDate(dateStr) {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+  const cleaned = str.split(':')[0];
+  const match = cleaned.match(/(\d{1,2})([A-Z]{3})(\d{4})/i);
+  if (!match) return null;
+  const months = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+  const day = parseInt(match[1]);
+  const month = months[match[2].toUpperCase()];
+  const year = parseInt(match[3]);
+  if (month === undefined) return null;
+  return new Date(year, month, day);
+}
+
+function formatNPercent(n, N) {
+  if (N === 0) return '0';
+  const pct = ((n / N) * 100).toFixed(1);
+  return `${n} (${pct}%)`;
+}
+
+function classifyAnalyte(analyteName) {
+  if (!analyteName) return null;
+  const name = analyteName.toLowerCase().trim();
+  
+  // Use getAnalyteShortName to get the short name
+  const shortName = getAnalyteShortName(analyteName);
+  
+  // Check if it's a valid CTCAE-graded analyte
+  const validAnalytes = ['ALT', 'AST', 'BILI', 'ALP', 'GGT', 'LDH', 'CREAT', 'PLAT', 'NEUT', 
+                         'WBC', 'LYM', 'HGB', 'K', 'SODIUM', 'CA', 'MG', 'PHOS', 'GLUC', 
+                         'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'FIB', 'ALB', 
+                         'CHOL', 'TRIG', 'URATE', 'CD4'];
+  
+  if (validAnalytes.includes(shortName)) {
+    return shortName;
+  }
+  
+  // Fallback pattern matching for common variations
+  if (/alanine.*transam|^alt$|^alt;|; alt$|sgpt/.test(name)) return 'ALT';
+  if (/aspartate.*transam|^ast$|^ast;|; ast$|sgot/.test(name)) return 'AST';
+  if (/bilirubin|^bili$|total.*bili/.test(name)) return 'BILI';
+  if (/alkaline.*phosph|^alp$|^alp;|; alp$/.test(name)) return 'ALP';
+  if (/gamma.*glut|^ggt$|^ggt;|; ggt$/.test(name)) return 'GGT';
+  if (/lactate.*dehydrogenase|^ldh$|^ldh;|; ldh$/.test(name)) return 'LDH';
+  if (/creatinine|^creat$|^creat;|; creat$/.test(name)) return 'CREAT';
+  if (/platelet|^plat$|plt/.test(name)) return 'PLAT';
+  if (/neutrophil|^neut$|anc$|absolute.*neutro/.test(name)) return 'NEUT';
+  if (/white.*blood.*cell|^wbc$|^wbc;|; wbc$|leukocyte/.test(name)) return 'WBC';
+  if (/lymphocyte|^lym$|^lym;|; lym$/.test(name)) return 'LYM';
+  if (/hemoglobin|^hgb$|^hgb;|; hgb$|^hgb$/.test(name)) return 'HGB';
+  if (/potassium|^k$|^k;|; k$/.test(name)) return 'K';
+  if (/sodium|^sodium$|^sodium;|; sodium$|^na$/.test(name)) return 'SODIUM';
+  if (/calcium|^ca$|^ca;|; ca$/.test(name)) return 'CA';
+  if (/magnesium|^mg$|^mg;|; mg$/.test(name)) return 'MG';
+  if (/phosphate|^phos$|^phos;|; phos$|phosphorus/.test(name)) return 'PHOS';
+  if (/glucose|^gluc$|^gluc;|; gluc$/.test(name)) return 'GLUC';
+  if (/lipase|^lipase$|^lipase;|; lipase$/.test(name)) return 'LIPASE';
+  if (/amylase|^amylase$|^amylase;|; amylase$/.test(name)) return 'AMYLASE';
+  if (/inr|international.*normalized.*ratio/.test(name)) return 'INR';
+  if (/aptt|activated.*partial.*thromboplastin/.test(name)) return 'APTT';
+  if (/^pt$|prothrombin.*time(?!.*partial)/.test(name)) return 'PT';
+  if (/ptt|partial.*thromboplastin/.test(name)) return 'PTT';
+  if (/fibrinogen|^fib$|^fib;|; fib$/.test(name)) return 'FIB';
+  if (/albumin|^alb$|^alb;|; alb$/.test(name)) return 'ALB';
+  if (/cholesterol|^chol$|^chol;|; chol$/.test(name)) return 'CHOL';
+  if (/triglyceride|^trig$|^trig;|; trig$/.test(name)) return 'TRIG';
+  if (/urate|uric.*acid|^urate$|^urate;|; urate$/.test(name)) return 'URATE';
+  if (/cd4|^cd4$|^cd4;|; cd4$/.test(name)) return 'CD4';
+  
+  return null;
+}
+
+function allowsLocalLabFallback(analyteGroup) {
+  return [
+    'ALT', 'AST', 'ALP', 'GGT', 'BILI', 'CREAT',
+    'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'LDH'
+  ].includes(analyteGroup);
+}
+
+function getMeasurementDirectionFlags(analyteGroup) {
+  const direction = ANALYTE_CONFIG.worstDirection[analyteGroup];
+  return {
+    direction: direction,
+    isIncrease: direction === 'max',
+    isDecrease: direction === 'min',
+    isWorstGrade: direction === 'worst_grade'
+  };
+}
+
+function selectMeasurementSource(analyteGroup, bundles) {
+  const flags = getMeasurementDirectionFlags(analyteGroup);
+  const stdValue = bundles.stdValue;
+  const stdHigh = bundles.stdHigh;
+  const stdLow = bundles.stdLow;
+  const stdUnits = bundles.stdUnits || '';
+  const labValue = bundles.labValue;
+  const labHigh = bundles.labHigh;
+  const labLow = bundles.labLow;
+  const labUnits = bundles.labUnits || '';
+
+  if (stdValue != null) {
+    if (flags.isIncrease && stdHigh != null && stdHigh > 0) {
+      return { value: stdValue, ULN: stdHigh, LLN: stdLow, units: stdUnits, useStandard: true, source: 'standard' };
+    }
+    if (flags.isDecrease && stdLow != null) {
+      return { value: stdValue, ULN: stdHigh, LLN: stdLow, units: stdUnits, useStandard: true, source: 'standard' };
+    }
+    if (flags.isWorstGrade && stdHigh != null && stdLow != null) {
+      return { value: stdValue, ULN: stdHigh, LLN: stdLow, units: stdUnits, useStandard: true, source: 'standard' };
+    }
+  }
+
+  if (!allowsLocalLabFallback(analyteGroup) || labValue == null) {
+    return null;
+  }
+
+  if (flags.isIncrease && labHigh != null && labHigh > 0) {
+    return { value: labValue, ULN: labHigh, LLN: labLow, units: labUnits, useStandard: false, source: 'lab' };
+  }
+  if (flags.isDecrease && labLow != null) {
+    return { value: labValue, ULN: labHigh, LLN: labLow, units: labUnits, useStandard: false, source: 'lab' };
+  }
+
+  return null;
+}
+
+// ============================================
+// LOAD CSV FILE
+// ============================================
+
+function loadCSV(filename) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(filename, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (err) => reject(err)
+    });
+  });
+}
+
+// ============================================
+// MAIN ANALYSIS
+// ============================================
+
+async function runAnalysis() {
+  const DATA = { lab: null, lblh: null, dm: null, dsen: null };
+  
+  // Load data files
+  try {
+    DATA.lab = await loadCSV(DATA_FILES.lab);
+  } catch (e) {
+    throw new Error(`Cannot load ${DATA_FILES.lab}`);
+  }
+  
+  try { DATA.lblh = await loadCSV(DATA_FILES.lblh); } catch (e) { /* optional */ }
+  try { DATA.dm = await loadCSV(DATA_FILES.dm); } catch (e) { /* optional */ }
+  try { DATA.dsen = await loadCSV(DATA_FILES.dsen); } catch (e) { /* optional */ }
+  
+  // Build dose level lookup from dsen.csv
+  DOSE_LEVEL_LOOKUP = {};
+  if (DATA.dsen && DATA.dsen.length > 0) {
+    const subjCol = Object.keys(DATA.dsen[0]).find(k => 
+      k.toUpperCase() === 'SUBJID' || k.toUpperCase() === 'SUBJECT' || k.toUpperCase() === 'USUBJID'
+    );
+    const doseCol = Object.keys(DATA.dsen[0]).find(k => 
+      k.toUpperCase() === 'DOSE_LVL' || k.toUpperCase() === 'DOSELVL' || k.toUpperCase() === 'DOSELEVEL'
+    );
+    
+    if (subjCol && doseCol) {
+      DATA.dsen.forEach(row => {
+        const subject = String(row[subjCol] || '').trim();
+        const doseLevel = String(row[doseCol] || '').trim();
+        if (subject && doseLevel) {
+          // Try to extract numeric dose level
+          const doseMatch = doseLevel.match(/(\d+)/);
+          if (doseMatch) {
+            const level = parseInt(doseMatch[1]);
+            if (!DOSE_LEVEL_LOOKUP[subject] || level > DOSE_LEVEL_LOOKUP[subject]) {
+              DOSE_LEVEL_LOOKUP[subject] = level;
+            }
+          }
+        }
+      });
+    }
+  }
+  
+  // Build ARM lookup from dm and determine safety analysis set
+  const armLookup = {};
+  let validSubjects = new Set();
+  if (DATA.dm && DATA.dm.length > 0) {
+    const dmColumns = Object.keys(DATA.dm[0] || {});
+    const subjCol = dmColumns.find(k => k.toUpperCase() === 'SUBJID') || 'SUBJID';
+    const armCol = dmColumns.find(k => k.toUpperCase() === 'ARM') || 'ARM';
+    const rfxCol = dmColumns.find(k => k.toUpperCase() === 'RFXSTDTC') || 'RFXSTDTC';
+
+    DATA.dm.forEach(row => {
+      const subject = String(row[subjCol] || '').trim();
+      const arm = String(row[armCol] || '').trim();
+      const rawRfx = row[rfxCol];
+      const rfxstdtcTrimmed = rawRfx == null ? '' : String(rawRfx).trim();
+      if (subject) {
+        armLookup[subject] = arm || 'Unknown';
+        if (rfxstdtcTrimmed.length >= 5) {
+          validSubjects.add(subject);
+        }
+      }
+    });
+
+    // DEBUG: DM/RFXSTDTC distribution
+    try {
+      console.log('=== DEBUG INFO ===');
+      console.log('DM file:', DATA_FILES.dm);
+      console.log('DM columns:', dmColumns);
+      console.log('Total DM rows:', DATA.dm.length);
+      let validCount = 0;
+      let invalidCount = 0;
+      let invalidSamples = 0;
+      const rfxValues = {};
+      DATA.dm.forEach(row => {
+        const rawRfx = row[rfxCol];
+        const trimmed = rawRfx == null ? '' : String(rawRfx).trim();
+        const len = trimmed.length;
+        const key = `len=${len}: "${trimmed.substring(0, 20)}"`;
+        rfxValues[key] = (rfxValues[key] || 0) + 1;
+        if (len >= 5) {
+          validCount += 1;
+        } else {
+          invalidCount += 1;
+          if (invalidSamples < 5) {
+            console.log(`Invalid RFXSTDTC: "${rawRfx}" -> "${trimmed}" (len=${len})`);
+            invalidSamples += 1;
+          }
+        }
+      });
+      console.log('RFXSTDTC value distribution:', rfxValues);
+      console.log('Valid RFXSTDTC rows:', validCount);
+      console.log('Invalid RFXSTDTC rows:', invalidCount);
+      console.log('Valid subjects count:', validSubjects.size);
+      console.log('==================');
+    } catch (e) {
+      console.warn('DEBUG INFO failed:', e);
+    }
+  }
+  
+  BIG_N_TOTAL_GLOBAL = validSubjects.size;
+
+  // Apply patient population filter to denominators (dose escalation = dose level >= 2)
+  let populationFilter = 'all';
+  try {
+    const filterElement = document.getElementById('patientPopulationFilter');
+    if (filterElement) {
+      populationFilter = filterElement.value || 'all';
+    }
+  } catch (e) {
+    // Element not yet available, use default
+  }
+
+  if (populationFilter === 'dose-escalation') {
+    validSubjects = new Set([...validSubjects].filter(subject => (DOSE_LEVEL_LOOKUP[subject] || 0) >= 2));
+  }
+
+  const BIG_N = validSubjects.size;
+  BIG_N_GLOBAL = BIG_N;
+  
+  // Process visit dates
+  const visitDates = new Map();
+  
+  if (DATA.lblh) {
+    DATA.lblh.forEach(row => {
+      const subject = String(row.Subject || '').trim();
+      const folder = normalizeFolder(row.Folder);
+      const dateCol = Object.keys(row).find(k => k.toUpperCase().includes('LBDAT'));
+      const visitDate = dateCol ? parseSASDate(row[dateCol]) : null;
+      
+      if (subject && folder && visitDate) {
+        visitDates.set(`${subject}_${folder}`, visitDate);
+      }
+    });
+  }
+
+  // CutoffDate per subject = max(SCRN, C0D1) visitDate
+  // This matches R's logic: CutoffDate = max(SCRN date, C0D1 date)
+  const cutoffDates = new Map();
+  if (DATA.lblh) {
+    DATA.lblh.forEach(row => {
+      const subject = String(row.Subject || '').trim();
+      const folder = normalizeFolder(row.Folder);
+      const dateCol = Object.keys(row).find(k => k.toUpperCase().includes('LBDAT'));
+      const visitDate = dateCol ? parseSASDate(row[dateCol]) : null;
+      if (!subject || !folder || !visitDate) return;
+
+      if (PRE_TREATMENT_VISITS.includes(folder)) {
+        const prev = cutoffDates.get(subject);
+        if (!prev || visitDate > prev) {
+          cutoffDates.set(subject, visitDate);
+        }
+      }
+    });
+  }
+  
+  // DEBUG: dump raw data for specific subject
+  const DEBUG_SUBJ = '10-102-1002';
+  const debugLiverRows = DATA.lab.filter(row => {
+    const s = String(row.Subject || '').trim();
+    const ag = classifyAnalyte(row.AnalyteName);
+    return s === DEBUG_SUBJ && ['BILI','ALT','AST','ALP'].includes(ag);
+  });
+  console.log(`=== RAW DATA for ${DEBUG_SUBJ} (liver analytes) ===`);
+  console.table(debugLiverRows.map(row => ({
+    Folder: row.Folder,
+    Analyte: classifyAnalyte(row.AnalyteName),
+    StdValue: row.StdValue ?? row.stdValue ?? '',
+    StdHigh: row.StdHigh ?? row.stdHigh ?? '',
+    StdLow: row.StdLow ?? row.stdLow ?? '',
+    StdUnits: row.StdUnits ?? row.stdUnits ?? '',
+    NumericValue: row.NumericValue ?? '',
+    LabHigh: row.LabHigh ?? '',
+    LabLow: row.LabLow ?? '',
+    LabUnits: row.LabUnits ?? ''
+  })));
+  console.log(`=== END RAW DATA for ${DEBUG_SUBJ} ===`);
+
+  // Process lab data
+  // CTCAE grading: use Standard values whenever available
+  // Local Lab fallback is allowed only for ratio-safe analytes; fixed-unit analytes require Standard values
+  const labRecords = [];
+  DATA.lab.forEach(row => {
+    const subject = String(row.Subject || '').trim();
+    const folder = normalizeFolder(row.Folder);
+    const analyteGroup = classifyAnalyte(row.AnalyteName);
+    if (!analyteGroup) return;
+    
+    // Check Standard bundle availability
+    const stdValue = parseNumber(row.StdValue ?? row.stdValue);
+    const stdHigh = parseNumber(row.StdHigh ?? row.stdHigh);
+    const stdLow = parseNumber(row.StdLow ?? row.stdLow);
+    const stdUnits = (row.StdUnits ?? row.stdUnits ?? '').trim();
+    
+    // Check Lab bundle availability (for xULN fallback only)
+    const labValue = parseNumber(row.NumericValue);
+    const labHigh = parseNumber(row.LabHigh);
+    const labLow = parseNumber(row.LabLow);
+    const labUnits = (row.LabUnits ?? '').trim();
+    
+    const selectedSource = selectMeasurementSource(analyteGroup, {
+      stdValue: stdValue,
+      stdHigh: stdHigh,
+      stdLow: stdLow,
+      stdUnits: stdUnits,
+      labValue: labValue,
+      labHigh: labHigh,
+      labLow: labLow,
+      labUnits: labUnits
+    });
+    
+    // Skip if no valid data source found
+    if (!selectedSource || selectedSource.value == null) return;
+    
+    labRecords.push({
+      subject, folder, analyteGroup,
+      analyteName: row.AnalyteName,
+      value: selectedSource.value,
+      ULN: selectedSource.ULN,
+      LLN: selectedSource.LLN,
+      units: selectedSource.units,
+      useStandard: selectedSource.useStandard
+    });
+  });
+  
+  // Store globally for missing data analysis
+  GLOBAL_LAB_RECORDS = labRecords;
+  GLOBAL_VALID_SUBJECTS = validSubjects;
+  
+  // Fill missing reference ranges
+  const refRanges = new Map();
+  labRecords.forEach(r => {
+    const key = `${r.subject}_${r.analyteGroup}`;
+    if (!refRanges.has(key)) refRanges.set(key, { ULN: null, LLN: null });
+    const ref = refRanges.get(key);
+    if (r.ULN != null && ref.ULN == null) ref.ULN = r.ULN;
+    if (r.LLN != null && ref.LLN == null) ref.LLN = r.LLN;
+  });
+  labRecords.forEach(r => {
+    const key = `${r.subject}_${r.analyteGroup}`;
+    const ref = refRanges.get(key);
+    if (r.ULN == null && ref.ULN != null) r.ULN = ref.ULN;
+    if (r.LLN == null && ref.LLN != null) r.LLN = ref.LLN;
+  });
+  
+  // Match R: do NOT deduplicate per visit
+  // R's worst post is directly across all post records (only tie keep first at the end)
+  // Deduplication would cause count mismatches with R
+  const dedupedLabRecords = labRecords;
+  
+  // Get baseline values (prefer C0D1, else SCRN)
+  // Use deduplicated records (one value per visit)
+  const baselineValues = new Map();
+  const baselineCandidates = new Map();
+  dedupedLabRecords
+    .filter(r => PRE_TREATMENT_VISITS.includes(r.folder))
+    .forEach(r => {
+      const key = `${r.subject}_${r.analyteGroup}`;
+      if (!baselineCandidates.has(key)) baselineCandidates.set(key, []);
+      baselineCandidates.get(key).push(r);
+    });
+
+  // NEW RULE: C0D1 first, else SCRN; tie keep first encountered (no date comparison)
+  baselineCandidates.forEach((records, key) => {
+    const c0d1Records = records.filter(r => r.folder === 'C0D1');
+    const scrnRecords = records.filter(r => r.folder === 'SCRN');
+    const pickFrom = c0d1Records.length > 0 ? c0d1Records : scrnRecords;
+    if (pickFrom.length === 0) return;
+
+    // tie keep first encountered
+    const chosen = pickFrom[0];
+
+    const grade = CTCAE.calculate(chosen.analyteGroup, chosen.value, chosen.ULN, chosen.LLN, null);
+    baselineValues.set(key, { value: chosen.value, ULN: chosen.ULN, LLN: chosen.LLN, grade });
+  });
+  
+  // Store globally for missing data analysis
+  GLOBAL_BASELINE_VALUES = baselineValues;
+  
+  // Get post-treatment records
+  // Match R loose rule: include if VisitDate is missing OR CutoffDate missing OR VisitDate > CutoffDate
+  const postTreatment = dedupedLabRecords.filter(r => {
+    if (PRE_TREATMENT_VISITS.includes(r.folder)) return false;
+
+    const visitDate = visitDates.get(`${r.subject}_${r.folder}`) || null;
+    const cutoffDate = cutoffDates.get(r.subject) || null;
+
+    // R loose rule:
+    // include if VisitDate is missing OR CutoffDate missing OR VisitDate > CutoffDate
+    if (!visitDate) return true;
+    if (!cutoffDate) return true;
+    return visitDate > cutoffDate;
+  });
+  
+  // Store globally for missing data analysis
+  GLOBAL_POST_TREATMENT = postTreatment;
+  
+  // Get worst case per subject per analyte
+  const worstCases = new Map();
+  postTreatment.forEach(r => {
+    const key = `${r.subject}_${r.analyteGroup}`;
+    const existing = worstCases.get(key);
+    const direction = ANALYTE_CONFIG.worstDirection[r.analyteGroup];
+    if (!existing) {
+      worstCases.set(key, r);
+    } else {
+      if (direction === 'max' && r.value > existing.value) worstCases.set(key, r);
+      else if (direction === 'min' && r.value < existing.value) worstCases.set(key, r);
+      else if (direction === 'worst_grade') {
+        const bl = baselineValues.get(key);
+        if (bl) {
+          const existingGrade = CTCAE.calculate(existing.analyteGroup, existing.value, existing.ULN, existing.LLN, bl.value, bl.LLN, bl.ULN) || 0;
+          const newGrade = CTCAE.calculate(r.analyteGroup, r.value, r.ULN, r.LLN, bl.value, bl.LLN, bl.ULN) || 0;
+          if (newGrade > existingGrade) worstCases.set(key, r);
+        }
+      }
+    }
+  });
+  
+  // Find worsening and all graded records
+  let worsening = [];
+  let allGraded = [];
+  worstCases.forEach((record, key) => {
+    const baseline = baselineValues.get(key);
+    if (!baseline || baseline.grade == null) return;
+    
+    const postGrade = CTCAE.calculate(
+      record.analyteGroup, 
+      record.value, 
+      record.ULN, 
+      record.LLN, 
+      baseline.value,
+      baseline.LLN,
+      baseline.ULN
+    );
+    if (postGrade == null) return;
+    
+    const direction = ANALYTE_CONFIG.worstDirection[record.analyteGroup] || 'max';
+    const refValue = direction === 'min' ? record.LLN : record.ULN;
+    const xULN = refValue && refValue > 0 ? (record.value / refValue).toFixed(2) : '-';
+    
+    let baselineAbnormalYN = 'N';
+    if (['ALT', 'AST', 'ALP', 'BILI', 'GGT', 'CREAT'].includes(record.analyteGroup)) {
+      baselineAbnormalYN = (baseline.value != null && baseline.ULN != null && baseline.value > baseline.ULN) ? 'Y' : 'N';
+    } else if (['NEUT', 'PLAT', 'WBC', 'LYM', 'HGB'].includes(record.analyteGroup)) {
+      baselineAbnormalYN = (baseline.value != null && baseline.LLN != null && baseline.value < baseline.LLN) ? 'Y' : 'N';
+    }
+    
+    const recordObj = {
+      subject: record.subject,
+      analyteGroup: record.analyteGroup,
+      analyteName: record.analyteName,
+      baselineValue: baseline.value,
+      baselineGrade: baseline.grade,
+      baselineAbnormalYN,
+      postValue: record.value,
+      postGrade,
+      ULN: record.ULN,
+      LLN: record.LLN,
+      xULN,
+      folder: record.folder
+    };
+    
+    if (postGrade >= 1) {
+      allGraded.push({...recordObj});
+    }
+    
+    if (postGrade > baseline.grade) {
+      worsening.push(recordObj);
+    }
+  });
+  
+  // Store globally for detail view (before filtering)
+  ALL_WORSENING_DATA = [...worsening];
+  ALL_GRADED_DATA = [...allGraded];
+
+  // === LIVER ANALYTE DIAGNOSTIC ===
+  // Compare JS grade (CTCAE w/ baseline distinction) vs ULN-only grade
+  console.log('=== LIVER ANALYTE DIAGNOSTIC (BILI, ALT, AST, ALP) ===');
+  const liverAnalytes = ['BILI', 'ALT', 'AST', 'ALP'];
+  const liverDiffs = [];
+  worstCases.forEach((record, key) => {
+    if (!liverAnalytes.includes(record.analyteGroup)) return;
+    const baseline = baselineValues.get(key);
+    if (!baseline || baseline.grade == null) return;
+
+    // JS grade (CTCAE v5.0 with baseline normal/abnormal distinction)
+    const jsGrade = CTCAE.calculate(
+      record.analyteGroup, record.value, record.ULN, record.LLN,
+      baseline.value, baseline.LLN, baseline.ULN
+    );
+
+    // ULN-only grade (always use ULN thresholds, ignore baseline status)
+    const ulnOnlyGrade = CTCAE.calculate(
+      record.analyteGroup, record.value, record.ULN, record.LLN,
+      null, null, null
+    );
+
+    const bStatus = getBaselineStatus(record.analyteGroup, baseline.value, baseline.LLN, baseline.ULN);
+
+    if (jsGrade !== ulnOnlyGrade) {
+      liverDiffs.push({
+        subject: record.subject,
+        analyte: record.analyteGroup,
+        baselineValue: baseline.value,
+        baselineULN: baseline.ULN,
+        baselineStatus: bStatus,
+        baselineGrade: baseline.grade,
+        postValue: record.value,
+        postULN: record.ULN,
+        jsGrade,
+        ulnOnlyGrade,
+        jsWorsening: jsGrade > baseline.grade,
+        ulnWorsening: ulnOnlyGrade > baseline.grade
+      });
+    }
+  });
+
+  if (liverDiffs.length > 0) {
+    console.log(`%c FOUND ${liverDiffs.length} subjects where grade differs due to baseline normal/abnormal distinction:`, 'color:red;font-weight:bold');
+    console.table(liverDiffs);
+    liverAnalytes.forEach(ag => {
+      const agDiffs = liverDiffs.filter(d => d.analyte === ag);
+      if (agDiffs.length > 0) {
+        const moreWorsening = agDiffs.filter(d => d.ulnWorsening && !d.jsWorsening).length;
+        const diffGrade = agDiffs.filter(d => d.jsGrade !== d.ulnOnlyGrade).length;
+        console.log(`  ${ag}: ${agDiffs.length} subjects differ, ${moreWorsening} extra worsening if ULN-only, ${diffGrade} grade changes`);
+      }
+    });
+    console.log('%c If your SAS uses ULN-only (no baseline distinction), the "ULN-only grade" column should match SAS.', 'color:blue');
+  } else {
+    console.log('No grade differences found — all liver subjects had normal baselines (baseline ≤ ULN).');
+    console.log('The baseline normal/abnormal distinction is NOT the cause of any difference.');
+  }
+
+  // Per-analyte grade distribution: WORSENING + ALL GRADES, JS vs ULN-only
+  console.log('=== Liver Grade Distribution (JS / ULN-only) × (Worsening / All Grades) ===');
+  console.log('N (safety set) =', validSubjects.size, '  SAS may use different N — check this first!');
+  liverAnalytes.forEach(ag => {
+    const jsW = { g1: 0, g2: 0, g3: 0, g4: 0, any: new Set() };
+    const ulnW = { g1: 0, g2: 0, g3: 0, g4: 0, any: new Set() };
+    const jsA = { g1: 0, g2: 0, g3: 0, g4: 0, any: new Set() };
+    const ulnA = { g1: 0, g2: 0, g3: 0, g4: 0, any: new Set() };
+
+    worstCases.forEach((record, key) => {
+      if (record.analyteGroup !== ag) return;
+      if (!validSubjects.has(record.subject)) return;
+      const bl = baselineValues.get(key);
+      if (!bl || bl.grade == null) return;
+
+      const jsGrade = CTCAE.calculate(ag, record.value, record.ULN, record.LLN, bl.value, bl.LLN, bl.ULN);
+      const ulnGrade = CTCAE.calculate(ag, record.value, record.ULN, record.LLN, null, null, null);
+
+      const addToCount = (g, bucket) => {
+        if (g == null || g < 1) return;
+        bucket.any.add(record.subject);
+        if (g === 1) bucket.g1++;
+        if (g === 2) bucket.g2++;
+        if (g === 3) bucket.g3++;
+        if (g === 4) bucket.g4++;
+      };
+
+      // WORSENING: post grade > baseline grade
+      if (jsGrade != null && jsGrade > bl.grade) addToCount(jsGrade, jsW);
+      if (ulnGrade != null && ulnGrade > bl.grade) addToCount(ulnGrade, ulnW);
+
+      // ALL GRADES: post grade >= 1 (any abnormality, regardless of baseline)
+      addToCount(jsGrade, jsA);
+      addToCount(ulnGrade, ulnA);
+    });
+
+    const fmt = (b) => `G1=${b.g1} G2=${b.g2} G3=${b.g3} G4=${b.g4} Any=${b.any.size}`;
+    console.log(`${ag} WORSENING  JS:       ${fmt(jsW)}`);
+    console.log(`${ag} WORSENING  ULN-only: ${fmt(ulnW)}`);
+    console.log(`${ag} ALL-GRADES JS:       ${fmt(jsA)}`);
+    console.log(`${ag} ALL-GRADES ULN-only: ${fmt(ulnA)}`);
+    console.log('');
+  });
+  console.log('%c Compare the 4 lines per analyte with your SAS output to find which row matches.', 'color:blue;font-weight:bold');
+  console.log('=== END LIVER DIAGNOSTIC ===');
+
+  // Debug: check alignment with R
+  console.log('=== JS vs R alignment check ===');
+  console.log('worsening unique subject+analyte =', 
+    new Set(worsening.map(w => `${w.subject}__${w.analyteGroup}`)).size
+  );
+  console.log('Total worsening records:', worsening.length);
+  console.log('labRecords count:', labRecords.length);
+  console.log('postTreatment count:', postTreatment.length);
+  console.log('worstCases count:', worstCases.size);
+  console.log('baselineValues count:', baselineValues.size);
+  console.log('cutoffDates count:', cutoffDates.size);
+  console.log('===============================');
+
+  if (populationFilter === 'dose-escalation') {
+    const doseFilter = w => (DOSE_LEVEL_LOOKUP[w.subject] || 0) >= 2;
+    worsening = worsening.filter(doseFilter);
+    allGraded = allGraded.filter(doseFilter);
+  }
+  
+  WORSENING_DATA = [...worsening];
+  
+  // Build summary - count unique subjects per analyte to avoid double counting
+  const summary = {};
+  ANALYTE_CONFIG.order.forEach(ag => {
+    const agWorsening = worsening.filter(w => w.analyteGroup === ag);
+    summary[ag] = {
+      any: new Set(agWorsening.map(w => w.subject)).size,
+      grade3plus: new Set(agWorsening.filter(w => w.postGrade >= 3).map(w => w.subject)).size
+    };
+  });
+
+  const armCounts = {};
+  validSubjects.forEach(subject => {
+    const arm = armLookup[subject] || 'Unknown';
+    armCounts[arm] = (armCounts[arm] || 0) + 1;
+  });
+
+  const orderedArms = Object.keys(armCounts).sort((a, b) => {
+    if (a === 'Unknown') return 1;
+    if (b === 'Unknown') return -1;
+    const numA = parseInt(String(a).match(/(\d+)/)?.[1] || '');
+    const numB = parseInt(String(b).match(/(\d+)/)?.[1] || '');
+    if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+    if (!isNaN(numA) && isNaN(numB)) return -1;
+    if (isNaN(numA) && !isNaN(numB)) return 1;
+    return String(a).localeCompare(String(b));
+  });
+
+  // Attach ARM to each record for filtering
+  const attachArm = w => ({ ...w, ARM: armLookup[w.subject] || 'Unknown' });
+  worsening = worsening.map(attachArm);
+  allGraded = allGraded.map(attachArm);
+  WORSENING_DATA = [...worsening];
+  ALL_GRADED_DATA = [...allGraded];
+
+  return { BIG_N, worsening, summary, armCounts, orderedArms };
+}
+
+// ============================================
+// RENDER SUMMARY TABLE
+// ============================================
+
+function renderTable(BIG_N, worsening, summary, armCounts, orderedArms, selectedArms = []) {
+  if (VIEW_MODE === 'all') worsening = ALL_GRADED_DATA;
+  const normalizedSelection = selectedArms.filter(Boolean);
+  const effectiveSelection = SHOW_DOSE ? normalizedSelection : [];
+  const totalBigN = BIG_N_TOTAL_GLOBAL || BIG_N;
+  const scopedBigN = effectiveSelection.length > 0
+    ? effectiveSelection.reduce((sum, arm) => sum + (armCounts[arm] || 0), 0)
+    : BIG_N;
+  const scopedWorsening = effectiveSelection.length > 0
+    ? worsening.filter(w => effectiveSelection.includes(w.ARM))
+    : worsening;
+
+  document.getElementById('bigN').textContent = totalBigN;
+  const uniqueWorseningSubjects = new Set(scopedWorsening.map(w => w.subject));
+  document.getElementById('nWorsening').textContent = uniqueWorseningSubjects.size;
+  const worseningLabel = document.getElementById('worseningLabel');
+  if (worseningLabel) {
+    worseningLabel.textContent = VIEW_MODE === 'all' ? 'Subjects with Abnormalities' : 'Subjects with Worsening';
+  }
+  document.getElementById('nGrade3Plus').textContent = scopedWorsening.filter(w => w.postGrade >= 3).length;
+  
+  // Count unique analytes with data
+  const uniqueAnalytes = new Set(scopedWorsening.map(w => w.analyteGroup));
+  document.getElementById('nAnalytes').textContent = uniqueAnalytes.size;
+  
+  const tableLabel = VIEW_MODE === 'all'
+    ? `Table X. Laboratory Abnormalities — All Post-Treatment Grades (N=${totalBigN})`
+    : `Table X. Laboratory Abnormalities Worsening from Baseline (N=${totalBigN})`;
+  const pageTitle = document.getElementById('pageTitle');
+  if (pageTitle) {
+    pageTitle.textContent = VIEW_MODE === 'all'
+      ? 'Laboratory Abnormalities — All Post-Treatment Grades'
+      : 'Laboratory Abnormalities Worsening from Baseline';
+  }
+  document.getElementById('tableTitle').innerHTML =
+    `<span>${tableLabel}</span>` +
+    `<div class="table-title-actions">` +
+    `<span class="table-title-note">Dose group from DM.ARM</span>` +
+    `<button class="btn export-btn" id="exportTableImage" type="button">Export Image</button>` +
+    `<button class="btn" id="showMissingDataBtn" type="button" style="background: #f59e0b;">Show Missing Data</button>` +
+    `</div>`;
+
+  const exportBtn = document.getElementById('exportTableImage');
+  if (exportBtn) {
+    exportBtn.onclick = exportTableImage;
+  }
+  
+  const showMissingDataBtn = document.getElementById('showMissingDataBtn');
+  if (showMissingDataBtn) {
+    showMissingDataBtn.onclick = analyzeMissingData;
+  }
+
+  const visibleArms = SHOW_DOSE
+    ? (effectiveSelection.length > 0 ? effectiveSelection : orderedArms)
+    : [];
+  const groups = [...visibleArms, 'All Dose Level'];
+  const gradeColumns = GRADE_VIEW === 'by-grade'
+    ? [
+        { key: 'any', label: 'Any Grade' },
+        { key: 'g1', label: 'Grade 1' },
+        { key: 'g2', label: 'Grade 2' },
+        { key: 'g3', label: 'Grade 3' },
+        { key: 'g4', label: 'Grade 4' }
+      ]
+    : [
+        { key: 'any', label: 'Any Grade' },
+        { key: '3plus', label: 'Grade ≥3' }
+      ];
+  const tableHead = document.getElementById('tableHead');
+  const hiddenTableHead = document.getElementById('hiddenTableHead');
+  if (tableHead) {
+    tableHead.innerHTML = '';
+    const headerRow1 = document.createElement('tr');
+    headerRow1.innerHTML = `<th rowspan="2" class="row-toggle-cell">Show</th>` +
+      `<th rowspan="2">Definition Per CTCAE V5.0</th>` +
+      groups.map(group => {
+        const label = group === 'All Dose Level'
+          ? `All Dose Level (N=${totalBigN})`
+          : `${group} (N=${armCounts[group] || 0})`;
+        return `<th class="group-header" colspan="${gradeColumns.length}">${label}</th>`;
+      }).join('');
+    const headerRow2 = document.createElement('tr');
+    headerRow2.innerHTML = groups.map(() =>
+      gradeColumns.map(col => `<th class="sub-header">${col.label}</th>`).join('')
+    ).join('');
+    tableHead.appendChild(headerRow1);
+    tableHead.appendChild(headerRow2);
+    if (hiddenTableHead) {
+      hiddenTableHead.innerHTML = tableHead.innerHTML;
+    }
+  }
+  
+  const tbody = document.getElementById('tableBody');
+  const hiddenBody = document.getElementById('hiddenTableBody');
+  tbody.innerHTML = '';
+  if (hiddenBody) hiddenBody.innerHTML = '';
+  
+  // Define categories
+  const categories = {
+    'Liver': ['BILI', 'ALT', 'AST', 'ALP', 'GGT', 'LDH'],
+    'Renal': ['CREAT', 'URATE'],
+    'Hematology': ['NEUT', 'PLAT', 'WBC', 'LYM', 'HGB', 'CD4'],
+    'Electrolytes': ['K', 'SODIUM', 'CA', 'MG', 'PHOS'],
+    'Coagulation': ['INR', 'APTT', 'PT', 'PTT', 'FIB'],
+    'Metabolic': ['GLUC', 'ALB', 'CHOL', 'TRIG', 'LIPASE', 'AMYLASE']
+  };
+
+  const scopedSummary = ANALYTE_CONFIG.order.reduce((acc, ag) => {
+    const agRecords = scopedWorsening.filter(w => w.analyteGroup === ag);
+    acc[ag] = {
+      any: new Set(agRecords.map(w => w.subject)).size,
+      grade3plus: new Set(agRecords.filter(w => w.postGrade >= 3).map(w => w.subject)).size
+    };
+    return acc;
+  }, {});
+
+  const noCtcaeAnalytes = ['LDH'];
+  const availableAnalytes = ANALYTE_CONFIG.order.filter(ag => {
+    if (noCtcaeAnalytes.includes(ag)) return true;
+    const s = scopedSummary[ag];
+    return s && (s.any > 0 || s.grade3plus > 0);
+  });
+
+  HIDDEN_DEFINITIONS = HIDDEN_DEFINITIONS.filter(ag => availableAnalytes.includes(ag));
+  const isHidden = (ag) => HIDDEN_DEFINITIONS.includes(ag);
+  
+  const renderCategories = (targetBody, filterFn) => {
+    let rowCount = 0;
+    Object.entries(categories).forEach(([categoryName, analytes]) => {
+      const analytesWithData = analytes.filter(ag => {
+        const s = scopedSummary[ag];
+        return s && (s.any > 0 || s.grade3plus > 0) && filterFn(ag);
+      });
+      
+      if (analytesWithData.length === 0) return;
+      
+      const categoryRow = document.createElement('tr');
+      categoryRow.className = 'category-row';
+      categoryRow.innerHTML = `<td colspan="${2 + groups.length * gradeColumns.length}">${categoryName}</td>`;
+      targetBody.appendChild(categoryRow);
+      
+      analytesWithData.forEach(ag => {
+        const row = document.createElement('tr');
+        const checked = !isHidden(ag);
+        const toggleCell = `
+          <td class="row-toggle-cell">
+            <input class="row-toggle" type="checkbox" data-analyte="${ag}" ${checked ? 'checked' : ''}>
+          </td>
+        `;
+        if (noCtcaeAnalytes.includes(ag)) {
+          const cells = groups.map(() =>
+            gradeColumns.map(() =>
+              `<td class="not-available">Not Available</td>`
+            ).join('')
+          ).join('');
+          row.innerHTML = `${toggleCell}<td>${ANALYTE_CONFIG.display[ag] || ag}</td>${cells}`;
+          targetBody.appendChild(row);
+          rowCount += 1;
+          return;
+        }
+
+        const cells = groups.map(group => {
+          const isAll = group === 'All Dose Level';
+          const baseRecords = isAll ? scopedWorsening : scopedWorsening.filter(w => w.ARM === group);
+          const groupRecords = baseRecords.filter(w => w.analyteGroup === ag);
+          const denom = isAll ? totalBigN : (armCounts[group] || 0);
+          return gradeColumns.map(col => {
+            let count = 0;
+            if (col.key === 'any') {
+              count = new Set(groupRecords.map(w => w.subject)).size;
+            } else if (col.key === '3plus') {
+              count = new Set(groupRecords.filter(w => w.postGrade >= 3).map(w => w.subject)).size;
+            } else if (col.key === 'g1') {
+              count = new Set(groupRecords.filter(w => w.postGrade === 1).map(w => w.subject)).size;
+            } else if (col.key === 'g2') {
+              count = new Set(groupRecords.filter(w => w.postGrade === 2).map(w => w.subject)).size;
+            } else if (col.key === 'g3') {
+              count = new Set(groupRecords.filter(w => w.postGrade === 3).map(w => w.subject)).size;
+            } else if (col.key === 'g4') {
+              count = new Set(groupRecords.filter(w => w.postGrade === 4).map(w => w.subject)).size;
+            }
+            return `
+              <td class="clickable" data-analyte="${ag}" data-grade="${col.key}" data-arm="${isAll ? 'all' : group}">
+                ${formatNPercent(count, denom)}
+              </td>
+            `;
+          }).join('');
+        }).join('');
+        row.innerHTML = `${toggleCell}<td>${ANALYTE_CONFIG.display[ag] || ag}</td>${cells}`;
+        targetBody.appendChild(row);
+        rowCount += 1;
+      });
+    });
+    return rowCount;
+  };
+
+  const visibleCount = renderCategories(tbody, ag => !isHidden(ag));
+  const hiddenCount = hiddenBody ? renderCategories(hiddenBody, ag => isHidden(ag)) : 0;
+
+  const hiddenContainer = document.getElementById('hiddenTableContainer');
+  if (hiddenContainer) {
+    if (hiddenCount > 0) {
+      hiddenContainer.classList.remove('hidden');
+    } else {
+      hiddenContainer.classList.add('hidden');
+    }
+  }
+  
+  // Add click handlers
+  document.querySelectorAll('td.clickable').forEach(cell => {
+    cell.addEventListener('click', handleCellClick);
+  });
+
+  document.querySelectorAll('.row-toggle').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const analyte = cb.dataset.analyte;
+      if (!analyte) return;
+      if (cb.checked) {
+        HIDDEN_DEFINITIONS = HIDDEN_DEFINITIONS.filter(v => v !== analyte);
+      } else if (!HIDDEN_DEFINITIONS.includes(analyte)) {
+        HIDDEN_DEFINITIONS = [...HIDDEN_DEFINITIONS, analyte];
+      }
+      if (LAST_RESULT) {
+        const { BIG_N, worsening, summary, armCounts, orderedArms } = LAST_RESULT;
+        renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+        populateDoseGroupSelect(orderedArms);
+      }
+    });
+  });
+  
+  // Show results
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('summaryStats').classList.remove('hidden');
+  document.getElementById('resultsContainer').classList.remove('hidden');
+}
+
+function populateDoseGroupSelect(orderedArms) {
+  const container = document.getElementById('doseGroupSelect');
+  if (!container) return;
+  container.innerHTML = '';
+  const allPill = document.createElement('button');
+  allPill.type = 'button';
+  allPill.className = `dose-pill${SELECTED_ARMS.length === 0 ? ' active' : ''}`;
+  allPill.dataset.value = 'all';
+  allPill.textContent = 'All Groups';
+  container.appendChild(allPill);
+  orderedArms.forEach(arm => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = `dose-pill${SELECTED_ARMS.includes(arm) ? ' active' : ''}`;
+    pill.dataset.value = arm;
+    pill.textContent = arm;
+    container.appendChild(pill);
+  });
+  container.querySelectorAll('.dose-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const value = pill.dataset.value;
+      if (value === 'all') {
+        SELECTED_ARMS = [];
+        populateDoseGroupSelect(orderedArms);
+        return;
+      }
+      if (SELECTED_ARMS.includes(value)) {
+        SELECTED_ARMS = SELECTED_ARMS.filter(v => v !== value);
+      } else {
+        SELECTED_ARMS = [...SELECTED_ARMS, value];
+      }
+      populateDoseGroupSelect(orderedArms);
+    });
+  });
+}
+
+function deriveDefaultArms(orderedArms) {
+  if (!Array.isArray(orderedArms) || orderedArms.length === 0) return [];
+  if (orderedArms.length <= 3) return orderedArms.slice();
+
+  const parsed = orderedArms.map(arm => {
+    const numMatch = String(arm).match(/(\d+(?:\.\d+)?)/);
+    const num = numMatch ? parseFloat(numMatch[1]) : NaN;
+    const isBID = /BID/i.test(String(arm));
+    return { arm, num, isBID };
+  });
+
+  const bidSorted = parsed
+    .filter(p => p.isBID && !isNaN(p.num))
+    .sort((a, b) => b.num - a.num)
+    .map(p => p.arm);
+
+  let selected = bidSorted.slice(0, 3);
+  if (selected.length < 3) {
+    const remaining = parsed
+      .filter(p => !selected.includes(p.arm) && !isNaN(p.num))
+      .sort((a, b) => b.num - a.num)
+      .map(p => p.arm);
+    selected = selected.concat(remaining.slice(0, 3 - selected.length));
+  }
+
+  return selected;
+}
+
+function getSelectedArms() {
+  return SELECTED_ARMS.slice();
+}
+
+// ============================================
+// DETAIL VIEW HANDLERS
+// ============================================
+
+function handleCellClick(e) {
+  const cell = e.target;
+  // Skip if cell is not clickable (e.g., "Not Available" cells)
+  if (!cell.classList.contains('clickable')) {
+    return;
+  }
+  
+  const analyte = cell.dataset.analyte;
+  const grade = cell.dataset.grade;
+  const arm = cell.dataset.arm || 'all';
+  
+  // Remove previous active state
+  document.querySelectorAll('td.clickable.active').forEach(c => c.classList.remove('active'));
+  cell.classList.add('active');
+  
+  const sourceData = VIEW_MODE === 'all' ? ALL_GRADED_DATA : WORSENING_DATA;
+  let filtered = sourceData.filter(w => w.analyteGroup === analyte);
+  if (arm !== 'all') {
+    filtered = filtered.filter(w => w.ARM === arm);
+  } else if (SHOW_DOSE && SELECTED_ARMS.length > 0) {
+    filtered = filtered.filter(w => SELECTED_ARMS.includes(w.ARM));
+  }
+  if (grade === '3plus') {
+    filtered = filtered.filter(w => w.postGrade >= 3);
+  } else if (grade === 'g1') {
+    filtered = filtered.filter(w => w.postGrade === 1);
+  } else if (grade === 'g2') {
+    filtered = filtered.filter(w => w.postGrade === 2);
+  } else if (grade === 'g3') {
+    filtered = filtered.filter(w => w.postGrade === 3);
+  } else if (grade === 'g4') {
+    filtered = filtered.filter(w => w.postGrade === 4);
+  }
+  // grade === 'any' keeps all filtered records
+  
+  showDetail(analyte, grade, arm, filtered);
+}
+
+async function exportTableImage() {
+  const table = document.getElementById('resultsTable');
+  if (!table || typeof html2canvas !== 'function') {
+    alert('Export failed: html2canvas not loaded.');
+    return;
+  }
+  const exportBtn = document.getElementById('exportTableImage');
+  const prevVisibility = exportBtn ? exportBtn.style.visibility : '';
+  if (exportBtn) exportBtn.style.visibility = 'hidden';
+  try {
+    const canvas = await html2canvas(table, {
+      backgroundColor: '#ffffff',
+      scale: Math.max(2, window.devicePixelRatio || 1),
+      useCORS: true,
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
+      onclone: (doc) => {
+        const clonedTable = doc.getElementById('resultsTable');
+        if (!clonedTable) return;
+        const clonedHead = clonedTable.querySelector('thead');
+        if (clonedHead) {
+          const headRows = clonedHead.querySelectorAll('tr');
+          const row1 = headRows[0];
+          const row2 = headRows[1];
+          if (row1 && row2) {
+            const groupLabels = Array.from(row1.querySelectorAll('th.group-header'))
+              .map(th => th.textContent || '');
+            const subLabels = Array.from(row2.querySelectorAll('th.sub-header'))
+              .map(th => th.textContent || '');
+            const perGroupCount = groupLabels.length > 0
+              ? Math.max(1, Math.round(subLabels.length / groupLabels.length))
+              : 2;
+            const perGroupLabels = subLabels.slice(0, perGroupCount);
+            const newHead = doc.createElement('thead');
+            const newRow1 = doc.createElement('tr');
+            newRow1.innerHTML =
+              `<th>Definition Per CTCAE V5.0</th>` +
+              groupLabels.map(label =>
+                `<th class="group-header" colspan="${perGroupCount}">${label}</th>`
+              ).join('');
+            const newRow2 = doc.createElement('tr');
+            newRow2.innerHTML =
+              `<th></th>` +
+              groupLabels.map(() =>
+                perGroupLabels.map(label => `<th class="sub-header">${label}</th>`).join('')
+              ).join('');
+            newHead.appendChild(newRow1);
+            newHead.appendChild(newRow2);
+            clonedHead.replaceWith(newHead);
+          }
+        }
+        clonedTable.style.background = '#ffffff';
+        clonedTable.querySelectorAll('tr').forEach(tr => {
+          const firstCell = tr.querySelector('th, td');
+          if (firstCell && firstCell.classList.contains('row-toggle-cell')) {
+            firstCell.remove();
+          }
+        });
+        clonedTable.querySelectorAll('th').forEach(th => {
+          th.style.backgroundColor = '#34495e';
+          th.style.color = '#ffffff';
+        });
+        clonedTable.querySelectorAll('th.group-header').forEach(th => {
+          th.style.backgroundColor = '#4f6b8a';
+        });
+        clonedTable.querySelectorAll('th.sub-header').forEach(th => {
+          th.style.backgroundColor = '#5c7695';
+        });
+      }
+    });
+    const link = document.createElement('a');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.download = `ctcae-grade-summary-${dateTag}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    if (exportBtn) exportBtn.style.visibility = prevVisibility;
+  }
+}
+
+function showDetail(analyte, grade, arm, records) {
+  const gradeLabelMap = {
+    any: 'Any Grade',
+    '3plus': 'Grade ≥3',
+    g1: 'Grade 1',
+    g2: 'Grade 2',
+    g3: 'Grade 3',
+    g4: 'Grade 4'
+  };
+  const gradeLabel = gradeLabelMap[grade] || 'Any Grade';
+  const armLabel = arm === 'all' ? 'All Dose Levels' : arm;
+  document.getElementById('detailTitle').textContent = 
+    `${ANALYTE_CONFIG.display[analyte]} - ${gradeLabel} (${armLabel}, ${records.length} subjects)`;
+  
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;">No records</td></tr>';
+  } else {
+    records.sort((a, b) => b.postGrade - a.postGrade || a.subject.localeCompare(b.subject));
+    
+    records.forEach(r => {
+      const refLabel = ['NEUT', 'PLAT'].includes(r.analyteGroup) ? 'LLN' : 'ULN';
+      const refValue = ['NEUT', 'PLAT'].includes(r.analyteGroup) ? r.LLN : r.ULN;
+      
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.subject}</td>
+        <td>${r.ARM || 'Unknown'}</td>
+        <td>${r.analyteName || r.analyteGroup}</td>
+        <td>${r.baselineValue?.toFixed(2) ?? '-'}</td>
+        <td>${r.baselineGrade}</td>
+        <td class="${r.baselineAbnormalYN === 'Y' ? 'baseline-abnormal' : ''}">
+          ${r.baselineAbnormalYN || 'N'}
+        </td>
+        <td>${r.postValue?.toFixed(2) ?? '-'}</td>
+        <td><strong>${r.postGrade}</strong></td>
+        <td>${refLabel}: ${refValue?.toFixed(1) ?? '-'}</td>
+        <td>${r.xULN}</td>
+        <td>${r.folder}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  document.getElementById('detailContainer').classList.remove('hidden');
+  document.getElementById('detailContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideDetail() {
+  document.getElementById('detailContainer').classList.add('hidden');
+  document.querySelectorAll('td.clickable.active').forEach(c => c.classList.remove('active'));
+}
+
+// ============================================
+// MISSING DATA ANALYSIS
+// ============================================
+
+function getSelectedAnalytes() {
+  const selected = new Set();
+  document.querySelectorAll('.row-toggle').forEach(cb => {
+    const ag = cb.dataset.analyte;
+    if (cb.checked && ag) {
+      selected.add(ag);
+    }
+  });
+  return Array.from(selected);
+}
+
+function analyzeMissingData() {
+  if (GLOBAL_LAB_RECORDS.length === 0) {
+    alert('No data available. Please wait for analysis to complete.');
+    return;
+  }
+  const selectedAnalytes = getSelectedAnalytes();
+  const filterBySelection = selectedAnalytes.length > 0;
+  const preTreatmentKeys = new Set();
+  const postTreatmentKeys = new Set();
+  
+  // Get all unique subject-analyte combinations from valid subjects
+  const subjectAnalyteMap = new Map();
+  
+  // First, collect all subject-analyte combinations from lab records
+  GLOBAL_LAB_RECORDS.forEach(record => {
+    if (!GLOBAL_VALID_SUBJECTS.has(record.subject)) return;
+    if (filterBySelection && !selectedAnalytes.includes(record.analyteGroup)) return;
+    
+    const key = `${record.subject}__${record.analyteGroup}`;
+    if (PRE_TREATMENT_VISITS.includes(record.folder)) {
+      preTreatmentKeys.add(key);
+    }
+    if (!subjectAnalyteMap.has(key)) {
+      subjectAnalyteMap.set(key, {
+        subject: record.subject,
+        analyteGroup: record.analyteGroup,
+        analyteName: record.analyteName,
+        missingLLN: false,
+        missingULN: false,
+        missingPreTreatment: false,
+        noPostTreatment: false
+      });
+    }
+  });
+
+  // Build post-treatment keys using the same criteria as analysis
+  GLOBAL_POST_TREATMENT.forEach(record => {
+    if (!GLOBAL_VALID_SUBJECTS.has(record.subject)) return;
+    if (filterBySelection && !selectedAnalytes.includes(record.analyteGroup)) return;
+    const key = `${record.subject}__${record.analyteGroup}`;
+    postTreatmentKeys.add(key);
+  });
+  
+  // Check for missing LLN/ULN across all records for each subject-analyte
+  GLOBAL_LAB_RECORDS.forEach(record => {
+    if (!GLOBAL_VALID_SUBJECTS.has(record.subject)) return;
+    if (filterBySelection && !selectedAnalytes.includes(record.analyteGroup)) return;
+    
+    const key = `${record.subject}__${record.analyteGroup}`;
+    const entry = subjectAnalyteMap.get(key);
+    if (!entry) return;
+    
+    // Check if LLN is missing (null or undefined)
+    if (record.LLN == null) {
+      entry.missingLLN = true;
+    }
+    
+    // Check if ULN is missing (null or undefined)
+    if (record.ULN == null) {
+      entry.missingULN = true;
+    }
+  });
+  
+  // Check for missing pre-treatment values
+  subjectAnalyteMap.forEach((entry, key) => {
+    if (!preTreatmentKeys.has(key)) {
+      entry.missingPreTreatment = true;
+    }
+  });
+  
+  // Check for no post-treatment values
+  subjectAnalyteMap.forEach((entry, key) => {
+    if (!postTreatmentKeys.has(key)) {
+      entry.noPostTreatment = true;
+    }
+  });
+  
+  // Filter to only entries with at least one missing data issue
+  const missingDataEntries = Array.from(subjectAnalyteMap.values()).filter(entry =>
+    entry.missingLLN || entry.missingULN || entry.missingPreTreatment || entry.noPostTreatment
+  );
+  
+  // Display the results
+  displayMissingDataTable(missingDataEntries);
+}
+
+function displayMissingDataTable(entries) {
+  const container = document.getElementById('missingDataContainer');
+  const tbody = document.getElementById('missingDataBody');
+  
+  if (!container || !tbody) return;
+  
+  tbody.innerHTML = '';
+  
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">No missing data found</td></tr>';
+  } else {
+    // Sort by subject, then analyte
+    entries.sort((a, b) => {
+      if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+      return a.analyteGroup.localeCompare(b.analyteGroup);
+    });
+    
+    entries.forEach(entry => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${entry.subject}</td>
+        <td>${entry.analyteName || entry.analyteGroup}</td>
+        <td style="text-align:center;">${entry.missingLLN ? '<span style="color:#e74c3c;font-weight:600;">Y</span>' : 'N'}</td>
+        <td style="text-align:center;">${entry.missingULN ? '<span style="color:#e74c3c;font-weight:600;">Y</span>' : 'N'}</td>
+        <td style="text-align:center;">${entry.missingPreTreatment ? '<span style="color:#e74c3c;font-weight:600;">Y</span>' : 'N'}</td>
+        <td style="text-align:center;">${entry.noPostTreatment ? '<span style="color:#e74c3c;font-weight:600;">Y</span>' : 'N'}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  container.classList.remove('hidden');
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideMissingData() {
+  const container = document.getElementById('missingDataContainer');
+  if (container) {
+    container.classList.add('hidden');
+  }
+}
+
+// ============================================
+// UNIT TESTS (CTCAE v5.0)
+// ============================================
+
+function computeSummaryCountsForTests(records) {
+  const summary = {};
+  ANALYTE_CONFIG.order.forEach(ag => {
+    const agRecords = records.filter(r => r.analyteGroup === ag);
+    summary[ag] = {
+      any: new Set(agRecords.map(r => r.subject)).size,
+      grade3plus: new Set(agRecords.filter(r => r.postGrade >= 3).map(r => r.subject)).size
+    };
+  });
+  return summary;
+}
+
+function runCTCAEUnitTests() {
+  const failures = [];
+  const checks = [];
+
+  function assertEqual(name, actual, expected) {
+    const pass = actual === expected;
+    checks.push({ name: name, pass: pass, actual: actual, expected: expected });
+    if (!pass) {
+      failures.push(name + ' (expected=' + expected + ', actual=' + actual + ')');
+    }
+  }
+
+  const analyteNameCases = [
+    ['Alanine aminotransferase; ALT', 'ALT'],
+    ['Aspartate aminotransferase; AST', 'AST'],
+    ['Bilirubin; BILI', 'BILI'],
+    ['Alkaline phosphatase; ALP', 'ALP'],
+    ['Gamma-glutamyltransferase; GGT', 'GGT'],
+    ['Lactate Dehydrogenase; LDH', 'LDH'],
+    ['Creatinine; CREAT', 'CREAT'],
+    ['Neutrophils; NEUT', 'NEUT'],
+    ['Platelets; PLAT', 'PLAT'],
+    ['Leukocytes; WBC', 'WBC'],
+    ['Lymphocytes; LYM', 'LYM'],
+    ['Hemoglobin; HGB', 'HGB'],
+    ['Potassium; K', 'K'],
+    ['Sodium; SODIUM', 'SODIUM'],
+    ['Calcium; CA', 'CA'],
+    ['Magnesium; MG', 'MG'],
+    ['Phosphate; PHOS', 'PHOS'],
+    ['Glucose; GLUC', 'GLUC'],
+    ['Lipase; LIPASE', 'LIPASE'],
+    ['Amylase; AMYLASE', 'AMYLASE'],
+    ['Prothrombin Intl. Normalized Ratio; INR', 'INR'],
+    ['Activated Partial Thromboplastin Time; APTT', 'APTT'],
+    ['Prothrombin Time; PT', 'PT'],
+    ['Partial Thromboplastin Time; PTT', 'PTT'],
+    ['Fibrinogen; FIB', 'FIB'],
+    ['Albumin; ALB', 'ALB'],
+    ['Cholesterol; CHOL', 'CHOL'],
+    ['Triglycerides; TRIG', 'TRIG'],
+    ['Urate; URATE', 'URATE'],
+    ['CD4; CD4', 'CD4']
+  ];
+  analyteNameCases.forEach(function(c) {
+    assertEqual('classifyAnalyte(' + c[0] + ')', classifyAnalyte(c[0]), c[1]);
+  });
+  assertEqual('classifyAnalyte(Urea Nitrogen; UREAN)', classifyAnalyte('Urea Nitrogen; UREAN'), null);
+  assertEqual('classifyAnalyte(Chloride; CL)', classifyAnalyte('Chloride; CL'), null);
+
+  assertEqual('Baseline ALT abnormal', getBaselineStatus('ALT', 80, 10, 40), 'AbnormalBaseline');
+  assertEqual('Baseline ALT normal', getBaselineStatus('ALT', 30, 10, 40), 'NormalBaseline');
+  assertEqual('Baseline AST abnormal', getBaselineStatus('AST', 90, 10, 40), 'AbnormalBaseline');
+  assertEqual('Baseline ALP low still normal', getBaselineStatus('ALP', 20, 30, 120), 'NormalBaseline');
+  assertEqual('Baseline ALP high abnormal', getBaselineStatus('ALP', 180, 30, 120), 'AbnormalBaseline');
+  assertEqual('Baseline BILI abnormal', getBaselineStatus('BILI', 2.0, 0.2, 1.2), 'AbnormalBaseline');
+  assertEqual('Baseline HGB abnormal', getBaselineStatus('HGB', 95, 120, 180), 'AbnormalBaseline');
+  assertEqual('Baseline NEUT abnormal', getBaselineStatus('NEUT', 1.0, 1.5, 7.0), 'AbnormalBaseline');
+  assertEqual('Baseline K abnormal', getBaselineStatus('K', 2.8, 3.5, 5.0), 'AbnormalBaseline');
+  assertEqual('Baseline K normal', getBaselineStatus('K', 4.1, 3.5, 5.0), 'NormalBaseline');
+  assertEqual('Baseline GLUC high abnormal', getBaselineStatus('GLUC', 9.5, 3.9, 7.8), 'AbnormalBaseline');
+  assertEqual('Baseline GLUC low abnormal', getBaselineStatus('GLUC', 3.0, 3.9, 7.8), 'AbnormalBaseline');
+
+  assertEqual('ALT normal-baseline post grade', CTCAE.calculate('ALT', 130, 40, null, 30, null, 40), 2);
+  assertEqual('ALT abnormal-baseline post grade', CTCAE.calculate('ALT', 200, 40, null, 80, null, 40), 1);
+  assertEqual('ALT exact 3xULN boundary', CTCAE.calculate('ALT', 120, 40, null, 30, null, 40), 1);
+  assertEqual('ALT above 3xULN boundary', CTCAE.calculate('ALT', 121, 40, null, 30, null, 40), 2);
+  assertEqual('BILI abnormal-baseline post grade', CTCAE.calculate('BILI', 7.0, 1.2, null, 2.0, null, 1.2), 3);
+  assertEqual('CREAT abnormal baseline still ULN based', CTCAE.calculate('CREAT', 2.0, 1.0, null, 1.6, null, 1.0), 2);
+  assertEqual('PLAT post grade', CTCAE.calculate('PLAT', 60, null, 150, 180, 150, null), 2);
+  assertEqual('PLAT boundary 75 is Grade1', CTCAE.calculate('PLAT', 75, null, 150, 180, 150, null), 1);
+  assertEqual('PLAT boundary 50 is Grade2', CTCAE.calculate('PLAT', 50, null, 150, 180, 150, null), 2);
+  assertEqual('PLAT boundary 25 is Grade3', CTCAE.calculate('PLAT', 25, null, 150, 180, 150, null), 3);
+  assertEqual('GLUC post grade', CTCAE.calculate('GLUC', 1.8, null, 3.9, 5.2, 3.9, 7.8), 3);
+  assertEqual('GLUC baseline abnormal high does not change low grade', CTCAE.calculate('GLUC', 1.8, null, 3.9, 9.0, 3.9, 7.8), 3);
+  assertEqual('K high-side post grade', CTCAE.calculate('K', 6.2, 5.0, 3.5, 4.2, 3.5, 5.0), 3);
+  assertEqual('K low-side post grade', CTCAE.calculate('K', 2.4, 5.0, 3.5, 4.2, 3.5, 5.0), 4);
+  assertEqual('K boundary 5.5 is Grade1', CTCAE.calculate('K', 5.5, 5.0, 3.5, 4.2, 3.5, 5.0), 1);
+  assertEqual('K boundary 6.0 is Grade2', CTCAE.calculate('K', 6.0, 5.0, 3.5, 4.2, 3.5, 5.0), 2);
+  assertEqual('K boundary 7.0 is Grade3', CTCAE.calculate('K', 7.0, 5.0, 3.5, 4.2, 3.5, 5.0), 3);
+  assertEqual('SODIUM low-side post grade', CTCAE.calculate('SODIUM', 125, 145, 135, 140, 135, 145), 3);
+  assertEqual('SODIUM boundary 130 is Grade1', CTCAE.calculate('SODIUM', 130, 145, 135, 140, 135, 145), 1);
+  assertEqual('SODIUM boundary 120 is Grade3', CTCAE.calculate('SODIUM', 120, 145, 135, 140, 135, 145), 3);
+  assertEqual('CA high-side post grade', CTCAE.calculate('CA', 3.2, 2.6, 2.1, 2.3, 2.1, 2.6), 3);
+  assertEqual('INR post grade', CTCAE.calculate('INR', 2.0, null, null, 1.0, null, null), 2);
+  assertEqual('LDH no-quantitative-grade', CTCAE.calculate('LDH', 500, 250, 100, 200, 100, 250), null);
+
+  assertEqual('Local fallback allowed for ALT', allowsLocalLabFallback('ALT'), true);
+  assertEqual('Local fallback blocked for GLUC', allowsLocalLabFallback('GLUC'), false);
+  assertEqual('Local fallback blocked for CHOL', allowsLocalLabFallback('CHOL'), false);
+  assertEqual('Local fallback blocked for K', allowsLocalLabFallback('K'), false);
+
+  var standardPreferred = selectMeasurementSource('ALT', {
+    stdValue: 100, stdHigh: 40, stdLow: 10, stdUnits: 'U/L',
+    labValue: 2.5, labHigh: 1.0, labLow: 0.1, labUnits: 'ukat/L'
+  });
+  assertEqual('Standard preferred when available', standardPreferred && standardPreferred.source, 'standard');
+  assertEqual('Standard preferred keeps standard units', standardPreferred && standardPreferred.units, 'U/L');
+
+  var altLabFallback = selectMeasurementSource('ALT', {
+    stdValue: null, stdHigh: null, stdLow: null, stdUnits: '',
+    labValue: 250, labHigh: 40, labLow: 10, labUnits: 'U/L'
+  });
+  assertEqual('ALT lab fallback allowed', altLabFallback && altLabFallback.source, 'lab');
+
+  var ptLabFallback = selectMeasurementSource('PT', {
+    stdValue: null, stdHigh: null, stdLow: null, stdUnits: '',
+    labValue: 19, labHigh: 12, labLow: null, labUnits: 'sec'
+  });
+  assertEqual('PT lab fallback allowed', ptLabFallback && ptLabFallback.source, 'lab');
+
+  var glucNoFallback = selectMeasurementSource('GLUC', {
+    stdValue: null, stdHigh: null, stdLow: null, stdUnits: '',
+    labValue: 32, labHigh: 70, labLow: 40, labUnits: 'mg/dL'
+  });
+  assertEqual('GLUC local fallback blocked', glucNoFallback, null);
+
+  var cholNoFallback = selectMeasurementSource('CHOL', {
+    stdValue: null, stdHigh: null, stdLow: null, stdUnits: '',
+    labValue: 320, labHigh: 200, labLow: null, labUnits: 'mg/dL'
+  });
+  assertEqual('CHOL local fallback blocked', cholNoFallback, null);
+
+  var kNoFallback = selectMeasurementSource('K', {
+    stdValue: null, stdHigh: null, stdLow: null, stdUnits: '',
+    labValue: 6.2, labHigh: 5.0, labLow: 3.5, labUnits: 'mmol/L'
+  });
+  assertEqual('K local fallback blocked', kNoFallback, null);
+
+  var glucStandardAllowed = selectMeasurementSource('GLUC', {
+    stdValue: 3.1, stdHigh: 7.8, stdLow: 3.9, stdUnits: 'mmol/L',
+    labValue: null, labHigh: null, labLow: null, labUnits: ''
+  });
+  assertEqual('GLUC standard source accepted', glucStandardAllowed && glucStandardAllowed.source, 'standard');
+
+  var kStandardAllowed = selectMeasurementSource('K', {
+    stdValue: 6.2, stdHigh: 5.0, stdLow: 3.5, stdUnits: 'mmol/L',
+    labValue: null, labHigh: null, labLow: null, labUnits: ''
+  });
+  assertEqual('K standard source accepted', kStandardAllowed && kStandardAllowed.source, 'standard');
+
+  const countInput = [
+    { subject: 'S1', analyteGroup: 'ALT', postGrade: 2 },
+    { subject: 'S1', analyteGroup: 'ALT', postGrade: 4 },
+    { subject: 'S2', analyteGroup: 'ALT', postGrade: 1 },
+    { subject: 'S3', analyteGroup: 'BILI', postGrade: 3 }
+  ];
+  const countSummary = computeSummaryCountsForTests(countInput);
+  assertEqual('Count ALT Any Grade unique', countSummary.ALT.any, 2);
+  assertEqual('Count ALT Grade>=3 unique', countSummary.ALT.grade3plus, 1);
+  assertEqual('Count BILI Any Grade unique', countSummary.BILI.any, 1);
+  assertEqual('Count BILI Grade>=3 unique', countSummary.BILI.grade3plus, 1);
+
+  const allAnalyteRecords = [];
+  ANALYTE_CONFIG.order.forEach(function(ag, idx) {
+    allAnalyteRecords.push({ subject: 'T' + (idx + 1) + '_A', analyteGroup: ag, postGrade: 1 });
+    allAnalyteRecords.push({ subject: 'T' + (idx + 1) + '_A', analyteGroup: ag, postGrade: 4 });
+    allAnalyteRecords.push({ subject: 'T' + (idx + 1) + '_B', analyteGroup: ag, postGrade: 2 });
+  });
+  const allSummary = computeSummaryCountsForTests(allAnalyteRecords);
+  ANALYTE_CONFIG.order.forEach(function(ag) {
+    assertEqual('Per-analyte any-count dedupe for ' + ag, allSummary[ag].any, 2);
+    assertEqual('Per-analyte grade>=3 dedupe for ' + ag, allSummary[ag].grade3plus, 1);
+  });
+
+  const passed = checks.length - failures.length;
+  const report = {
+    timestamp: new Date().toISOString(),
+    totalChecks: checks.length,
+    passed: passed,
+    failed: failures.length,
+    failures: failures
+  };
+
+  try {
+    const key = 'ctcae_v5_unit_test_history';
+    const prev = JSON.parse(localStorage.getItem(key) || '[]');
+    prev.push(report);
+    localStorage.setItem(key, JSON.stringify(prev.slice(-20)));
+  } catch (e) {
+    console.warn('Unit test history save failed:', e);
+  }
+
+  return report;
+}
+
+function renderUnitTestReport(report) {
+  const panel = document.getElementById('unitTestContainer');
+  const summary = document.getElementById('unitTestSummary');
+  const failureList = document.getElementById('unitTestFailures');
+  if (!panel || !summary || !failureList) return;
+
+  panel.classList.remove('hidden');
+  summary.innerHTML =
+    '<span class="' + (report.failed === 0 ? 'unit-test-pass' : 'unit-test-fail') + '">' +
+    'Checks: ' + report.totalChecks + ' | Passed: ' + report.passed + ' | Failed: ' + report.failed +
+    '</span>';
+  failureList.innerHTML = '';
+  if (report.failed === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'All CTCAE unit tests passed.';
+    failureList.appendChild(li);
+  } else {
+    report.failures.forEach(function(msg) {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      failureList.appendChild(li);
+    });
+  }
+}
+
+// ============================================
+// ERROR HANDLING
+// ============================================
+
+function showError(msg) {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('errorState').textContent = msg;
+  document.getElementById('errorState').classList.remove('hidden');
+}
+
+// ============================================
+// INITIALIZE
+// ============================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('runUnitTests') === '1') {
+      document.getElementById('loadingState').classList.add('hidden');
+      const report = runCTCAEUnitTests();
+      renderUnitTestReport(report);
+      console.log('CTCAE Unit Test Report:', report);
+      return;
+    }
+
+    const { BIG_N, worsening, summary, armCounts, orderedArms } = await runAnalysis();
+    LAST_RESULT = { BIG_N, worsening, summary, armCounts, orderedArms };
+    if (!DEFAULT_ARMS_APPLIED && SELECTED_ARMS.length === 0) {
+      SELECTED_ARMS = deriveDefaultArms(orderedArms);
+      DEFAULT_ARMS_APPLIED = true;
+    }
+    renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+    populateDoseGroupSelect(orderedArms);
+
+    const applyBtn = document.getElementById('applyDoseGroup');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        SELECTED_ARMS = getSelectedArms();
+        if (LAST_RESULT) {
+          const { BIG_N, worsening, summary, armCounts, orderedArms } = LAST_RESULT;
+          renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+          populateDoseGroupSelect(orderedArms);
+        }
+      });
+    }
+
+    const populationFilterEl = document.getElementById('patientPopulationFilter');
+    if (populationFilterEl) {
+      populationFilterEl.addEventListener('change', async () => {
+        try {
+          const result = await runAnalysis();
+          LAST_RESULT = result;
+          renderTable(result.BIG_N, result.worsening, result.summary, result.armCounts, result.orderedArms, SELECTED_ARMS);
+          populateDoseGroupSelect(result.orderedArms);
+        } catch (err) {
+          console.error(err);
+          showError(`Error: ${err.message}`);
+        }
+      });
+    }
+
+    const gradeViewSelectEl = document.getElementById('gradeViewSelect');
+    if (gradeViewSelectEl) {
+      gradeViewSelectEl.addEventListener('change', () => {
+        GRADE_VIEW = gradeViewSelectEl.value || 'summary';
+        if (LAST_RESULT) {
+          const { BIG_N, worsening, summary, armCounts, orderedArms } = LAST_RESULT;
+          renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+          populateDoseGroupSelect(orderedArms);
+        }
+      });
+    }
+
+    const viewModeSelectEl = document.getElementById('viewModeSelect');
+    if (viewModeSelectEl) {
+      viewModeSelectEl.addEventListener('change', () => {
+        VIEW_MODE = viewModeSelectEl.value || 'worsening';
+        if (LAST_RESULT) {
+          const { BIG_N, worsening, summary, armCounts, orderedArms } = LAST_RESULT;
+          renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+          populateDoseGroupSelect(orderedArms);
+        }
+      });
+    }
+
+    const toggleDoseBtn = document.getElementById('toggleDoseColumns');
+    if (toggleDoseBtn) {
+      toggleDoseBtn.addEventListener('click', () => {
+        SHOW_DOSE = !SHOW_DOSE;
+        toggleDoseBtn.textContent = SHOW_DOSE ? 'Hide Dose' : 'Show Dose';
+        if (LAST_RESULT) {
+          const { BIG_N, worsening, summary, armCounts, orderedArms } = LAST_RESULT;
+          renderTable(BIG_N, worsening, summary, armCounts, orderedArms, SELECTED_ARMS);
+          populateDoseGroupSelect(orderedArms);
+        }
+      });
+    }
+    
+    const showMissingDataBtn = document.getElementById('showMissingDataBtn');
+    if (showMissingDataBtn) {
+      showMissingDataBtn.addEventListener('click', analyzeMissingData);
+    }
+    
+    const closeMissingDataBtn = document.getElementById('closeMissingDataBtn');
+    if (closeMissingDataBtn) {
+      closeMissingDataBtn.addEventListener('click', hideMissingData);
+    }
+  } catch (err) {
+    console.error(err);
+    showError(`Error: ${err.message}. Please ensure lab.CSV, lblh.CSV, and dm.CSV are in the data directory.`);
+  }
+});
+</script>
+</body>
+</html>

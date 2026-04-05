@@ -1,0 +1,3121 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Bilirubin - CTCAE</title>
+
+  <link rel="stylesheet" href="../../assets/css/base.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+
+    /* ========================================================================
+
+       Page Layout
+
+       ======================================================================== */
+
+    .bili-container {
+
+      max-width: 2000px;
+
+      margin: 0 auto;
+
+      padding: 20px;
+
+    }
+
+
+
+    .page-title {
+
+      font-size: 28px;
+
+      font-weight: bold;
+
+      color: #2C3E50;
+
+      margin-bottom: 10px;
+
+    }
+
+
+
+    .page-subtitle {
+
+      font-size: 14px;
+
+      color: #7F8C8D;
+
+      margin-bottom: 20px;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Tab Navigation
+
+       ======================================================================== */
+
+    .tab-nav {
+
+      display: flex;
+
+      gap: 0;
+
+      margin-bottom: 20px;
+
+      border-bottom: 2px solid #dee2e6;
+
+    }
+
+
+
+    .tab-btn {
+
+      padding: 12px 24px;
+
+      border: none;
+
+      background: #f8f9fa;
+
+      color: #34495E;
+
+      font-size: 14px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+
+      border-bottom: 3px solid transparent;
+
+      margin-bottom: -2px;
+
+      transition: all 0.2s;
+
+    }
+
+
+
+    .tab-btn:hover {
+
+      background: #e9ecef;
+
+    }
+
+
+
+    .tab-btn.active {
+
+      background: white;
+
+      color: #e67e22;
+
+      border-bottom-color: #e67e22;
+
+    }
+
+
+
+    .tab-content {
+
+      display: none;
+
+    }
+
+
+
+    .tab-content.active {
+
+      display: block;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Info Panel
+
+       ======================================================================== */
+
+    .info-panel {
+
+      background: #fff8e1;
+
+      border: 1px solid #ffcc80;
+
+      border-radius: 8px;
+
+      padding: 15px 20px;
+
+      margin-bottom: 20px;
+
+    }
+
+
+
+    .info-panel h4 {
+
+      margin: 0 0 10px 0;
+
+      color: #e65100;
+
+    }
+
+
+
+    .info-panel ul {
+
+      margin: 0;
+
+      padding-left: 20px;
+
+      color: #34495E;
+
+    }
+
+
+
+    .info-panel li {
+
+      margin-bottom: 5px;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Controls Panel
+
+       ======================================================================== */
+
+    .controls-panel {
+
+      background: #f8f9fa;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 8px;
+
+      padding: 15px 20px;
+
+      margin-bottom: 20px;
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 20px;
+
+      align-items: center;
+
+    }
+
+
+
+    .control-group {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 5px;
+
+    }
+
+
+
+    .control-group label {
+
+      font-weight: 600;
+
+      color: #2C3E50;
+
+      font-size: 13px;
+
+    }
+
+
+
+    .control-group select,
+
+    .control-group input[type="text"] {
+
+      padding: 8px 12px;
+
+      border: 1px solid #ced4da;
+
+      border-radius: 4px;
+
+      font-size: 14px;
+
+      min-width: 180px;
+
+    }
+
+
+
+    .checkbox-group {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      margin-top: 18px;
+
+    }
+
+
+
+    .checkbox-group input[type="checkbox"] {
+
+      width: 16px;
+
+      height: 16px;
+
+      cursor: pointer;
+
+    }
+
+
+
+    .checkbox-group label {
+
+      font-size: 13px;
+
+      color: #34495E;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Chart Components
+
+       ======================================================================== */
+
+    .chart-container {
+
+      background: white;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 8px;
+
+      padding: 20px;
+
+      margin-bottom: 20px;
+
+    }
+
+
+
+    .chart-title {
+
+      font-size: 18px;
+
+      font-weight: bold;
+
+      color: #2C3E50;
+
+      margin-bottom: 5px;
+
+      text-align: center;
+
+    }
+
+
+
+    .chart-subtitle {
+
+      font-size: 13px;
+
+      color: #7F8C8D;
+
+      margin-bottom: 10px;
+
+      text-align: center;
+
+    }
+
+
+
+    .chart-caption {
+
+      font-size: 12px;
+
+      color: #7F8C8D;
+
+      text-align: center;
+
+      margin-top: 10px;
+
+    }
+
+
+
+    .chart-wrapper {
+
+      position: relative;
+
+      width: 100%;
+
+      height: 900px;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Legend Panel
+
+       ======================================================================== */
+
+    .legend-panel {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      justify-content: center;
+
+      align-items: flex-start;
+
+      gap: 30px;
+
+      margin-bottom: 15px;
+
+      padding: 15px;
+
+      background: #f8f9fa;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 8px;
+
+    }
+
+
+
+    .legend-section {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 8px;
+
+    }
+
+
+
+    .legend-section-title {
+
+      font-weight: 600;
+
+      font-size: 13px;
+
+      color: #2C3E50;
+
+      border-bottom: 1px solid #dee2e6;
+
+      padding-bottom: 5px;
+
+    }
+
+
+
+    .legend-items {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 10px;
+
+    }
+
+
+
+    .legend-item {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+      font-size: 12px;
+
+      color: #34495E;
+
+    }
+
+
+
+    .legend-color {
+
+      width: 20px;
+
+      height: 4px;
+
+      border-radius: 2px;
+
+    }
+
+
+
+    .legend-shape {
+
+      width: 12px;
+
+      height: 12px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      font-size: 14px;
+
+    }
+
+
+
+    .legend-line {
+
+      width: 30px;
+
+      height: 0;
+
+      border-top: 2px;
+
+    }
+
+
+
+    .legend-line.solid { border-style: solid; }
+
+    .legend-line.dashed { border-style: dashed; }
+
+    .legend-line.dotted { border-style: dotted; border-width: 3px; }
+
+
+
+    /* ========================================================================
+
+       Stats Cards
+
+       ======================================================================== */
+
+    .stats-panel {
+
+      display: grid;
+
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+
+      gap: 15px;
+
+      margin-bottom: 20px;
+
+    }
+
+
+
+    .stat-card {
+
+      background: white;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 8px;
+
+      padding: 12px;
+
+      text-align: center;
+
+    }
+
+
+
+    .stat-value {
+
+      font-size: 24px;
+
+      font-weight: bold;
+
+      color: #2C3E50;
+
+    }
+
+
+
+    .stat-value.warning { color: #e67e22; }
+
+    .stat-value.danger { color: #c0392b; }
+
+
+
+    .stat-label {
+
+      font-size: 11px;
+
+      color: #7F8C8D;
+
+      margin-top: 3px;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Dose Change Editor
+
+       ======================================================================== */
+
+    .dose-change-editor {
+
+      background: #f0f8ff;
+
+      border: 1px solid #90caf9;
+
+      border-radius: 8px;
+
+      padding: 15px;
+
+      margin-bottom: 20px;
+
+    }
+
+
+
+    .dose-change-editor h4 {
+
+      margin: 0 0 10px 0;
+
+      color: #1565c0;
+
+    }
+
+
+
+    .dose-change-list {
+
+      margin-bottom: 10px;
+
+    }
+
+
+
+    .dose-change-item {
+
+      background: white;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 4px;
+
+      padding: 10px;
+
+      margin-bottom: 8px;
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 10px;
+
+      align-items: center;
+
+    }
+
+
+
+    .dose-change-item input,
+
+    .dose-change-item select {
+
+      padding: 6px 10px;
+
+      border: 1px solid #ced4da;
+
+      border-radius: 4px;
+
+      font-size: 13px;
+
+    }
+
+
+
+    .dose-change-item .remove-btn {
+
+      background: #e74c3c;
+
+      color: white;
+
+      border: none;
+
+      border-radius: 4px;
+
+      padding: 6px 12px;
+
+      cursor: pointer;
+
+      font-size: 12px;
+
+    }
+
+
+
+    .add-change-btn {
+
+      background: #27ae60;
+
+      color: white;
+
+      border: none;
+
+      border-radius: 4px;
+
+      padding: 8px 16px;
+
+      cursor: pointer;
+
+      font-size: 13px;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Loading
+
+       ======================================================================== */
+
+    .loading-overlay {
+
+      position: fixed;
+
+      top: 0;
+
+      left: 0;
+
+      right: 0;
+
+      bottom: 0;
+
+      background: rgba(255, 255, 255, 0.9);
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+
+      justify-content: center;
+
+      z-index: 1000;
+
+    }
+
+
+
+    .loading-spinner {
+
+      width: 50px;
+
+      height: 50px;
+
+      border: 4px solid #f3f3f3;
+
+      border-top: 4px solid #e67e22;
+
+      border-radius: 50%;
+
+      animation: spin 1s linear infinite;
+
+    }
+
+
+
+    @keyframes spin {
+
+      0% { transform: rotate(0deg); }
+
+      100% { transform: rotate(360deg); }
+
+    }
+
+
+
+    .loading-text {
+
+      margin-top: 15px;
+
+      font-size: 16px;
+
+      color: #34495E;
+
+    }
+
+
+
+    /* ========================================================================
+
+       Patient Table
+
+       ======================================================================== */
+
+    .patient-table-container {
+
+      margin-top: 20px;
+
+      background: white;
+
+      border: 1px solid #dee2e6;
+
+      border-radius: 8px;
+
+      padding: 15px;
+
+    }
+
+
+
+    .patient-table {
+
+      width: 100%;
+
+      border-collapse: collapse;
+
+      font-size: 12px;
+
+    }
+
+
+
+    .patient-table th {
+
+      background: #e67e22;
+
+      color: white;
+
+      padding: 8px 10px;
+
+      text-align: left;
+
+      font-weight: 600;
+
+    }
+
+
+
+    .patient-table td {
+
+      padding: 8px 10px;
+
+      border-bottom: 1px solid #dee2e6;
+
+    }
+
+
+
+    .patient-table tr:nth-child(even) {
+
+      background: #fef9e7;
+
+    }
+
+
+
+    .grade-badge {
+
+      display: inline-block;
+
+      padding: 2px 8px;
+
+      border-radius: 10px;
+
+      font-size: 10px;
+
+      font-weight: bold;
+
+      color: white;
+
+    }
+
+
+
+    .grade-badge.grade-2 { background: #f39c12; }
+
+    .grade-badge.grade-3 { background: #e74c3c; }
+
+    .grade-badge.grade-4 { background: #8e44ad; }
+
+    .grade-badge.grade-5 { background: #2c3e50; }
+
+  </style>
+
+</head>
+
+<body>
+
+  <header id="global-nav"></header>
+
+
+
+  <main class="page-content">
+
+    <div class="bili-container">
+
+      <h1 class="page-title">Bilirubin - CTCAE</h1>
+
+      <p class="page-subtitle">Tracking bilirubin levels for patients with Grade ≥2 bilirubin-related adverse events</p>
+
+
+
+      <!-- Loading Overlay -->
+
+      <div id="loadingOverlay" class="loading-overlay">
+
+        <div class="loading-spinner"></div>
+
+        <div class="loading-text">Loading lab data...</div>
+
+      </div>
+
+
+
+      <!-- Info Panel -->
+
+      <div class="info-panel">
+
+        <h4>Analysis Overview</h4>
+
+        <ul>
+
+          <li><strong>Patient Selection:</strong> Only patients with Max Grade ≥2 bilirubin-related AEs are included</li>
+
+          <li><strong>Baseline (Day 0):</strong> C0D1 visit date, or earliest lab date if C0D1 not available</li>
+
+          <li><strong>Line Color:</strong> Changes based on current dose at each time point</li>
+
+          <li><strong>Dotted Lines:</strong> Indicate dosing interruption periods</li>
+
+          <li><strong>Point Shapes:</strong> Different shapes for different patients</li>
+
+        </ul>
+
+      </div>
+
+
+
+      <!-- Stats Panel -->
+
+      <div class="stats-panel">
+
+        <div class="stat-card">
+
+          <div class="stat-value" id="statPatients">-</div>
+
+          <div class="stat-label">Grade ≥2 Patients</div>
+
+        </div>
+
+        <div class="stat-card">
+
+          <div class="stat-value" id="statDataPoints">-</div>
+
+          <div class="stat-label">Total Data Points</div>
+
+        </div>
+
+        <div class="stat-card">
+
+          <div class="stat-value warning" id="statMaxBili">-</div>
+
+          <div class="stat-label">Max Bilirubin (mg/dL)</div>
+
+        </div>
+
+        <div class="stat-card">
+
+          <div class="stat-value warning" id="statMaxULN">-</div>
+
+          <div class="stat-label">Max ×ULN</div>
+
+        </div>
+
+        <div class="stat-card">
+
+          <div class="stat-value" id="statMeanULN">-</div>
+
+          <div class="stat-label">Mean ULN (mg/dL)</div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Controls -->
+
+      <div class="controls-panel">
+
+        <div class="control-group">
+
+          <label for="patientFilter">Patient Filter</label>
+
+          <select id="patientFilter">
+
+            <option value="all">All Patients</option>
+
+          </select>
+
+        </div>
+
+        <div class="control-group">
+
+          <label for="doseFilter">Dose Filter</label>
+
+          <select id="doseFilter">
+
+            <option value="all">All Doses</option>
+
+          </select>
+
+        </div>
+
+        <div class="checkbox-group">
+
+          <input type="checkbox" id="showAllPatients">
+
+          <label for="showAllPatients">Show All Patients</label>
+
+        </div>
+
+        <div class="checkbox-group">
+
+          <input type="checkbox" id="showDoseChangePatientsOnly">
+
+          <label for="showDoseChangePatientsOnly">Show dose change patient only</label>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Dose Change Configuration -->
+
+      <div class="dose-change-editor">
+
+        <h4>⚙️ Dose Changes & Interruptions (Hard-coded in R)</h4>
+
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+
+          Configure dose changes and dosing interruptions. Changes will be reflected in line colors.
+
+        </p>
+
+        <div id="doseChangeList" class="dose-change-list"></div>
+
+        <button class="add-change-btn" onclick="addDoseChange()">+ Add Dose Change</button>
+
+        <button class="add-change-btn" style="background: #3498db; margin-left: 10px;" onclick="addInterruption()">+ Add Interruption</button>
+
+        <button class="add-change-btn" style="background: #9b59b6; margin-left: 10px;" onclick="applyChanges()">Apply Changes</button>
+
+      </div>
+
+
+
+      <!-- Tab Navigation -->
+
+      <div class="tab-nav" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+
+        <div style="display: flex; gap: 8px;">
+        <button class="tab-btn active" data-tab="normalized">Normalized (×ULN)</button>
+
+        <button class="tab-btn" data-tab="absolute">Absolute Values</button>
+        </div>
+        <button class="export-btn" onclick="var el = document.querySelector('.tab-content.active'); if (el && typeof showBlockExportDialog === 'function') showBlockExportDialog(el.id, el.id === 'tab-normalized' ? 'Bilirubin_Normalized' : 'Bilirubin_Absolute');" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+      </div>
+
+
+
+      <!-- Tab 1: Normalized Plot -->
+
+      <div id="tab-normalized" class="tab-content active">
+
+        <div class="chart-container">
+
+          <div class="chart-title">Bilirubin - Grade 2+ AE Patients (Times ULN Method)</div>
+
+          <div class="chart-subtitle" id="normalizedSubtitle">Times Upper Limit of Normal (×ULN)</div>
+
+          <div class="legend-panel" id="normalizedLegend"></div>
+
+          <div class="chart-wrapper">
+
+            <canvas id="normalizedChart"></canvas>
+
+          </div>
+
+          <div class="chart-caption">
+
+            Blue area = Normal range | Line color = Dose | Dotted grey = Dosing interruption | Shape = Patient ID
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Tab 2: Absolute Plot -->
+
+      <div id="tab-absolute" class="tab-content">
+
+        <div class="chart-container">
+
+          <div class="chart-title">All Patients (Grade ≥ 2) - Bilirubin Absolute Values</div>
+
+          <div class="chart-subtitle">Absolute Bilirubin Values by Study Day</div>
+
+          <div class="legend-panel" id="absoluteLegend"></div>
+
+          <div class="chart-wrapper">
+
+            <canvas id="absoluteChart"></canvas>
+
+          </div>
+
+          <div class="chart-caption">
+
+            Line color = Dose | Dotted grey = Dosing interruption | Shape = Patient ID
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Patient Table -->
+
+      <div class="patient-table-container">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+
+          <h4 style="margin: 0; color: #e67e22;">Grade ≥2 Bilirubin AE Patients</h4>
+
+          <button type="button" class="export-csv-btn" onclick="exportBilirubinPatientTableCSV()" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+
+        </div>
+
+        <table class="patient-table" id="patientTable">
+
+          <thead>
+
+            <tr>
+
+              <th>Subject</th>
+
+              <th>Max Grade</th>
+
+              <th>Initial Dose</th>
+
+              <th>Dose Changes</th>
+
+              <th>Max Bilirubin</th>
+
+              <th>Max ×ULN</th>
+
+              <th>Data Points</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="patientTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+
+  <script src="../../assets/js/nav.js"></script>
+
+  <script>
+
+    // Initialize navigation
+
+    if (typeof renderNav === 'function') {
+
+      renderNav('safety', 'bilirubin', '../../');
+
+    }
+
+
+
+    // ========================================================================
+
+    // Global State
+
+    // ========================================================================
+
+    const state = {
+
+      aeData: [],
+
+      lblcData: [],
+
+      labData: [],
+
+      doseData: [],
+
+      grade2Subjects: [],
+
+      baselines: {},
+
+      normalRanges: {},
+
+      meanULN: 1.2,
+
+      meanLLN: 0.3,
+
+      processedData: [],
+
+      doseChanges: [],
+
+      interruptions: [],
+
+      charts: {}
+
+    };
+
+
+
+    // Bilirubin-related AE terms (matching R code)
+
+    const BILI_TERMS = [
+
+      'TOTAL BILIRUBIN INCREASED', 'BLOOD BILIRUBIN INCREASED',
+
+      'TOTAL BILIRUBIN INCREASE', 'BLOOD BILIRUIN INCREASED',
+
+      'HYPERBILIRUBINEMIA'
+
+    ];
+
+
+
+    // Color palette for doses (matching R code)
+
+    const DOSE_COLORS = [
+
+      '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+
+      '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5'
+
+    ];
+
+
+
+    // Shape symbols for patients
+
+    const PATIENT_SHAPES = ['●', '▲', '■', '◆', '★', '✚', '○', '△', '□', '◇', '☆', '✖'];
+
+
+
+    // ========================================================================
+
+    // Tab Navigation
+
+    // ========================================================================
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+
+      btn.addEventListener('click', () => {
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        btn.classList.add('active');
+
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+
+      });
+
+    });
+
+
+
+    // ========================================================================
+
+    // Data Loading
+
+    // ========================================================================
+
+    async function loadCSV(url) {
+
+      return new Promise((resolve, reject) => {
+
+        Papa.parse(url, {
+
+          download: true,
+
+          header: true,
+
+          skipEmptyLines: true,
+
+          complete: (results) => resolve(results.data),
+
+          error: (error) => reject(error)
+
+        });
+
+      });
+
+    }
+
+
+
+    // Parse date in multiple formats (matching R code)
+
+    function parseDate(dateStr) {
+
+      if (!dateStr || dateStr.trim() === '') return null;
+
+      
+
+      // Format: "01JAN2024:00:00:00.000" or "01JAN2024 00:00:00.000"
+
+      const match1 = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})[:\s]?/i);
+
+      if (match1) {
+
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+
+                         JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+
+        const day = parseInt(match1[1]);
+
+        const month = months[match1[2].toUpperCase()];
+
+        const year = parseInt(match1[3]);
+
+        if (month !== undefined) {
+
+          return new Date(year, month, day);
+
+        }
+
+      }
+
+      
+
+      // Format: "2-Jul-25" (day-Mon-YY)
+
+      const match2 = dateStr.match(/^(\d{1,2})-([A-Z]{3})-(\d{2})$/i);
+
+      if (match2) {
+
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+
+                         JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+
+        const day = parseInt(match2[1]);
+
+        const month = months[match2[2].toUpperCase()];
+
+        let year = parseInt(match2[3]);
+
+        year = year < 50 ? 2000 + year : 1900 + year;
+
+        if (month !== undefined) {
+
+          return new Date(year, month, day);
+
+        }
+
+      }
+
+      
+
+      // Try ISO format
+
+      const d = new Date(dateStr);
+
+      if (!isNaN(d.getTime())) return d;
+
+      
+
+      return null;
+
+    }
+
+
+
+    // ========================================================================
+
+    // Data Processing (Matching R Code Logic)
+
+    // ========================================================================
+
+    function processData() {
+
+      const { aeData, lblcData, labData, doseData } = state;
+
+      
+
+      // Step 1: Filter AE data for bilirubin-related Grade ≥2
+
+      const aeBili = {};
+
+      aeData.forEach(row => {
+
+        const subject = (row.Subject || row.SUBJID || row.subject || '').trim();
+
+        const term = (row.AETERM || row.AETERM_STD || '').toUpperCase().trim();
+
+        const grade = parseFloat(row.AETOXGR_STD) || parseFloat(row.AETOXGR) || 0;
+
+        
+
+        if (!subject) return;
+
+        
+
+        const isBiliRelated = term.includes('BILIRUBIN') || BILI_TERMS.includes(term);
+
+        if (isBiliRelated) {
+
+          if (!aeBili[subject] || grade > aeBili[subject]) {
+
+            aeBili[subject] = grade;
+
+          }
+
+        }
+
+      });
+
+      
+
+      // Get Grade ≥2 subjects
+      const showAllPatients = document.getElementById('showAllPatients')?.checked || false;
+      
+      if (showAllPatients) {
+        // Include all subjects with bilirubin data
+        state.grade2Subjects = [...new Set(lblcData.map(r => (r.Subject || r.SUBJID || r.subject || '').trim()).filter(s => s))];
+      } else {
+        // Only Grade ≥2 subjects
+        state.grade2Subjects = Object.keys(aeBili).filter(s => aeBili[s] >= 2);
+        
+        if (state.grade2Subjects.length === 0) {
+          console.warn('No subjects with Grade ≥2 bilirubin AEs found');
+          // For demo, use all subjects with bilirubin data
+          state.grade2Subjects = [...new Set(lblcData.map(r => (r.Subject || r.SUBJID || r.subject || '').trim()).filter(s => s))];
+        }
+      }
+
+      
+
+      // Step 2: Parse lblc data and calculate baselines
+
+      const subjectVisits = {};
+
+      lblcData.forEach(row => {
+
+        const subject = (row.Subject || row.SUBJID || row.subject || '').trim();
+
+        if (!subject || !state.grade2Subjects.includes(subject)) return;
+
+        
+
+        const labDate = parseDate(row.LBDAT || row.LBDAT_INT_POSIX || row.RecordDate);
+
+        const folder = (row.Folder || row.FOLDER || row.folder || '').trim().toUpperCase();
+
+        const biliValue = parseFloat(row.BILI_LBORRES || row.AnalyteValue || row.StdValue || row.NumericValue);
+
+        
+
+        if (!subjectVisits[subject]) subjectVisits[subject] = [];
+
+        subjectVisits[subject].push({
+
+          date: labDate,
+
+          folder: folder,
+
+          value: biliValue,
+
+          originalFolder: (row.Folder || row.FOLDER || row.folder || '').trim()
+
+        });
+
+      });
+
+      
+
+      // Calculate baselines (C0D1 or earliest date)
+
+      Object.keys(subjectVisits).forEach(subject => {
+
+        const visits = subjectVisits[subject].filter(v => v.date);
+
+        const c0d1 = visits.find(v => v.folder === 'C0D1');
+
+        if (c0d1) {
+
+          state.baselines[subject] = c0d1.date;
+
+        } else if (visits.length > 0) {
+
+          visits.sort((a, b) => a.date - b.date);
+
+          state.baselines[subject] = visits[0].date;
+
+        }
+
+      });
+
+      
+
+      // Step 3: Get normal ranges from lab data
+
+      labData.forEach(row => {
+
+        const subject = (row.Subject || row.SUBJID || row.subject || '').trim();
+
+        const analyteName = (row.AnalyteName || '').toLowerCase();
+
+        
+
+        if (!subject || !state.grade2Subjects.includes(subject)) return;
+
+        if (!analyteName.includes('bilirubin') && !analyteName.includes('bili')) return;
+
+        
+
+        const labLow = parseFloat(row.LabLow || row.StdLow);
+
+        const labHigh = parseFloat(row.LabHigh || row.StdHigh);
+
+        
+
+        if (!state.normalRanges[subject]) {
+
+          state.normalRanges[subject] = { low: null, high: null };
+
+        }
+
+        if (labLow && labLow > 0 && !state.normalRanges[subject].low) {
+
+          state.normalRanges[subject].low = labLow;
+
+        }
+
+        if (labHigh && labHigh > 0 && !state.normalRanges[subject].high) {
+
+          state.normalRanges[subject].high = labHigh;
+
+        }
+
+      });
+
+      
+
+      // Calculate mean ULN/LLN
+
+      const allULN = Object.values(state.normalRanges).map(r => r.high).filter(v => v && v > 0);
+
+      const allLLN = Object.values(state.normalRanges).map(r => r.low).filter(v => v && v > 0);
+
+      state.meanULN = allULN.length > 0 ? allULN.reduce((a, b) => a + b, 0) / allULN.length : 1.2;
+
+      state.meanLLN = allLLN.length > 0 ? allLLN.reduce((a, b) => a + b, 0) / allLLN.length : 0.3;
+
+      
+
+      // Step 4: Build dose lookup
+
+      const doseLookup = {};
+
+      doseData.forEach(row => {
+
+        const subject = (row['Subject ID'] || row.Subject || row.SUBJID || row.subject || '').trim();
+
+        const dose = (row['Initial Dose'] || row.Initial_Dose || row.arm || row.ARM || row.Arm || '').trim();
+
+        if (subject && dose) doseLookup[subject] = dose;
+
+      });
+
+      
+
+      // Step 5: Process data points
+
+      const processed = [];
+
+      Object.keys(subjectVisits).forEach(subject => {
+
+        const baseline = state.baselines[subject];
+
+        if (!baseline) return;
+
+        
+
+        const uln = state.normalRanges[subject]?.high || state.meanULN;
+
+        const initialDose = doseLookup[subject] || 'Unknown Dose';
+
+        
+
+        subjectVisits[subject].forEach(visit => {
+
+          if (!visit.date || isNaN(visit.value)) return;
+
+          
+
+          const studyDay = Math.round((visit.date - baseline) / (1000 * 60 * 60 * 24));
+
+          const norm = uln > 0 ? visit.value / uln : null;
+
+          
+
+          // Create cycle label (matching R code)
+
+          let cycleLabel = visit.originalFolder;
+
+          const folderUpper = visit.folder;
+
+          if (folderUpper.includes('SCRN') || folderUpper.includes('SCREEN')) {
+
+            cycleLabel = 'SCR';
+
+          } else if (folderUpper.includes('END')) {
+
+            cycleLabel = 'EOT';
+
+          } else if (folderUpper.includes('SFU') || folderUpper.includes('FOLLOW')) {
+
+            cycleLabel = 'SFU';
+
+          } else if (folderUpper.includes('USV') || folderUpper.includes('UNSCH')) {
+
+            cycleLabel = 'USV';
+
+          }
+
+          
+
+          processed.push({
+
+            Subject: subject,
+
+            StudyDay: studyDay,
+
+            Value: visit.value,
+
+            Norm: norm ? Math.round(norm * 10) / 10 : null,
+
+            Folder: visit.originalFolder,
+
+            CycleLabel: cycleLabel,
+
+            ULN: uln,
+
+            InitialDose: initialDose,
+
+            CurrentDose: initialDose,
+
+            IsInterruption: false,
+
+            MaxGrade: aeBili[subject] || 0
+
+          });
+
+        });
+
+      });
+
+      
+
+      // Sort by subject and study day
+
+      processed.sort((a, b) => {
+
+        if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+
+        return a.StudyDay - b.StudyDay;
+
+      });
+
+      
+
+      state.processedData = processed;
+
+      
+
+      // Apply dose changes and interruptions
+
+      applyDoseChangesAndInterruptions();
+
+    }
+
+
+
+    function applyDoseChangesAndInterruptions() {
+
+      // Apply dose changes
+
+      state.doseChanges.forEach(change => {
+
+        const baseline = state.baselines[change.subject];
+
+        if (!baseline) return;
+
+        
+
+        const changeDate = parseDate(change.date);
+
+        if (!changeDate) return;
+
+        
+
+        const changeDay = Math.round((changeDate - baseline) / (1000 * 60 * 60 * 24));
+
+        
+
+        state.processedData.forEach(row => {
+
+          if (row.Subject === change.subject && row.StudyDay >= changeDay) {
+
+            row.CurrentDose = change.newDose;
+
+          }
+
+        });
+
+      });
+
+      
+
+      // Apply interruptions
+
+      state.interruptions.forEach(int => {
+
+        const baseline = state.baselines[int.subject];
+
+        if (!baseline) return;
+
+        
+
+        const startDate = parseDate(int.startDate);
+
+        const endDate = parseDate(int.endDate);
+
+        if (!startDate || !endDate) return;
+
+        
+
+        const startDay = Math.round((startDate - baseline) / (1000 * 60 * 60 * 24));
+
+        const endDay = Math.round((endDate - baseline) / (1000 * 60 * 60 * 24));
+
+        
+
+        state.processedData.forEach(row => {
+
+          if (row.Subject === int.subject && row.StudyDay >= startDay && row.StudyDay <= endDay) {
+
+            row.IsInterruption = true;
+
+          }
+
+        });
+
+      });
+
+      
+
+      // Update stats and UI
+
+      updateStats();
+
+      updateFilters();
+
+      renderCharts();
+
+      updatePatientTable();
+
+    }
+
+
+
+    // ========================================================================
+
+    // UI Updates
+
+    // ========================================================================
+
+    function updateStats() {
+
+      const data = state.processedData;
+
+      const subjects = [...new Set(data.map(d => d.Subject))];
+
+      
+
+      document.getElementById('statPatients').textContent = subjects.length;
+
+      document.getElementById('statDataPoints').textContent = data.length;
+
+      
+
+      const maxBili = Math.max(...data.map(d => d.Value).filter(v => !isNaN(v)));
+
+      const maxULN = Math.max(...data.map(d => d.Norm).filter(v => v !== null));
+
+      
+
+      document.getElementById('statMaxBili').textContent = isFinite(maxBili) ? maxBili.toFixed(2) : '-';
+
+      document.getElementById('statMaxULN').textContent = isFinite(maxULN) ? maxULN.toFixed(1) + '×' : '-';
+
+      document.getElementById('statMeanULN').textContent = state.meanULN.toFixed(2);
+
+      
+
+      document.getElementById('normalizedSubtitle').textContent = 
+
+        `Times Upper Limit of Normal (×ULN) | Mean ULN = ${state.meanULN.toFixed(2)} mg/dL`;
+
+    }
+
+
+
+    function updateFilters() {
+
+      const subjects = [...new Set(state.processedData.map(d => d.Subject))].sort();
+
+      const doses = [...new Set(state.processedData.map(d => d.CurrentDose))].sort();
+
+      
+
+      const patientSelect = document.getElementById('patientFilter');
+
+      patientSelect.innerHTML = '<option value="all">All Patients</option>' +
+
+        subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+
+      
+
+      const doseSelect = document.getElementById('doseFilter');
+
+      doseSelect.innerHTML = '<option value="all">All Doses</option>' +
+
+        doses.map(d => `<option value="${d}">${d}</option>`).join('');
+
+    }
+
+
+
+    function updatePatientTable() {
+
+      const tbody = document.getElementById('patientTableBody');
+
+      const subjects = [...new Set(state.processedData.map(d => d.Subject))];
+
+      
+
+      const rows = subjects.map(subject => {
+
+        const subjectData = state.processedData.filter(d => d.Subject === subject);
+
+        const maxGrade = subjectData[0]?.MaxGrade || 0;
+
+        const initialDose = subjectData[0]?.InitialDose || 'Unknown';
+
+        const doses = [...new Set(subjectData.map(d => d.CurrentDose))];
+
+        const doseChanges = doses.length > 1 ? doses.join(' → ') : 'None';
+
+        const maxBili = Math.max(...subjectData.map(d => d.Value));
+
+        const maxNorm = Math.max(...subjectData.map(d => d.Norm).filter(v => v !== null));
+
+        
+
+        return {
+
+          subject, maxGrade, initialDose, doseChanges, maxBili, maxNorm,
+
+          dataPoints: subjectData.length
+
+        };
+
+      });
+
+      
+
+      tbody.innerHTML = rows.map(r => `
+
+        <tr>
+
+          <td><strong>${r.subject}</strong></td>
+
+          <td><span class="grade-badge grade-${Math.floor(r.maxGrade)}">Grade ${r.maxGrade}</span></td>
+
+          <td>${r.initialDose}</td>
+
+          <td>${r.doseChanges}</td>
+
+          <td>${r.maxBili.toFixed(2)} mg/dL</td>
+
+          <td>${r.maxNorm.toFixed(1)}×</td>
+
+          <td>${r.dataPoints}</td>
+
+        </tr>
+
+      `).join('');
+
+    }
+
+
+
+    // ========================================================================
+
+    // Dose Change UI
+
+    // ========================================================================
+
+    function renderDoseChangeList() {
+
+      const container = document.getElementById('doseChangeList');
+
+      
+
+      const changesHtml = state.doseChanges.map((c, i) => `
+
+        <div class="dose-change-item" data-type="change" data-index="${i}">
+
+          <span style="font-weight: bold; color: #27ae60;">Dose Change:</span>
+
+          <input type="text" placeholder="Subject ID" value="${c.subject}" onchange="updateChange(${i}, 'subject', this.value)">
+
+          <input type="text" placeholder="Initial Dose" value="${c.initialDose}" onchange="updateChange(${i}, 'initialDose', this.value)">
+
+          <span>→</span>
+
+          <input type="text" placeholder="New Dose" value="${c.newDose}" onchange="updateChange(${i}, 'newDose', this.value)">
+
+          <input type="text" placeholder="Date (e.g., 2-Jul-25)" value="${c.date}" onchange="updateChange(${i}, 'date', this.value)">
+
+          <button class="remove-btn" onclick="removeChange(${i})">Remove</button>
+
+        </div>
+
+      `).join('');
+
+      
+
+      const interruptionsHtml = state.interruptions.map((int, i) => `
+
+        <div class="dose-change-item" data-type="interruption" data-index="${i}">
+
+          <span style="font-weight: bold; color: #3498db;">Interruption:</span>
+
+          <input type="text" placeholder="Subject ID" value="${int.subject}" onchange="updateInterruption(${i}, 'subject', this.value)">
+
+          <span>From:</span>
+
+          <input type="text" placeholder="Start Date" value="${int.startDate}" onchange="updateInterruption(${i}, 'startDate', this.value)">
+
+          <span>To:</span>
+
+          <input type="text" placeholder="End Date" value="${int.endDate}" onchange="updateInterruption(${i}, 'endDate', this.value)">
+
+          <button class="remove-btn" onclick="removeInterruption(${i})">Remove</button>
+
+        </div>
+
+      `).join('');
+
+      
+
+      container.innerHTML = changesHtml + interruptionsHtml;
+
+    }
+
+
+
+    function addDoseChange() {
+
+      state.doseChanges.push({
+
+        subject: '',
+
+        initialDose: '',
+
+        newDose: '',
+
+        date: ''
+
+      });
+
+      renderDoseChangeList();
+
+    }
+
+
+
+    function addInterruption() {
+
+      state.interruptions.push({
+
+        subject: '',
+
+        startDate: '',
+
+        endDate: ''
+
+      });
+
+      renderDoseChangeList();
+
+    }
+
+
+
+    function updateChange(index, field, value) {
+
+      state.doseChanges[index][field] = value;
+
+    }
+
+
+
+    function updateInterruption(index, field, value) {
+
+      state.interruptions[index][field] = value;
+
+    }
+
+
+
+    function removeChange(index) {
+
+      state.doseChanges.splice(index, 1);
+
+      renderDoseChangeList();
+
+    }
+
+
+
+    function removeInterruption(index) {
+
+      state.interruptions.splice(index, 1);
+
+      renderDoseChangeList();
+
+    }
+
+
+
+    function applyChanges() {
+
+      // Reprocess with new changes
+
+      processData();
+
+    }
+
+
+
+    // ========================================================================
+
+    // Chart Rendering
+
+    // ========================================================================
+
+    function renderCharts() {
+
+      const patientFilter = document.getElementById('patientFilter').value;
+
+      const doseFilter = document.getElementById('doseFilter').value;
+
+      const showAllPatients = document.getElementById('showAllPatients').checked;
+
+      const showDoseChangePatientsOnly = document.getElementById('showDoseChangePatientsOnly').checked;
+
+      
+
+      let data = state.processedData;
+      
+      // If "Show All Patients" is checked, include all patients with bilirubin data
+      if (showAllPatients) {
+        // This will be handled in processData by including all subjects
+        // For now, we'll use all available data
+      }
+
+      if (patientFilter !== 'all') {
+
+        data = data.filter(d => d.Subject === patientFilter);
+
+      }
+
+      if (doseFilter !== 'all') {
+
+        data = data.filter(d => d.CurrentDose === doseFilter);
+
+      }
+      
+      // Filter to show only patients with dose changes if checkbox is checked
+      if (showDoseChangePatientsOnly) {
+        const subjectsWithDoseChanges = getSubjectsWithDoseChanges(data);
+        data = data.filter(d => subjectsWithDoseChanges.includes(d.Subject));
+      }
+
+      
+
+      // Get unique subjects and doses for colors
+
+      const subjects = [...new Set(data.map(d => d.Subject))];
+
+      const doses = [...new Set(data.map(d => d.CurrentDose))].sort();
+
+      
+
+      // Create color and shape mappings
+
+      const doseColorMap = {};
+
+      doses.forEach((dose, i) => {
+
+        doseColorMap[dose] = DOSE_COLORS[i % DOSE_COLORS.length];
+
+      });
+
+      
+
+      const subjectShapeMap = {};
+
+      subjects.forEach((subject, i) => {
+
+        subjectShapeMap[subject] = PATIENT_SHAPES[i % PATIENT_SHAPES.length];
+
+      });
+
+      
+
+      // Update legends
+
+      updateLegend('normalizedLegend', doseColorMap, subjectShapeMap);
+
+      updateLegend('absoluteLegend', doseColorMap, subjectShapeMap);
+
+      
+
+      // Render both charts
+
+      renderNormalizedChart(data, doseColorMap, subjectShapeMap);
+
+      renderAbsoluteChart(data, doseColorMap, subjectShapeMap);
+
+    }
+
+    
+
+    // Get list of subjects that have dose changes
+
+    function getSubjectsWithDoseChanges(data) {
+
+      const subjectsWithChanges = new Set();
+
+      const subjects = [...new Set(data.map(d => d.Subject))];
+
+      
+
+      subjects.forEach(subject => {
+
+        const subjectData = data.filter(d => d.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+
+        
+
+        for (let i = 1; i < subjectData.length; i++) {
+
+          const prev = subjectData[i - 1];
+
+          const curr = subjectData[i];
+
+          
+
+          // Check if dose changed between consecutive points
+
+          if (prev.CurrentDose !== curr.CurrentDose && prev.CurrentDose && curr.CurrentDose) {
+
+            subjectsWithChanges.add(subject);
+
+            break; // Found a change, no need to check further
+
+          }
+
+        }
+
+      });
+
+      
+
+      return Array.from(subjectsWithChanges);
+
+    }
+
+
+
+    function updateLegend(containerId, doseColorMap, subjectShapeMap) {
+
+      const container = document.getElementById(containerId);
+
+      
+
+      const doseItems = Object.entries(doseColorMap).map(([dose, color]) => `
+
+        <div class="legend-item">
+
+          <div class="legend-color" style="background: ${color}"></div>
+
+          <span>${dose}</span>
+
+        </div>
+
+      `).join('');
+
+      
+
+      const shapeItems = Object.entries(subjectShapeMap).map(([subject, shape]) => `
+
+        <div class="legend-item">
+
+          <div class="legend-shape">${shape}</div>
+
+          <span>${subject}</span>
+
+        </div>
+
+      `).join('');
+
+      
+
+      container.innerHTML = `
+
+        <div class="legend-section">
+
+          <div class="legend-section-title">Dose (Line Color)</div>
+
+          <div class="legend-items">${doseItems}</div>
+
+        </div>
+
+        <div class="legend-section">
+
+          <div class="legend-section-title">Patient (Shape)</div>
+
+          <div class="legend-items">${shapeItems}</div>
+
+        </div>
+
+        <div class="legend-section">
+
+          <div class="legend-section-title">Line Style</div>
+
+          <div class="legend-items">
+
+            <div class="legend-item">
+
+              <div class="legend-line solid" style="border-color: #333"></div>
+
+              <span>Normal dosing</span>
+
+            </div>
+
+            <div class="legend-item">
+
+              <div class="legend-line dotted" style="border-color: grey"></div>
+
+              <span>Interruption</span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+
+
+
+    function renderNormalizedChart(data, doseColorMap, subjectShapeMap) {
+
+      if (state.charts.normalized) {
+
+        state.charts.normalized.destroy();
+
+      }
+
+      
+
+      const ctx = document.getElementById('normalizedChart').getContext('2d');
+
+      const subjects = [...new Set(data.map(d => d.Subject))];
+
+      
+
+      // Calculate axis limits
+
+      const allNorms = data.map(d => d.Norm).filter(v => v !== null);
+
+      const yMax = Math.ceil(Math.max(...allNorms, 10));
+
+      const xMin = Math.min(...data.map(d => d.StudyDay)) - 5;
+
+      const xMax = Math.max(...data.map(d => d.StudyDay)) + 5;
+
+      
+
+      // Create datasets for each subject
+
+      const segments = subjects.flatMap(subject => {
+
+        const subjectData = data.filter(d => d.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+
+        const segs = [];
+
+        
+
+        // Create segments based on interruption status
+
+        for (let i = 0; i < subjectData.length - 1; i++) {
+
+          const current = subjectData[i];
+
+          const next = subjectData[i + 1];
+
+          const isInt = current.IsInterruption || next.IsInterruption;
+
+          
+
+          segs.push({
+
+            subject,
+
+            x1: current.StudyDay,
+
+            y1: current.Norm,
+
+            x2: next.StudyDay,
+
+            y2: next.Norm,
+
+            dose: current.CurrentDose,
+
+            isInterruption: isInt
+
+          });
+
+        }
+
+        
+
+        return segs;
+
+      });
+
+      
+
+      // Points dataset
+
+      const pointsData = data.map(d => ({
+
+        x: d.StudyDay,
+
+        y: d.Norm,
+
+        subject: d.Subject,
+
+        dose: d.CurrentDose,
+
+        label: d.CycleLabel,
+
+        folder: d.Folder,
+
+        value: d.Value
+
+      }));
+
+      
+
+      state.charts.normalized = new Chart(ctx, {
+
+        type: 'scatter',
+
+        data: {
+
+          datasets: [{
+
+            data: pointsData,
+
+            pointRadius: 5,
+
+            pointHoverRadius: 7,
+
+            backgroundColor: pointsData.map(p => doseColorMap[p.dose]),
+
+            borderColor: pointsData.map(p => doseColorMap[p.dose]),
+
+            borderWidth: 2
+
+          }]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+          plugins: {
+
+            legend: { display: false },
+
+            tooltip: {
+
+              callbacks: {
+
+                label: (ctx) => {
+
+                  const p = ctx.raw;
+
+                  return [
+
+                    `Subject: ${p.subject}`,
+
+                    `Cycle: ${p.label}`,
+
+                    `Study Day: ${p.x}`,
+
+                    `×ULN: ${p.y.toFixed(1)}`,
+
+                    `Value: ${p.value.toFixed(2)} mg/dL`,
+
+                    `Dose: ${p.dose}`
+
+                  ];
+
+                }
+
+              }
+
+            }
+
+          },
+
+          scales: {
+
+            x: {
+
+              type: 'linear',
+
+              min: xMin,
+
+              max: xMax,
+
+              title: { display: true, text: 'Study Days', font: { size: 14, weight: 'bold' } },
+
+              grid: { display: false }
+
+            },
+
+            y: {
+
+              type: 'linear',
+
+              min: 0,
+
+              max: yMax,
+
+              title: { display: true, text: 'Times Upper Limit of Normal (×ULN)', font: { size: 14, weight: 'bold' } },
+
+              grid: { display: false }
+
+            }
+
+          }
+
+        },
+
+        plugins: [{
+
+          id: 'normalizedBackgroundPlugin',
+
+          beforeDraw: (chart) => {
+
+            const ctx = chart.ctx;
+
+            const xAxis = chart.scales.x;
+
+            const yAxis = chart.scales.y;
+
+            const chartArea = chart.chartArea;
+
+            
+
+            ctx.save();
+
+            
+
+            // Normal range shading (0-1)
+
+            const y1 = yAxis.getPixelForValue(1);
+
+            const y0 = yAxis.getPixelForValue(0);
+
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.3)';
+
+            ctx.fillRect(chartArea.left, y1, chartArea.right - chartArea.left, y0 - y1);
+
+            
+
+            // Reference lines
+
+            const refLines = [
+
+              { y: 1, color: 'blue', label: 'ULN', style: 'solid' },
+
+              { y: 10, color: 'red', label: 'CTCAE Grade 3', style: 'dashed' }
+
+            ];
+
+            
+
+            refLines.forEach(line => {
+
+              if (line.y <= yAxis.max) {
+
+                const yPos = yAxis.getPixelForValue(line.y);
+
+                ctx.beginPath();
+
+                ctx.strokeStyle = line.color;
+
+                ctx.lineWidth = line.style === 'solid' ? 2 : 1;
+
+                ctx.setLineDash(line.style === 'dashed' ? [5, 5] : []);
+
+                ctx.globalAlpha = 0.5;
+
+                ctx.moveTo(chartArea.left, yPos);
+
+                ctx.lineTo(chartArea.right, yPos);
+
+                ctx.stroke();
+
+                
+
+                // Label
+
+                ctx.globalAlpha = 1;
+
+                ctx.fillStyle = 'black';
+
+                ctx.font = '10px Arial';
+
+                ctx.textAlign = 'right';
+
+                ctx.fillText(line.label, chartArea.right - 10, yPos - 5);
+
+              }
+
+            });
+
+            
+
+            // Draw segments
+
+            ctx.setLineDash([]);
+
+            ctx.globalAlpha = 1;
+
+            segments.forEach(seg => {
+
+              const x1 = xAxis.getPixelForValue(seg.x1);
+
+              const y1 = yAxis.getPixelForValue(seg.y1);
+
+              const x2 = xAxis.getPixelForValue(seg.x2);
+
+              const y2 = yAxis.getPixelForValue(seg.y2);
+
+              
+
+              ctx.beginPath();
+
+              ctx.strokeStyle = seg.isInterruption ? 'grey' : doseColorMap[seg.dose];
+
+              ctx.lineWidth = seg.isInterruption ? 1.5 : 2;
+
+              ctx.setLineDash(seg.isInterruption ? [4, 4] : []);
+
+              ctx.moveTo(x1, y1);
+
+              ctx.lineTo(x2, y2);
+
+              ctx.stroke();
+
+            });
+
+            
+
+            // Border
+
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = 'black';
+
+            ctx.lineWidth = 1;
+
+            ctx.strokeRect(chartArea.left, chartArea.top, 
+
+                          chartArea.right - chartArea.left, 
+
+                          chartArea.bottom - chartArea.top);
+
+            
+
+            ctx.restore();
+
+          }
+
+        }]
+
+      });
+
+    }
+
+
+
+    function renderAbsoluteChart(data, doseColorMap, subjectShapeMap) {
+
+      if (state.charts.absolute) {
+
+        state.charts.absolute.destroy();
+
+      }
+
+      
+
+      const ctx = document.getElementById('absoluteChart').getContext('2d');
+
+      const subjects = [...new Set(data.map(d => d.Subject))];
+
+      
+
+      // Calculate axis limits
+
+      const allValues = data.map(d => d.Value).filter(v => !isNaN(v));
+
+      const yMin = Math.min(...allValues);
+
+      const yMax = Math.max(...allValues);
+
+      const yRange = yMax - yMin;
+
+      const yLimits = [yMin - yRange * 0.1, yMax + yRange * 0.1];
+
+      const xMin = Math.min(...data.map(d => d.StudyDay)) - 5;
+
+      const xMax = Math.max(...data.map(d => d.StudyDay)) + 5;
+
+      
+
+      // Create segments
+
+      const segments = subjects.flatMap(subject => {
+
+        const subjectData = data.filter(d => d.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+
+        const segs = [];
+
+        
+
+        for (let i = 0; i < subjectData.length - 1; i++) {
+
+          const current = subjectData[i];
+
+          const next = subjectData[i + 1];
+
+          const isInt = current.IsInterruption || next.IsInterruption;
+
+          
+
+          segs.push({
+
+            subject,
+
+            x1: current.StudyDay,
+
+            y1: current.Value,
+
+            x2: next.StudyDay,
+
+            y2: next.Value,
+
+            dose: current.CurrentDose,
+
+            isInterruption: isInt
+
+          });
+
+        }
+
+        
+
+        return segs;
+
+      });
+
+      
+
+      // Points
+
+      const pointsData = data.map(d => ({
+
+        x: d.StudyDay,
+
+        y: d.Value,
+
+        subject: d.Subject,
+
+        dose: d.CurrentDose,
+
+        label: d.CycleLabel,
+
+        folder: d.Folder,
+
+        norm: d.Norm
+
+      }));
+
+      
+
+      state.charts.absolute = new Chart(ctx, {
+
+        type: 'scatter',
+
+        data: {
+
+          datasets: [{
+
+            data: pointsData,
+
+            pointRadius: 5,
+
+            pointHoverRadius: 7,
+
+            backgroundColor: pointsData.map(p => doseColorMap[p.dose]),
+
+            borderColor: pointsData.map(p => doseColorMap[p.dose]),
+
+            borderWidth: 2
+
+          }]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+          plugins: {
+
+            legend: { display: false },
+
+            tooltip: {
+
+              callbacks: {
+
+                label: (ctx) => {
+
+                  const p = ctx.raw;
+
+                  return [
+
+                    `Subject: ${p.subject}`,
+
+                    `Cycle/Visit: ${p.label || p.folder || 'N/A'}`,
+
+                    `Study Day: ${p.x}`,
+
+                    `Value: ${p.y.toFixed(2)} mg/dL`,
+
+                    `×ULN: ${p.norm?.toFixed(1) || 'N/A'}`,
+
+                    `Dose: ${p.dose || 'N/A'}`
+
+                  ];
+
+                }
+
+              }
+
+            }
+
+          },
+
+          scales: {
+
+            x: {
+
+              type: 'linear',
+
+              min: xMin,
+
+              max: xMax,
+
+              title: { display: true, text: 'Study Days', font: { size: 14, weight: 'bold' } },
+
+              grid: { display: false }
+
+            },
+
+            y: {
+
+              type: 'linear',
+
+              min: yLimits[0],
+
+              max: yLimits[1],
+
+              title: { display: true, text: 'Bilirubin Value (mg/dL)', font: { size: 14, weight: 'bold' } },
+
+              grid: { display: false }
+
+            }
+
+          }
+
+        },
+
+        plugins: [{
+
+          id: 'absoluteBackgroundPlugin',
+
+          beforeDraw: (chart) => {
+
+            const ctx = chart.ctx;
+
+            const xAxis = chart.scales.x;
+
+            const yAxis = chart.scales.y;
+
+            const chartArea = chart.chartArea;
+
+            
+
+            ctx.save();
+
+            
+
+            // Draw segments
+
+            segments.forEach(seg => {
+
+              const x1 = xAxis.getPixelForValue(seg.x1);
+
+              const y1 = yAxis.getPixelForValue(seg.y1);
+
+              const x2 = xAxis.getPixelForValue(seg.x2);
+
+              const y2 = yAxis.getPixelForValue(seg.y2);
+
+              
+
+              ctx.beginPath();
+
+              ctx.strokeStyle = seg.isInterruption ? 'grey' : doseColorMap[seg.dose];
+
+              ctx.lineWidth = seg.isInterruption ? 1.5 : 2;
+
+              ctx.setLineDash(seg.isInterruption ? [4, 4] : []);
+
+              ctx.moveTo(x1, y1);
+
+              ctx.lineTo(x2, y2);
+
+              ctx.stroke();
+
+            });
+
+            
+
+            // Border
+
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = 'black';
+
+            ctx.lineWidth = 1;
+
+            ctx.strokeRect(chartArea.left, chartArea.top, 
+
+                          chartArea.right - chartArea.left, 
+
+                          chartArea.bottom - chartArea.top);
+
+            
+
+            ctx.restore();
+
+          }
+
+        }]
+
+      });
+
+    }
+
+
+
+    // ========================================================================
+
+    // Event Listeners
+
+    // ========================================================================
+
+    document.getElementById('patientFilter').addEventListener('change', renderCharts);
+
+    document.getElementById('doseFilter').addEventListener('change', renderCharts);
+
+    document.getElementById('showAllPatients').addEventListener('change', () => {
+
+      // Reprocess data to include all patients if needed
+
+      processData();
+
+    });
+
+    document.getElementById('showDoseChangePatientsOnly').addEventListener('change', renderCharts);
+
+
+
+    // ========================================================================
+
+    // Initialization
+
+    // ========================================================================
+
+    async function init() {
+
+      try {
+
+        // Load data files - using uppercase .CSV extensions
+
+        const [aeData, lblcData, labData] = await Promise.all([
+
+          loadCSV('../../data/ae.CSV').catch(() => loadCSV('../../data/ae.csv')),
+
+          loadCSV('../../data/lblc.CSV').catch(() => loadCSV('../../data/lblc.csv')),
+
+          loadCSV('../../data/lab.CSV').catch(() => loadCSV('../../data/lab.csv'))
+
+        ]);
+
+        
+
+        state.aeData = aeData;
+
+        state.lblcData = lblcData;
+
+        state.labData = labData;
+
+        
+
+        // Try to load dose data from dm.CSV or dose_change.CSV
+
+        try {
+
+          const dmData = await loadCSV('../../data/dm.CSV');
+
+          // Convert dm.CSV format to dose data format
+
+          state.doseData = dmData.map(row => ({
+
+            'Subject ID': row.SUBJID || row.Subject || row.subject || '',
+
+            'Initial Dose': row.arm || row.ARM || row.Arm || ''
+
+          })).filter(row => row['Subject ID'] && row['Initial Dose']);
+
+        } catch (e1) {
+
+          try {
+
+            state.doseData = await loadCSV('../../data/dose_change.CSV').catch(() => loadCSV('../../data/dose_change.csv'));
+
+          } catch (e2) {
+
+            console.warn('dose_change.CSV and dm.CSV not found');
+
+            state.doseData = [];
+
+          }
+
+        }
+
+        
+
+        // Set default dose changes and interruptions (matching R code hardcoded values)
+
+        state.doseChanges = [
+
+          { subject: '16-102-1003', initialDose: '80 mg BID', newDose: '40 mg BID', date: '2-Jul-25' }
+
+        ];
+
+        state.interruptions = [
+
+          { subject: '16-102-1003', startDate: '26-May-25', endDate: '1-Jul-25' }
+
+        ];
+
+        
+
+        // Process data
+
+        processData();
+
+        
+
+        // Render dose change UI
+
+        renderDoseChangeList();
+
+        if (typeof initBlockExportDialog === 'function') {
+
+          initBlockExportDialog();
+
+          setBlockExportPrefix('Bilirubin');
+
+        }
+
+        
+
+      } catch (error) {
+
+        console.error('Error loading data:', error);
+
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + error.message;
+
+      } finally {
+
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+      }
+
+    }
+
+
+
+    function exportBilirubinPatientTableCSV() {
+
+      var table = document.getElementById('patientTable');
+
+      if (!table) return;
+
+      var rows = [];
+
+      table.querySelectorAll('tr').forEach(function(tr) {
+
+        var row = [];
+
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+
+        });
+
+        rows.push(row.join(','));
+
+      });
+
+      var csv = rows.join('\n');
+
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+      var url = URL.createObjectURL(blob);
+
+      var a = document.createElement('a');
+
+      a.href = url;
+
+      a.download = 'Bilirubin_Patients_' + new Date().toISOString().slice(0, 10) + '.csv';
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
+
+    }
+
+    // Start
+
+    document.addEventListener('DOMContentLoaded', init);
+
+  </script>
+
+</body>
+
+</html>

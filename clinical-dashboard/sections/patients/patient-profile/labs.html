@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Labs</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../../assets/js/block-export.js"></script>
+  <style>
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .filter-bar { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; }
+    .filter-bar label { font-weight: 500; color: var(--text-secondary); }
+    .filter-bar select { padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 6px; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .chart-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #1e293b; }
+    .chart-card h4 .form-name { font-style: italic; color: #64748b; font-weight: normal; margin-left: 8px; }
+    .chart-wrapper { height: 250px; position: relative; }
+    .chart-wrapper canvas { max-height: 250px; }
+    .ref-range-note { font-size: 11px; color: #64748b; text-align: center; margin-top: 8px; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+    .debug-info { background: #fffbe6; border: 1px solid #ffe58f; padding: 12px; margin-bottom: 16px; border-radius: 6px; font-size: 12px; font-family: monospace; }
+    .data-count { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+    @media (max-width: 1200px) { .charts-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab active">Labs</button>
+  </nav>
+  <main class="page-content">
+    <h1>Laboratory Results</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <div class="card" id="labsChartsExportBlock">
+      <div id="debugInfo" class="debug-info" style="display:none;"></div>
+      <div class="filter-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <label>Panel:</label>
+          <select id="panelFilter"><option value="">All Panels</option></select>
+          <span class="data-count" id="dataCount"></span>
+        </div>
+        <button class="export-btn" onclick="showBlockExportDialog('labsChartsExportBlock', 'Patient_Labs')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+      </div>
+      <div id="chartsContainer" class="charts-grid"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    // Ensure renderNav is called with all parameters
+    if (typeof renderNav === 'function') {
+      renderNav('patients', 'pp-labs', '../../../');
+    } else {
+      console.error('renderNav function not found');
+    }
+    
+    let labData = [];
+    let currentSubject = null;
+    let charts = {};
+    let isRendering = false;
+    
+    function parseDate(str) {
+      if (!str || str.trim() === '') return null;
+      str = str.trim();
+      const months = {'jan':0,'feb':1,'mar':2,'apr':3,'may':4,'jun':5,'jul':6,'aug':7,'sep':8,'oct':9,'nov':10,'dec':11};
+      
+      let match = str.match(/^(\d{1,2})([A-Za-z]{3})(\d{4})/);
+      if (match) {
+        const day = parseInt(match[1]), mon = months[match[2].toLowerCase()], year = parseInt(match[3]);
+        if (!isNaN(day) && mon !== undefined && !isNaN(year)) return new Date(year, mon, day);
+      }
+      let parts = str.split(/\s+/);
+      if (parts.length >= 3) {
+        const day = parseInt(parts[0]), mon = months[parts[1].toLowerCase()], year = parseInt(parts[2]);
+        if (!isNaN(day) && mon !== undefined && !isNaN(year)) return new Date(year, mon, day);
+      }
+      match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) return new Date(parseInt(match[1]), parseInt(match[2])-1, parseInt(match[3]));
+      return null;
+    }
+    
+    async function loadData() {
+      return new Promise(res => {
+        Papa.parse('../../../data/lab.CSV', { 
+          download: true, 
+          header: true, 
+          skipEmptyLines: true, 
+          complete: r => { 
+            labData = r.data; 
+            console.log('Lab data loaded:', labData.length, 'rows');
+            if (labData.length > 0) console.log('Columns:', Object.keys(labData[0]));
+            res(); 
+          }, 
+          error: e => { console.error('Error loading lab.csv:', e); res(); }
+        });
+      });
+    }
+    
+    function populateSubjects() {
+      if (!labData || labData.length === 0) {
+        document.getElementById('subjectSelect').innerHTML = '<option value="">No data available</option>';
+        document.getElementById('chartsContainer').innerHTML = '<div class="no-data">No lab data available</div>';
+        return;
+      }
+      
+      const subjectCol = labData[0].Subject ? 'Subject' : 
+                        labData[0].subject ? 'subject' : 
+                        labData[0].SUBJECT ? 'SUBJECT' : 'Subject';
+      
+      const subjects = [...new Set(labData.map(r => r[subjectCol]))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      
+      if (!subjects.length) {
+        document.getElementById('chartsContainer').innerHTML = '<div class="no-data">No subjects found in lab data</div>';
+        return;
+      }
+      
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      
+      select.addEventListener('change', e => { 
+        currentSubject = e.target.value; 
+        history.replaceState(null, '', `?id=${currentSubject}`); 
+        updatePanelFilter(); 
+        renderCharts(); 
+      });
+      
+      // Update panel filter first, then render charts
+      updatePanelFilter();
+      const panelFilterEl = document.getElementById('panelFilter');
+      // Remove existing listeners to prevent duplicates
+      const newPanelFilter = panelFilterEl.cloneNode(true);
+      panelFilterEl.parentNode.replaceChild(newPanelFilter, panelFilterEl);
+      // Use a small delay to ensure DOM is ready before adding listener
+      setTimeout(() => {
+        newPanelFilter.addEventListener('change', () => {
+          if (!isRendering) {
+            renderCharts();
+          }
+        });
+      }, 10);
+      // Render charts after a small delay to ensure everything is set up
+      setTimeout(() => {
+        renderCharts();
+      }, 50);
+    }
+    
+    function updatePanelFilter() {
+      const subjectCol = labData[0]?.Subject ? 'Subject' : 
+                        labData[0]?.subject ? 'subject' : 
+                        labData[0]?.SUBJECT ? 'SUBJECT' : 'Subject';
+      const data = labData.filter(r => r[subjectCol] === currentSubject);
+      const panels = [...new Set(data.map(r => r.FormName || 'Unknown'))].filter(Boolean).sort();
+      const panelFilterEl = document.getElementById('panelFilter');
+      const currentValue = panelFilterEl.value; // Save current value
+      panelFilterEl.innerHTML = '<option value="">All Panels</option>' + panels.map(p => `<option value="${p}">${p}</option>`).join('');
+      // Restore value if it still exists
+      if (panels.includes(currentValue)) {
+        panelFilterEl.value = currentValue;
+      }
+    }
+    
+    function renderCharts() {
+      // Prevent multiple simultaneous renders
+      if (isRendering) {
+        console.log('Render already in progress, skipping...');
+        return;
+      }
+      isRendering = true;
+      
+      const container = document.getElementById('chartsContainer');
+      const debugDiv = document.getElementById('debugInfo');
+      const subj = currentSubject;
+      const panelFilter = document.getElementById('panelFilter').value;
+      
+      // Destroy existing charts
+      Object.values(charts).forEach(c => { 
+        if (c && typeof c.destroy === 'function') {
+          try {
+            c.destroy();
+          } catch(e) {
+            console.warn('Error destroying chart:', e);
+          }
+        }
+      });
+      charts = {};
+      
+      const subjectCol = labData[0]?.Subject ? 'Subject' : 
+                        labData[0]?.subject ? 'subject' : 
+                        labData[0]?.SUBJECT ? 'SUBJECT' : 'Subject';
+      
+      let data = labData.filter(r => r[subjectCol] === subj).map(r => {
+        const dateCol = Object.keys(r).find(k => k === 'RecordDate' || k.includes('Date') || k.includes('DAT'));
+        const dateStr = r[dateCol] || r.RecordDate || '';
+        
+        return {
+          ...r,
+          parsedDate: parseDate(dateStr),
+          dateStr: dateStr,
+          folder: r.Folder === 'DSET' ? 'End of treatment' : (r.Folder || 'Unknown'),
+          formName: r.FormName || 'Unknown',
+          analyteName: r.AnalyteName || 'Unknown',
+          numericValue: parseFloat(r.NumericValue),
+          labLow: parseFloat(r.LabLow),
+          labHigh: parseFloat(r.LabHigh),
+          labUnits: r.LabUnits || '',
+          clinSig: r.ClinSigValue || ''
+        };
+      });
+      
+      if (panelFilter) data = data.filter(r => r.formName === panelFilter);
+      
+      const validData = data.filter(r => r.parsedDate && !isNaN(r.numericValue));
+      
+      document.getElementById('dataCount').textContent = `${validData.length} data points`;
+      
+      if (data.length > 0 && validData.length === 0) {
+        debugDiv.style.display = 'block';
+        const samples = data.slice(0, 3);
+        debugDiv.innerHTML = `<strong>Debug:</strong><br>
+          Total records for subject: ${data.length}<br>
+          Records with valid date AND numeric value: ${validData.length}<br>
+          Sample dates: ${samples.map(s => `"${s.dateStr}"`).join(', ')}<br>
+          Sample values: ${samples.map(s => `"${s.NumericValue}"`).join(', ')}<br>
+          Available columns: ${Object.keys(labData[0] || {}).join(', ')}`;
+        container.innerHTML = '<div class="no-data">No lab data with valid dates and values. Check debug info above.</div>';
+        isRendering = false;
+        return;
+      }
+      debugDiv.style.display = 'none';
+      
+      if (!validData.length) {
+        container.innerHTML = '<div class="no-data">No laboratory data available</div>';
+        isRendering = false;
+        return;
+      }
+      
+      const groups = {};
+      for (const d of validData) {
+        const key = `${d.formName}|||${d.analyteName}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(d);
+      }
+      
+      for (const key of Object.keys(groups)) {
+        groups[key].sort((a, b) => a.parsedDate - b.parsedDate);
+        const visitCounts = {};
+        for (const d of groups[key]) {
+          visitCounts[d.folder] = (visitCounts[d.folder] || 0) + 1;
+          d.folderX = visitCounts[d.folder] > 1 ? `${d.folder} ${visitCounts[d.folder]}` : d.folder;
+        }
+      }
+      
+      const groupKeys = Object.keys(groups);
+      
+      let html = '';
+      for (const key of groupKeys) {
+        const [formName, analyteName] = key.split('|||');
+        const chartId = `chart_${key.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        let displayName = analyteName;
+        if (analyteName && analyteName.includes('; ')) {
+          const parts = analyteName.split('; ');
+          displayName = `${parts[0]}; ${parts[1].toUpperCase()}`;
+        }
+        
+        html += `<div class="chart-card">
+          <h4><strong>${displayName}</strong><span class="form-name">${formName}</span></h4>
+          <div class="chart-wrapper"><canvas id="${chartId}"></canvas></div>
+          <div class="ref-range-note" id="note_${chartId}"></div>
+        </div>`;
+      }
+      container.innerHTML = html;
+      
+      // Wait for DOM to update before creating charts
+      setTimeout(() => {
+        // Check if another render started (we were cancelled)
+        if (!isRendering) {
+          console.log('Render was cancelled, skipping chart creation');
+          return;
+        }
+        
+        // Double-check container still has the HTML (wasn't cleared)
+        if (container.innerHTML.trim() === '') {
+          console.warn('Container was cleared, skipping chart creation');
+          isRendering = false;
+          return;
+        }
+        
+        for (const key of groupKeys) {
+        const gData = groups[key];
+        const chartId = `chart_${key.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        const labels = gData.map(d => d.folderX);
+        const values = gData.map(d => {
+          const val = d.numericValue;
+          return isNaN(val) || val === null || val === undefined ? null : val;
+        });
+        const unit = gData[0].labUnits || 'Unknown';
+        
+        // Ensure we have at least some valid data
+        const validValues = values.filter(v => v !== null && !isNaN(v));
+        if (validValues.length === 0) {
+          console.warn(`No valid values for chart ${chartId}`);
+          continue;
+        }
+        
+        const labLow = gData.find(d => !isNaN(d.labLow))?.labLow;
+        const labHigh = gData.find(d => !isNaN(d.labHigh))?.labHigh;
+        
+        const dataMin = Math.min(...validValues);
+        const dataMax = Math.max(...validValues);
+        const yMin = Math.min(dataMin, labLow || dataMin) * 0.9;
+        const yMax = Math.max(dataMax, labHigh || dataMax) * 1.1;
+        
+        const annotations = {};
+        if (!isNaN(labLow) && !isNaN(labHigh)) {
+          annotations.refRange = {
+            type: 'box',
+            yMin: labLow,
+            yMax: labHigh,
+            backgroundColor: 'rgba(173, 216, 230, 0.3)',
+            borderWidth: 0
+          };
+          document.getElementById(`note_${chartId}`).textContent = `Reference range: ${labLow} - ${labHigh} ${unit}`;
+        }
+        
+        const canvas = document.getElementById(chartId);
+        if (!canvas) continue;
+        
+        charts[chartId] = new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Value',
+              data: values,
+              borderColor: '#333',
+              backgroundColor: 'red',
+              pointBackgroundColor: 'red',
+              pointBorderColor: '#333',
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointStyle: 'circle',
+              tension: 0,
+              fill: false,
+              borderWidth: 2,
+              showLine: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.parsed.y.toFixed(2)} ${unit}`
+                }
+              },
+              annotation: { annotations },
+              yAxisTitleBorder: true
+            },
+            scales: {
+              x: {
+                display: true,
+                title: { 
+                  display: true,
+                  text: 'Visit',
+                  font: { size: 12 }
+                },
+                ticks: {
+                  display: true,
+                  maxRotation: 45,
+                  minRotation: 45,
+                  font: { size: 10 },
+                  color: '#666'
+                },
+                grid: { 
+                  display: true, 
+                  color: '#f0f0f0',
+                  drawBorder: true,
+                  borderColor: '#ccc'
+                }
+              },
+              y: {
+                display: true,
+                title: {
+                  display: true,
+                  text: `Unit (${unit})`,
+                  font: { size: 11 }
+                },
+                ticks: {
+                  display: true,
+                  font: { size: 10 },
+                  color: '#666'
+                },
+                min: isFinite(yMin) ? yMin : undefined,
+                max: isFinite(yMax) ? yMax : undefined,
+                grid: { 
+                  display: true, 
+                  color: '#f0f0f0',
+                  drawBorder: true,
+                  borderColor: '#ccc'
+                }
+              }
+            }
+          }
+        });
+        }
+        
+        // Reset rendering flag after charts are created
+        isRendering = false;
+        console.log('Charts rendered successfully, count:', Object.keys(charts).length);
+      }, 100);
+      
+    }
+    
+    loadData().then(() => {
+      populateSubjects();
+      if (typeof initBlockExportDialog === 'function') {
+        initBlockExportDialog();
+        setBlockExportPrefix('Patient_Labs');
+      }
+    });
+  </script>
+</body>
+</html>

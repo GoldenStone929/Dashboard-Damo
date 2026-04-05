@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab Normalized (ULN/LLN)</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script src="../../assets/js/labs-config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    .labs-container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .controls-panel {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-group label {
+      font-weight: 600;
+      color: #2C3E50;
+      font-size: 14px;
+    }
+    .control-group select,
+    .control-group input {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 200px;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .chart-container {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 750px;
+    }
+    .chart-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 5px;
+    }
+    .chart-subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 15px;
+    }
+    .no-data-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: #7F8C8D;
+      font-size: 18px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .legend-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #34495E;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .pagination button {
+      padding: 10px 20px;
+      border: 1px solid #3498db;
+      background: white;
+      color: #3498db;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .pagination button:hover:not(:disabled) {
+      background: #3498db;
+      color: white;
+    }
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .pagination .page-info {
+      font-size: 14px;
+      color: #34495E;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px; height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #34495E;
+    }
+    .info-panel {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .info-panel h4 {
+      margin: 0 0 10px 0;
+      color: #1565c0;
+    }
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #34495E;
+    }
+    .info-panel li {
+      margin-bottom: 5px;
+    }
+    .stats-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #7F8C8D;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <div class="labs-container">
+      <h1>Lab Normalized (ULN / LLN)</h1>
+
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading lab data...</div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <h4>Normalization (Value/ULN or Value/LLN)</h4>
+        <ul>
+          <li><strong>Increase analytes (e.g., ALT, AST, BILI):</strong> Normalized as <code>Value / ULN</code>
+            <ul>
+              <li>Y-axis shows <strong>Ratio</strong>: green zone 0&ndash;1 = normal, &gt;1 = abnormal (elevated)</li>
+            </ul>
+          </li>
+          <li><strong>Decrease analytes (e.g., PLAT, NEUT, HGB):</strong> Normalized as <code>Value / LLN</code>
+            <ul>
+              <li>Y-axis shows <strong>% of LLN</strong>: &ge;100% = normal, &lt;100% = abnormal (decreased)</li>
+              <li>Example: Platelet = 75 with LLN = 150 &rarr; 50% of LLN</li>
+            </ul>
+          </li>
+          <li><strong>Bidirectional analytes (e.g., K, SODIUM, CA):</strong> Use ULN or LLN based on which side is abnormal (unified ratio &gt;1 = abnormal)</li>
+        </ul>
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #90caf9;">
+        <ul>
+          <li><strong>Value Source:</strong> Standard (SI) values first, then Local Lab values as fallback</li>
+          <li><strong>Point Styles:</strong> &#9679; Circle = Standard (SI Units), &#9632; Square = Local Lab Units, &#9650; Triangle = Hardcoded (Manual)</li>
+          <li><strong>X-Axis:</strong> Study Day (Day 0 = C0D1 or first screening visit)</li>
+          <li><strong>Exclusion:</strong> Patients whose ALL visits are within normal range are excluded by default</li>
+        </ul>
+      </div>
+
+      <!-- Stats Panel -->
+      <div class="stats-panel" id="statsPanel">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotalPatients">-</div>
+          <div class="stat-label">Total Patients</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statShown">-</div>
+          <div class="stat-label">Patients Shown</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statMissingStudyDay">-</div>
+          <div class="stat-label">Missing Study Day</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statMissingRange">-</div>
+          <div class="stat-label">Missing ULN/LLN or Value</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statExcluded">-</div>
+          <div class="stat-label">Excluded (All Normal)</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label for="analyteSelect">Analyte</label>
+          <select id="analyteSelect">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="armFilter">Dosing Group Filter</label>
+          <select id="armFilter">
+            <option value="all">All Groups</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="sortBy">Sort Data Points By</label>
+          <select id="sortBy">
+            <option value="dose">Dose Group</option>
+            <option value="subject">Subject (Patient ID)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="yAxisScale">Y-Axis Scale</label>
+          <select id="yAxisScale">
+            <option value="linear">Linear</option>
+            <option value="log">Log</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showNormal">
+          <label for="showNormal">Include Patients Within Normal Range</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="show2xOnly">
+          <label for="show2xOnly" id="show2xLabel">Show &ge; 2&times; ULN Only</label>
+        </div>
+      </div>
+
+      <!-- Chart Container -->
+      <div class="chart-container" id="chartExportBlock">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 20px;">
+          <div style="flex: 1;">
+            <div class="chart-title" id="chartTitle">Select an analyte</div>
+            <div class="chart-subtitle" id="chartSubtitle">Direction-aware normalization (formula shown after analyte selection)</div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <div id="chartFilterInfo" style="padding: 10px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #475569; display: none; font-style: italic;"></div>
+            <button class="export-btn" onclick="showBlockExportDialog('chartExportBlock', getCurrentAnalyteName())">Export</button>
+          </div>
+        </div>
+        <div class="legend-container" id="legendContainer"></div>
+        <div class="chart-wrapper">
+          <canvas id="labChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button id="prevAnalyte" disabled>&larr; Previous Analyte</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button id="nextAnalyte" disabled>Next Analyte &rarr;</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'lab-uln-lln', '../../');
+    }
+
+    // ========================================================================
+    // Global State
+    // ========================================================================
+    const state = {
+      labData: [],
+      lblhData: [],
+      dmData: [],
+      processedData: [],
+      uniqueAnalytes: [],
+      uniqueArms: [],
+      baselineDates: {},
+      armLookup: {},
+      currentDirection: 'increase',
+      currentAnalyteIndex: 0,
+      chart: null
+    };
+
+    const ARM_COLORS = [
+      '#E41A1C', '#377EB8', '#4DAF4A', '#984EA3',
+      '#FF7F00', '#A65628', '#F781BF', '#999999',
+      '#66C2A5', '#FC8D62', '#8DA0CB', '#E78AC3'
+    ];
+
+    // ========================================================================
+    // Analyte Name Mapping & Direction Detection
+    // ========================================================================
+    const ANALYTE_NAME_MAP = {
+      'Alanine Aminotransferase; ALT': 'ALT',
+      'Aspartate Aminotransferase; AST': 'AST',
+      'Alkaline Phosphatase; ALP': 'ALP',
+      'Bilirubin; BILI': 'BILI',
+      'Direct Bilirubin; D-BIL': 'D-BIL',
+      'Indirect Bilirubin; I-BIL': 'I-BIL',
+      'GGT; GGT': 'GGT',
+      'Lactate Dehydrogenase; LDH': 'LDH',
+      'Creatinine; CREAT': 'CREAT',
+      'Urea Nitrogen; UREAN': 'UREAN',
+      'Urate; URATE': 'URATE',
+      'Albumin; ALB': 'ALB',
+      'Protein; PROT': 'PROT',
+      'Potassium; K': 'K',
+      'Sodium; SODIUM': 'SODIUM',
+      'Calcium; CA': 'CA',
+      'Magnesium; MG': 'MG',
+      'Phosphate; PHOS': 'PHOS',
+      'Chloride; CL': 'CL',
+      'Bicarbonate; BICARB': 'BICARB',
+      'Carbon Dioxide; CO2': 'CO2',
+      'Glucose; GLUC': 'GLUC',
+      'Amylase; AMYLASE': 'AMYLASE',
+      'Lipase; LIPASET': 'LIPASE',
+      'Lipase; LIPASE': 'LIPASE',
+      'Cholesterol; CHOL': 'CHOL',
+      'Triglycerides; TRIG': 'TRIG',
+      'Activated Partial Thromboplastin Time; APTT': 'APTT',
+      'Prothrombin Intl. Normalized Ratio; INR': 'INR',
+      'Prothrombin Time; PT': 'PT',
+      'Partial Thromboplastin Time; PTT': 'PTT',
+      'Fibrinogen; FIB': 'FIB',
+      'Leukocytes; WBC': 'WBC',
+      'Erythrocytes; RBC': 'RBC',
+      'Hemoglobin; HGB': 'HGB',
+      'Hematocrit; HCT': 'HCT',
+      'Platelets; PLAT': 'PLAT',
+      'Neutrophils; NEUT': 'NEUT',
+      'Lymphocytes; LYM': 'LYM',
+      'Monocytes; MONO': 'MONO',
+      'Eosinophils; EOS': 'EOS',
+      'Basophils; BASO': 'BASO',
+      'CD4; CD4': 'CD4'
+    };
+
+    function getAnalyteShortName(fullName) {
+      if (ANALYTE_NAME_MAP[fullName]) return ANALYTE_NAME_MAP[fullName];
+      if (fullName.includes(';')) return fullName.split(';').pop().trim();
+      return fullName;
+    }
+
+    /**
+     * Get the normalization direction for an analyte.
+     * - 'increase': Value/ULN  (abnormal when elevated, e.g. ALT, AST, BILI)
+     * - 'decrease': Value/LLN  (shown as % of LLN; <100% = abnormal, e.g. PLAT, NEUT, HGB)
+     * - 'bidirectional': both directions (e.g. K, SODIUM, CA)
+     * - null: unknown direction
+     */
+    function getAnalyteDirection(analyteName) {
+      const shortName = getAnalyteShortName(analyteName);
+
+      // Increase analytes
+      const increaseAnalytes = [
+        'ALT', 'AST', 'ALP', 'BILI', 'D-BIL', 'I-BIL', 'GGT', 'LDH',
+        'CREAT', 'UREAN', 'URATE', 'LIPASE', 'AMYLASE',
+        'INR', 'APTT', 'PT', 'PTT',
+        'CHOL', 'TRIG'
+      ];
+
+      // Decrease analytes
+      const decreaseAnalytes = [
+        'PLAT', 'NEUT', 'WBC', 'LYM', 'HGB', 'HCT', 'RBC',
+        'ALB', 'FIB', 'MG', 'PHOS', 'CD4',
+        'MONO', 'EOS', 'BASO'
+      ];
+
+      // Bidirectional analytes
+      const bidirectionalAnalytes = ['K', 'SODIUM', 'CA', 'GLUC', 'CL', 'BICARB', 'CO2', 'PROT'];
+
+      if (increaseAnalytes.includes(shortName)) return 'increase';
+      if (decreaseAnalytes.includes(shortName)) return 'decrease';
+      if (bidirectionalAnalytes.includes(shortName)) return 'bidirectional';
+
+      // Default: treat as increase (Value/ULN) if ULN available
+      return null;
+    }
+
+    // ========================================================================
+    // One-sided Normalization
+    // ========================================================================
+    function getNormalizedValue(value, low, high, direction) {
+      if (value === null || !isFinite(value)) return null;
+
+      if (direction === 'increase') {
+        if (high == null || !isFinite(high) || high <= 0) return null;
+        return value / high;
+      }
+      if (direction === 'decrease') {
+        if (low == null || !isFinite(low) || low <= 0) return null;
+        return value / low;
+      }
+      if (direction === 'bidirectional') {
+        // Value of 0 or negative with positive LLN is abnormally low
+        if (low != null && isFinite(low) && low > 0 && value <= 0) {
+          return null; // Cannot compute ratio; treat as unmeasurable
+        }
+        // If below LLN, use LLN/Value (inverted, >1 = abnormal low)
+        if (low != null && isFinite(low) && value < low && value > 0) {
+          return low / value;
+        }
+        // If above ULN, use Value/ULN (>1 = abnormal high)
+        if (high != null && isFinite(high) && high > 0 && value > high) {
+          return value / high;
+        }
+        // Within normal range: use the ratio closest to abnormal boundary
+        if (high != null && isFinite(high) && high > 0) {
+          return value / high; // Will be <= 1
+        }
+        if (low != null && isFinite(low) && value > 0) {
+          return low / value; // Will be <= 1
+        }
+        return null;
+      }
+      return null;
+    }
+
+    // ========================================================================
+    // Data Loading
+    // ========================================================================
+    async function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data),
+          error: (error) => reject(error)
+        });
+      });
+    }
+
+    function parseSASDate(dateStr) {
+      if (!dateStr || dateStr.trim() === '') return null;
+      const match1 = dateStr.match(/^(\d{2})([A-Z]{3})(\d{4}):?/i);
+      if (match1) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+                         JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        const day = parseInt(match1[1]);
+        const month = months[match1[2].toUpperCase()];
+        const year = parseInt(match1[3]);
+        if (month !== undefined) return new Date(year, month, day);
+      }
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+      return null;
+    }
+
+    // ========================================================================
+    // Data Processing (same as index.html but preserves raw Std/Lab values)
+    // ========================================================================
+    function processData() {
+      const { labData, lblhData, dmData } = state;
+
+      // Standardize Folder naming
+      labData.forEach(row => { if (row.Folder === 'DSET') row.Folder = 'End of treatment'; });
+      lblhData.forEach(row => { if (row.Folder === 'DSET') row.Folder = 'End of treatment'; });
+
+      // Parse LBDAT_INT in lblh
+      lblhData.forEach(row => { row.LBDAT_INT_POSIX = parseSASDate(row.LBDAT_INT); });
+
+      // Baseline dates per subject
+      const baselineDates = {};
+      const subjectVisits = {};
+      lblhData.forEach(row => {
+        if (!row.Subject || !row.LBDAT_INT_POSIX) return;
+        if (!subjectVisits[row.Subject]) subjectVisits[row.Subject] = [];
+        subjectVisits[row.Subject].push({ folder: row.Folder, date: row.LBDAT_INT_POSIX });
+      });
+      Object.keys(subjectVisits).forEach(subject => {
+        const visits = subjectVisits[subject].sort((a, b) => a.date - b.date);
+        const c0d1 = visits.find(v => v.folder === 'C0D1');
+        const scrn = visits.find(v => v.folder === 'SCRN');
+        baselineDates[subject] = c0d1 ? c0d1.date : (scrn ? scrn.date : visits[0]?.date);
+      });
+
+      // StudyDay for lblh
+      const lblhStudyDays = {};
+      lblhData.forEach(row => {
+        if (!row.Subject || !row.LBDAT_INT_POSIX || !baselineDates[row.Subject]) return;
+        const key = `${row.Subject}|${row.Folder}|${row.AnalyteName || ''}`;
+        lblhStudyDays[key] = Math.round((row.LBDAT_INT_POSIX - baselineDates[row.Subject]) / (1000 * 60 * 60 * 24));
+      });
+
+      // ARM lookup from dm data
+      const armLookup = {};
+      dmData.forEach(row => {
+        const subjid = (row.SUBJID || row.Subject || '').trim();
+        const arm = (row.ARM || '').trim();
+        if (subjid) armLookup[subjid] = arm || 'Unknown';
+      });
+
+      // Process lab data - preserve raw Std/Lab values for direction-aware selection
+      const processed = labData.map(row => {
+        const subject = (row.Subject || '').trim();
+        const folder = row.Folder || '';
+        const analyteName = row.AnalyteName || '';
+
+        // Get StudyDay
+        const key = `${subject}|${folder}|${analyteName}`;
+        const keyNoAnalyte = `${subject}|${folder}|`;
+        let studyDay = lblhStudyDays[key];
+        if (studyDay === undefined) studyDay = lblhStudyDays[keyNoAnalyte];
+        if (studyDay === undefined && row.RecordDate && baselineDates[subject]) {
+          const recordDate = parseSASDate(row.RecordDate);
+          if (recordDate) studyDay = Math.round((recordDate - baselineDates[subject]) / (1000 * 60 * 60 * 24));
+        }
+
+        // Parse all value fields
+        const stdValue = parseFloat(row.StdValue);
+        const stdLow = parseFloat(row.StdLow);
+        const stdHigh = parseFloat(row.StdHigh);
+        const stdUnits = (row.StdUnits || '').trim();
+        const numericValue = parseFloat(row.NumericValue);
+        const labLow = parseFloat(row.LabLow);
+        const labHigh = parseFloat(row.LabHigh);
+        const labUnits = (row.LabUnits || '').trim();
+
+        return {
+          Subject: subject,
+          Folder: folder,
+          AnalyteName: analyteName,
+          StudyDay: studyDay,
+          ARM: armLookup[subject] || 'Unknown',
+          // Preserve raw values for direction-aware selection
+          StdValue: isNaN(stdValue) ? null : stdValue,
+          StdLow: isNaN(stdLow) ? null : stdLow,
+          StdHigh: (isNaN(stdHigh) || stdHigh <= 0) ? null : stdHigh,
+          StdUnits: stdUnits || null,
+          LabValue: isNaN(numericValue) ? null : numericValue,
+          LabLow: isNaN(labLow) ? null : labLow,
+          LabHigh: (isNaN(labHigh) || labHigh <= 0) ? null : labHigh,
+          LabUnits: labUnits || null,
+          FormName: row.FormName || '',
+          StdGroup: row.StdGroup || 'Other'
+        };
+      }).filter(row => row.Subject && row.AnalyteName);
+
+      state.baselineDates = baselineDates;
+      state.armLookup = armLookup;
+      state.processedData = processed;
+
+      // Get unique analytes (from processed data + hardcoded config)
+      const processedAnalytes = processed.map(r => r.AnalyteName);
+      const hardcodedAnalytes = (typeof LABS_CONFIG !== 'undefined' && LABS_CONFIG.getHardcodedAnalytes)
+        ? LABS_CONFIG.getHardcodedAnalytes() : [];
+      state.uniqueAnalytes = [...new Set([...processedAnalytes, ...hardcodedAnalytes])].sort();
+      state.uniqueArms = [...new Set(processed.map(r => r.ARM))].sort();
+    }
+
+    // ========================================================================
+    // Get Normalized Data for an Analyte (direction-aware)
+    // ========================================================================
+    function getAnalyteNormalizedData(analyteName, includeNormalRange = false, show2xOnly = false) {
+      // Step 1: Get all rows for this analyte
+      const allRows = state.processedData.filter(r => r.AnalyteName === analyteName);
+      const allSubjects = new Set(allRows.map(r => r.Subject));
+      const totalPatientsProcessed = allSubjects.size;
+
+      // Step 2: Filter rows with valid StudyDay
+      let labdata = allRows.filter(r => r.StudyDay !== null && r.StudyDay !== undefined);
+      const subjectsWithStudyDay = new Set(labdata.map(r => r.Subject));
+      const missingStudyDay = totalPatientsProcessed - subjectsWithStudyDay.size;
+
+      // Step 3: Get direction for this analyte
+      const direction = getAnalyteDirection(analyteName);
+      if (!direction) {
+        return {
+          data: [], hasData: false, noDirection: true,
+          direction: null,
+          stats: { totalPatients: totalPatientsProcessed, shown: 0, excluded: 0, missingStudyDay, missingRange: 0 }
+        };
+      }
+
+      // Step 4: Select data bundle based on direction requirements
+      labdata = labdata.map(row => {
+        const hasStdValue = row.StdValue !== null && isFinite(row.StdValue);
+        const hasStdLow = row.StdLow !== null && isFinite(row.StdLow);
+        const hasStdHigh = row.StdHigh !== null && isFinite(row.StdHigh) && row.StdHigh > 0;
+        const hasLabValue = row.LabValue !== null && isFinite(row.LabValue);
+        const hasLabLow = row.LabLow !== null && isFinite(row.LabLow);
+        const hasLabHigh = row.LabHigh !== null && isFinite(row.LabHigh) && row.LabHigh > 0;
+
+        let value = null, low = null, high = null, units = '', useStandard = false;
+
+        if (direction === 'increase') {
+          // For increase: need Value + ULN (High)
+          if (hasStdValue && hasStdHigh) {
+            value = row.StdValue; low = row.StdLow; high = row.StdHigh;
+            units = row.StdUnits || ''; useStandard = true;
+          } else if (hasLabValue && hasLabHigh) {
+            value = row.LabValue; low = row.LabLow; high = row.LabHigh;
+            units = row.LabUnits || ''; useStandard = false;
+          }
+        } else if (direction === 'decrease') {
+          // For decrease: need Value + LLN (Low)
+          if (hasStdValue && hasStdLow) {
+            value = row.StdValue; low = row.StdLow; high = row.StdHigh;
+            units = row.StdUnits || ''; useStandard = true;
+          } else if (hasLabValue && hasLabLow) {
+            value = row.LabValue; low = row.LabLow; high = row.LabHigh;
+            units = row.LabUnits || ''; useStandard = false;
+          }
+        } else if (direction === 'bidirectional') {
+          // For bidirectional: need Value + LLN + ULN
+          if (hasStdValue && hasStdLow && hasStdHigh) {
+            value = row.StdValue; low = row.StdLow; high = row.StdHigh;
+            units = row.StdUnits || ''; useStandard = true;
+          } else if (hasLabValue && hasLabLow && hasLabHigh) {
+            value = row.LabValue; low = row.LabLow; high = row.LabHigh;
+            units = row.LabUnits || ''; useStandard = false;
+          }
+        }
+
+        if (value === null) return null;
+
+        // Calculate normalized value
+        const normValue = getNormalizedValue(value, low, high, direction);
+        if (normValue === null || !isFinite(normValue)) return null;
+
+        // Determine normal/abnormal status
+        let normStatus = 'Normal';
+        if (direction === 'increase' && high != null && value > high) normStatus = 'High';
+        if (direction === 'decrease' && low != null && value < low) normStatus = 'Low';
+        if (direction === 'bidirectional') {
+          if (low != null && value < low) normStatus = 'Low';
+          else if (high != null && value > high) normStatus = 'High';
+        }
+
+        return {
+          ...row,
+          Value: value, Low: low, High: high, Units: units,
+          UseStandard: useStandard, IsHardcoded: false,
+          NormValue: normValue, NormStatus: normStatus, Direction: direction
+        };
+      }).filter(Boolean);
+
+      const subjectsWithValidData = new Set(labdata.map(r => r.Subject));
+      const missingRange = subjectsWithStudyDay.size - subjectsWithValidData.size;
+
+      // Step 5: Merge hardcoded data
+      let hardcodedData = getHardcodedNormalizedData(analyteName, direction);
+      if (hardcodedData.length > 0) {
+        const hardcodedKeys = new Set(hardcodedData.map(r => `${r.Subject}|${r.StudyDay}`));
+        labdata = labdata.filter(r => !hardcodedKeys.has(`${r.Subject}|${r.StudyDay}`));
+      }
+      labdata = [...labdata, ...hardcodedData];
+
+      const hardcodedSubjects = new Set(hardcodedData.map(r => r.Subject));
+      const totalPatients = new Set([...allSubjects, ...hardcodedSubjects]).size;
+
+      const dedupMap = {};
+      labdata.forEach(row => {
+        const key = `${row.Subject}|${row.StudyDay}`;
+        if (!dedupMap[key]) {
+          dedupMap[key] = row;
+        } else if (direction === 'decrease') {
+          if (row.NormValue < dedupMap[key].NormValue) dedupMap[key] = row;
+        } else {
+          if (row.NormValue > dedupMap[key].NormValue) dedupMap[key] = row;
+        }
+      });
+      labdata = Object.values(dedupMap);
+
+      if (labdata.length === 0) {
+        return {
+          data: [], hasData: false, noValidData: true, direction,
+          stats: { totalPatients, shown: 0, excluded: 0, missingStudyDay, missingRange }
+        };
+      }
+
+      if (show2xOnly) {
+        const patientsAboveThreshold = new Set();
+        if (direction === 'decrease') {
+          // Value/LLN < 1 means Value < LLN (abnormal)
+          labdata.forEach(r => { if (r.NormValue < 1) patientsAboveThreshold.add(r.Subject); });
+        } else {
+          labdata.forEach(r => { if (r.NormValue >= 2) patientsAboveThreshold.add(r.Subject); });
+        }
+        labdata = labdata.filter(r => patientsAboveThreshold.has(r.Subject));
+        if (labdata.length === 0) {
+          return {
+            data: [], hasData: false, no2x: true, direction,
+            stats: { totalPatients, shown: 0, excluded: totalPatients, missingStudyDay, missingRange }
+          };
+        }
+      }
+
+      let excludedSubjects = new Set();
+      if (!includeNormalRange) {
+        const subjectStatus = {};
+        labdata.forEach(row => {
+          if (!subjectStatus[row.Subject]) subjectStatus[row.Subject] = { allNormal: true };
+          if (direction === 'decrease') {
+            if (row.NormValue < 1) subjectStatus[row.Subject].allNormal = false;
+          } else {
+            if (row.NormValue > 1) subjectStatus[row.Subject].allNormal = false;
+          }
+        });
+        const subjectsToKeep = Object.keys(subjectStatus).filter(s => !subjectStatus[s].allNormal);
+        excludedSubjects = new Set(Object.keys(subjectStatus).filter(s => subjectStatus[s].allNormal));
+        labdata = labdata.filter(row => subjectsToKeep.includes(row.Subject));
+      }
+
+      const shownSubjects = new Set(labdata.map(r => r.Subject));
+
+      if (labdata.length === 0) {
+        return {
+          data: [], hasData: false, allNormal: true, direction,
+          stats: { totalPatients, shown: 0, excluded: excludedSubjects.size, missingStudyDay, missingRange }
+        };
+      }
+
+      // Sort by Subject then StudyDay
+      labdata.sort((a, b) => {
+        if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+        return a.StudyDay - b.StudyDay;
+      });
+
+      return {
+        data: labdata, hasData: true, direction,
+        stats: { totalPatients, shown: shownSubjects.size, excluded: excludedSubjects.size, missingStudyDay, missingRange }
+      };
+    }
+
+    // ========================================================================
+    // Get Hardcoded Data with One-sided Normalization
+    // ========================================================================
+    function getHardcodedNormalizedData(analyteName, direction) {
+      if (typeof LABS_CONFIG === 'undefined' || !LABS_CONFIG.hardcodedPatients) return [];
+
+      const results = [];
+      Object.entries(LABS_CONFIG.hardcodedPatients).forEach(([patientId, patientData]) => {
+        const ranges = patientData.ranges[analyteName];
+        if (!ranges) return;
+
+        const low = ranges.low;
+        const high = ranges.high;
+        const units = ranges.units || '';
+
+        // Check we have required range for this direction
+        if (direction === 'increase' && (high == null || !isFinite(high) || high <= 0)) return;
+        if (direction === 'decrease' && (low == null || !isFinite(low) || low <= 0)) return;
+        if (direction === 'bidirectional' && (low == null || !isFinite(low) || high == null || !isFinite(high) || high <= 0)) return;
+
+        patientData.data
+          .filter(d => d.analyte === analyteName)
+          .forEach(d => {
+            const recordDate = LABS_CONFIG.parseHardcodedDate ? LABS_CONFIG.parseHardcodedDate(d.date) : parseSASDate(d.date);
+            if (!recordDate) return;
+
+            let studyDay = null;
+            if (state.baselineDates[patientId]) {
+              studyDay = Math.round((recordDate - state.baselineDates[patientId]) / (1000 * 60 * 60 * 24));
+            }
+            if (studyDay === null || studyDay === undefined) return;
+
+            const normValue = getNormalizedValue(d.value, low, high, direction);
+            if (normValue === null || !isFinite(normValue)) return;
+
+            let normStatus = 'Normal';
+            if (direction === 'increase' && high != null && d.value > high) normStatus = 'High';
+            if (direction === 'decrease' && low != null && d.value < low) normStatus = 'Low';
+            if (direction === 'bidirectional') {
+              if (low != null && d.value < low) normStatus = 'Low';
+              else if (high != null && d.value > high) normStatus = 'High';
+            }
+
+            results.push({
+              Subject: patientId,
+              AnalyteName: analyteName,
+              Folder: 'Hardcoded',
+              Value: d.value, Low: low, High: high, Units: units,
+              LLN: low, ULN: high,
+              NormValue: normValue, NormStatus: normStatus,
+              Date: d.date, StudyDay: studyDay,
+              ARM: state.armLookup[patientId] || 'Unknown',
+              IsHardcoded: true, UseStandard: false,
+              Direction: direction
+            });
+          });
+      });
+      return results;
+    }
+
+    // ========================================================================
+    // Chart Rendering
+    // ========================================================================
+    function renderChart(analyteName) {
+      const includeNormalRange = document.getElementById('showNormal').checked;
+      const show2xOnly = document.getElementById('show2xOnly').checked;
+      const armFilter = document.getElementById('armFilter').value;
+      const yAxisScale = document.getElementById('yAxisScale')?.value || 'linear';
+      const isLogScale = yAxisScale === 'log';
+
+      // First get direction to update the checkbox label before filtering
+      const preDirection = getAnalyteDirection(analyteName);
+      const show2xLabel = document.getElementById('show2xLabel');
+      if (show2xLabel) {
+        if (preDirection === 'decrease') {
+          show2xLabel.innerHTML = 'Show &lt;LLN Only';
+        } else {
+          show2xLabel.innerHTML = 'Show &ge; 2&times; ULN Only';
+        }
+      }
+
+      let { data, hasData, allNormal, noValidData, noDirection, no2x, direction, stats } =
+        getAnalyteNormalizedData(analyteName, includeNormalRange, show2xOnly);
+
+      // Apply ARM filter
+      if (armFilter !== 'all') {
+        data = data.filter(r => r.ARM === armFilter);
+      }
+
+      // Update stats panel
+      const shownSubjects = new Set(data.map(r => r.Subject));
+      document.getElementById('statTotalPatients').textContent = stats?.totalPatients || 0;
+      document.getElementById('statShown').textContent = shownSubjects.size;
+      document.getElementById('statMissingStudyDay').textContent = stats?.missingStudyDay || 0;
+      document.getElementById('statMissingRange').textContent = stats?.missingRange || 0;
+      document.getElementById('statExcluded').textContent = stats?.excluded || 0;
+
+      // Update filter info
+      const filterInfoBox = document.getElementById('chartFilterInfo');
+      if (filterInfoBox && stats) {
+        filterInfoBox.style.display = 'block';
+        const analyteShort = analyteName.split(';')[1]?.trim() || analyteName.split(';')[0]?.trim() || analyteName;
+        const refType = direction === 'decrease' ? 'LLN' : 'ULN';
+        const abnormalType = direction === 'decrease' ? 'decrease' : 'elevation';
+        let footnote = '';
+        if (show2xOnly) {
+          if (direction === 'decrease') {
+            footnote = `${shownSubjects.size} patients shown with ${analyteShort} <strong>&lt; LLN</strong> at any time during therapy`;
+          } else {
+            footnote = `${shownSubjects.size} patients shown with ${analyteShort} ${abnormalType} <strong>&ge;2&times; ${refType}</strong> at any time during therapy`;
+          }
+        } else if (includeNormalRange) {
+          footnote = `${shownSubjects.size} patients shown (<strong>all patients with ${analyteShort} data</strong>)`;
+        } else {
+          footnote = `${shownSubjects.size} patients shown with ${analyteShort} <strong>abnormality</strong> at any time during therapy`;
+        }
+        if (armFilter !== 'all') footnote += ` (${armFilter} only)`;
+        filterInfoBox.innerHTML = footnote;
+      } else if (filterInfoBox) {
+        filterInfoBox.style.display = 'none';
+      }
+
+      document.getElementById('chartTitle').textContent = analyteName;
+
+      // Handle no data
+      if (!hasData || data.length === 0) {
+        let message = 'No normalized data available';
+        if (allNormal) message = 'No patients outside normal range';
+        if (noValidData) message = 'No valid data with required ULN/LLN';
+        if (noDirection) message = 'No direction mapping for this analyte (cannot determine increase/decrease)';
+        if (no2x) message = direction === 'decrease' ? 'No patients with values < LLN' : 'No patients with values >= 2x ULN';
+        document.getElementById('chartSubtitle').textContent = message;
+        document.getElementById('legendContainer').innerHTML = '';
+        if (state.chart) { state.chart.destroy(); state.chart = null; }
+        return;
+      }
+
+      // Store direction for chart plugin
+      state.currentDirection = direction;
+      const units = data[0]?.Units || '';
+
+      let formulaText = '';
+      let zoneText = '';
+      if (direction === 'increase') {
+        formulaText = 'Value / ULN';
+        zoneText = 'Green zone = Normal (Ratio ≤ 1)';
+      } else if (direction === 'decrease') {
+        formulaText = 'Value / LLN (%)';
+        zoneText = 'Green zone = Normal (≥ 100%)';
+      } else if (direction === 'bidirectional') {
+        formulaText = 'Value/ULN or LLN/Value';
+        zoneText = 'Green zone = Normal (Ratio ≤ 1)';
+      }
+      document.getElementById('chartSubtitle').textContent =
+        `${direction.charAt(0).toUpperCase() + direction.slice(1)} analyte | Formula: ${formulaText} | ${zoneText} | Units: ${units}`;
+
+      // Build legend
+      const armsInData = [...new Set(data.map(r => r.ARM))].sort();
+      const armColorMap = {};
+      armsInData.forEach((arm, i) => { armColorMap[arm] = ARM_COLORS[i % ARM_COLORS.length]; });
+
+      const legendHtml = armsInData.map(arm => `
+        <div class="legend-item">
+          <div class="legend-dot" style="background: ${armColorMap[arm]}"></div>
+          <span>${arm}</span>
+        </div>
+      `).join('');
+
+      // Point style legend
+      const hasLocalLab = data.some(r => !r.UseStandard && !r.IsHardcoded);
+      const hasStandard = data.some(r => r.UseStandard && !r.IsHardcoded);
+      const hasHardcoded = data.some(r => r.IsHardcoded);
+      let pointStyleLegend = '';
+      if (hasStandard || hasLocalLab || hasHardcoded) {
+        pointStyleLegend = `
+          <div style="border-left: 2px solid #dee2e6; padding-left: 15px; margin-left: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
+            <span style="font-weight: 600; color: #2C3E50;">Point Style:</span>
+            ${hasStandard ? '<div class="legend-item"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #666;"></span><span>Standard (SI)</span></div>' : ''}
+            ${hasLocalLab ? '<div class="legend-item"><span style="display: inline-block; width: 10px; height: 10px; background: #666;"></span><span>Local Lab</span></div>' : ''}
+            ${hasHardcoded ? '<div class="legend-item"><span style="display: inline-block; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #666;"></span><span>Hardcoded</span></div>' : ''}
+          </div>`;
+      }
+
+      const isDecrease = direction === 'decrease';
+      const normalRangeLegend = isDecrease ? `
+        <div style="border-left: 2px solid #dee2e6; padding-left: 15px; margin-left: 10px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+          <span style="font-weight: 600; color: #2C3E50;">Chart Zones:</span>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 12px; background: rgba(76, 175, 80, 0.3); border: 1px solid #4CAF50;"></span>
+            <span>Normal Range (≥ 100%)</span>
+          </div>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 2px; background: #4CAF50;"></span>
+            <span>LLN Boundary (100%)</span>
+          </div>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 2px; background: #FF9800;"></span>
+            <span>50% of LLN</span>
+          </div>
+        </div>` : `
+        <div style="border-left: 2px solid #dee2e6; padding-left: 15px; margin-left: 10px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+          <span style="font-weight: 600; color: #2C3E50;">Chart Zones:</span>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 12px; background: rgba(76, 175, 80, 0.3); border: 1px solid #4CAF50;"></span>
+            <span>Normal Range (0-1)</span>
+          </div>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 2px; background: #4CAF50;"></span>
+            <span>Boundary (Ratio = 1)</span>
+          </div>
+          <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 2px; background: #FF9800;"></span>
+            <span>2x ULN (Ratio = 2)</span>
+          </div>
+        </div>`;
+
+      document.getElementById('legendContainer').innerHTML = legendHtml + pointStyleLegend + normalRangeLegend;
+
+      // Sort subjects
+      const subjects = [...new Set(data.map(r => r.Subject))];
+      const sortBy = document.getElementById('sortBy').value;
+      if (sortBy === 'subject') {
+        subjects.sort((a, b) => a.localeCompare(b));
+      } else {
+        subjects.sort((a, b) => {
+          const armA = data.find(r => r.Subject === a)?.ARM || 'Unknown';
+          const armB = data.find(r => r.Subject === b)?.ARM || 'Unknown';
+          if (armA !== armB) return armA.localeCompare(armB);
+          return a.localeCompare(b);
+        });
+      }
+
+      // Y-axis range
+      const allNormValues = data.map(r => r.NormValue);
+      const dataMin = Math.min(...allNormValues);
+      const maxNorm = Math.max(...allNormValues, 1);
+
+      let yOffset = 0;
+      let yMin = 0;
+      let yMax = Math.max(1.2, maxNorm * 1.1);
+
+      if (isLogScale) {
+        if (dataMin <= 0) {
+          yOffset = Math.abs(dataMin) + 0.1;
+          yMin = 0.01;
+        } else {
+          yMin = dataMin * 0.5;
+        }
+        yMax = Math.max(maxNorm + yOffset, 1 + yOffset) * 1.5;
+      }
+
+      // X-axis
+      const allStudyDays = data.map(r => r.StudyDay);
+      const maxStudyDay = Math.max(...allStudyDays, 0);
+      const xMax = Math.ceil((maxStudyDay + 14) / 10) * 10;
+
+      // Build datasets
+      const datasets = [];
+      subjects.forEach(subject => {
+        const subjectData = data.filter(r => r.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+        const arm = subjectData[0]?.ARM || 'Unknown';
+        const color = armColorMap[arm];
+        datasets.push({
+          type: 'line',
+          label: `${subject} (${arm})`,
+          data: subjectData.map(r => ({
+            x: r.StudyDay,
+            y: r.NormValue + yOffset,
+            originalY: r.NormValue,
+            folder: r.Folder,
+            normStatus: r.NormStatus,
+            rawValue: r.Value,
+            units: r.Units,
+            low: r.Low,
+            high: r.High,
+            useStandard: r.UseStandard,
+            isHardcoded: r.IsHardcoded || false
+          })),
+          borderColor: color,
+          backgroundColor: color,
+          borderWidth: 1,
+          pointRadius: 6,
+          pointStyle: subjectData.map(r => {
+            if (r.IsHardcoded) return 'triangle';
+            return r.UseStandard ? 'circle' : 'rect';
+          }),
+          pointBackgroundColor: color,
+          pointBorderColor: color,
+          fill: false,
+          tension: 0,
+          showLine: true,
+          clip: false
+        });
+      });
+
+      // Destroy existing chart
+      if (state.chart) { state.chart.destroy(); }
+
+      // Create chart
+      const ctx = document.getElementById('labChart').getContext('2d');
+      state.chart = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'point', intersect: true },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.raw;
+                  const labelParts = context.dataset.label.split(' ');
+                  const subject = labelParts[0];
+                  const arm = labelParts.slice(1).join(' ').replace(/[()]/g, '');
+                  const displayValue = point.originalY !== undefined ? point.originalY : point.y;
+                  let valueSource = point.useStandard ? 'Standard (SI)' : 'Local Lab';
+                  if (point.isHardcoded) valueSource = 'Hardcoded (Manual)';
+                  const rawStr = (point.rawValue != null && isFinite(point.rawValue)) ? point.rawValue.toFixed(2) : 'N/A';
+                  const refInfo = [];
+                  if (point.low != null) refInfo.push(`LLN: ${point.low}`);
+                  if (point.high != null) refInfo.push(`ULN: ${point.high}`);
+                  const ratioLine = isDecrease
+                    ? `% of LLN: ${(displayValue * 100).toFixed(1)}%`
+                    : `Ratio: ${displayValue.toFixed(3)}`;
+                  return [
+                    `Subject: ${subject}`,
+                    `Dosing Group: ${arm}`,
+                    `Visit: ${point.folder}`,
+                    `Study Day: ${point.x}`,
+                    `Raw Value: ${rawStr} ${point.units || ''}`,
+                    refInfo.length > 0 ? `Ref Range: ${refInfo.join(', ')}` : '',
+                    ratioLine,
+                    `Status: ${point.normStatus}`,
+                    `Source: ${valueSource}`
+                  ].filter(Boolean);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: -30,
+              max: xMax,
+              title: { display: true, text: 'Study Day (Day 0 = C0D1)', font: { size: 14 } },
+              ticks: { stepSize: 30, font: { size: 12 } },
+              grid: { color: '#e0e0e0' }
+            },
+            y: {
+              type: isLogScale ? 'logarithmic' : 'linear',
+              min: yMin,
+              max: yMax,
+              title: {
+                display: true,
+                text: isDecrease
+                  ? `% of LLN (100% = LLN Boundary)${isLogScale ? ' (Log Scale)' : ''}`
+                  : `Ratio (1 = Normal Boundary) | ${formulaText}${isLogScale ? ' (Log Scale)' : ''}`,
+                font: { size: 14 }
+              },
+              ticks: {
+                font: { size: 12 },
+                callback: function(value) {
+                  const v = (isLogScale && yOffset > 0) ? (value - yOffset) : value;
+                  if (isDecrease) return Math.round(v * 100) + '%';
+                  return v.toFixed(1);
+                }
+              },
+              grid: { display: false }
+            }
+          }
+        },
+        plugins: [{
+          id: 'normalZonePlugin',
+          beforeDraw: (chart) => {
+            const ctx = chart.ctx;
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+
+            const x1 = xAxis.getPixelForValue(-30);
+            const x2 = xAxis.getPixelForValue(xMax);
+
+            const y1Val = isLogScale ? (1 + yOffset) : 1;
+            const yPx1 = yAxis.getPixelForValue(y1Val);
+
+            ctx.save();
+
+            if (isDecrease) {
+              // Decrease: green zone ABOVE 100% (ratio 1) = normal
+              ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+              ctx.fillRect(x1, chart.chartArea.top, x2 - x1, yPx1 - chart.chartArea.top);
+
+              // 100% boundary line (green, solid)
+              ctx.beginPath();
+              ctx.strokeStyle = '#4CAF50';
+              ctx.setLineDash([]);
+              ctx.lineWidth = 2;
+              ctx.moveTo(x1, yPx1);
+              ctx.lineTo(x2, yPx1);
+              ctx.stroke();
+
+              // 50% threshold line (orange, dashed)
+              const yHalfVal = isLogScale ? (0.5 + yOffset) : 0.5;
+              const yPxHalf = yAxis.getPixelForValue(yHalfVal);
+              if (yPxHalf <= chart.chartArea.bottom) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#FF9800';
+                ctx.setLineDash([6, 4]);
+                ctx.lineWidth = 1.5;
+                ctx.moveTo(x1, yPxHalf);
+                ctx.lineTo(x2, yPxHalf);
+                ctx.stroke();
+              }
+            } else {
+              // Increase/Bidirectional: green zone BELOW ratio 1 = normal
+              const y0Val = isLogScale ? (0 + yOffset) : 0;
+              const yPx0 = yAxis.getPixelForValue(y0Val);
+
+              ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+              ctx.fillRect(x1, yPx1, x2 - x1, yPx0 - yPx1);
+
+              // Ratio = 1 line (green, solid)
+              ctx.beginPath();
+              ctx.strokeStyle = '#4CAF50';
+              ctx.setLineDash([]);
+              ctx.lineWidth = 2;
+              ctx.moveTo(x1, yPx1);
+              ctx.lineTo(x2, yPx1);
+              ctx.stroke();
+
+              // Ratio = 2 line (orange, dashed)
+              const y2Val = isLogScale ? (2 + yOffset) : 2;
+              const yPx2 = yAxis.getPixelForValue(y2Val);
+              if (yPx2 >= chart.chartArea.top) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#FF9800';
+                ctx.setLineDash([6, 4]);
+                ctx.lineWidth = 1.5;
+                ctx.moveTo(x1, yPx2);
+                ctx.lineTo(x2, yPx2);
+                ctx.stroke();
+              }
+            }
+
+            // Day 0 vertical line (red, dashed)
+            ctx.beginPath();
+            ctx.strokeStyle = 'red';
+            ctx.setLineDash([2, 2]);
+            ctx.lineWidth = 2;
+            const x0 = xAxis.getPixelForValue(0);
+            ctx.moveTo(x0, chart.chartArea.top);
+            ctx.lineTo(x0, chart.chartArea.bottom);
+            ctx.stroke();
+
+            // C0D1 label
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#1a237e';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('C0D1', x0 + 4, chart.chartArea.top + 8);
+
+            ctx.restore();
+          }
+        }]
+      });
+    }
+
+    // ========================================================================
+    // UI Event Handlers
+    // ========================================================================
+    function updateAnalyteDropdown() {
+      const select = document.getElementById('analyteSelect');
+      select.innerHTML = state.uniqueAnalytes.map((analyte, i) =>
+        `<option value="${analyte}" ${i === 0 ? 'selected' : ''}>${analyte}</option>`
+      ).join('');
+    }
+
+    function updateArmFilter() {
+      const select = document.getElementById('armFilter');
+      select.innerHTML = '<option value="all">All Groups</option>' +
+        state.uniqueArms.map(arm => `<option value="${arm}">${arm}</option>`).join('');
+    }
+
+    function updatePagination() {
+      const current = state.currentAnalyteIndex + 1;
+      const total = state.uniqueAnalytes.length;
+      document.getElementById('pageInfo').textContent = `${current} / ${total}`;
+      document.getElementById('prevAnalyte').disabled = current <= 1;
+      document.getElementById('nextAnalyte').disabled = current >= total;
+    }
+
+    function goToAnalyte(index) {
+      if (index < 0 || index >= state.uniqueAnalytes.length) return;
+      state.currentAnalyteIndex = index;
+      const analyte = state.uniqueAnalytes[index];
+      document.getElementById('analyteSelect').value = analyte;
+      renderChart(analyte);
+      updatePagination();
+    }
+
+    function getCurrentAnalyteName() {
+      return state.uniqueAnalytes[state.currentAnalyteIndex] || 'Lab_Normalized';
+    }
+
+    // ========================================================================
+    // Initialization
+    // ========================================================================
+    async function init() {
+      try {
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('Lab_Normalized');
+        }
+
+        const [labData, lblhData] = await Promise.all([
+          loadCSV('../../data/lab.CSV'),
+          loadCSV('../../data/lblh.CSV')
+        ]);
+        state.labData = labData;
+        state.lblhData = lblhData;
+
+        try {
+          state.dmData = await loadCSV('../../data/dm.CSV');
+        } catch (e) {
+          console.warn('dm.CSV not found, ARM data may be missing');
+          state.dmData = [];
+        }
+
+        processData();
+        updateAnalyteDropdown();
+        updateArmFilter();
+        updatePagination();
+
+        if (state.uniqueAnalytes.length > 0) {
+          renderChart(state.uniqueAnalytes[0]);
+        }
+
+        // Event listeners
+        document.getElementById('analyteSelect').addEventListener('change', (e) => {
+          state.currentAnalyteIndex = state.uniqueAnalytes.indexOf(e.target.value);
+          renderChart(e.target.value);
+          updatePagination();
+        });
+        document.getElementById('armFilter').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('sortBy').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('showNormal').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('show2xOnly').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('yAxisScale').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('prevAnalyte').addEventListener('click', () => {
+          goToAnalyte(state.currentAnalyteIndex - 1);
+        });
+        document.getElementById('nextAnalyte').addEventListener('click', () => {
+          goToAnalyte(state.currentAnalyteIndex + 1);
+        });
+        document.addEventListener('keydown', (e) => {
+          // Don't intercept arrows when focused on form controls
+          if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+          if (e.key === 'ArrowLeft') goToAnalyte(state.currentAnalyteIndex - 1);
+          if (e.key === 'ArrowRight') goToAnalyte(state.currentAnalyteIndex + 1);
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('chartTitle').textContent = 'Error Loading Data';
+        document.getElementById('chartSubtitle').textContent = error.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

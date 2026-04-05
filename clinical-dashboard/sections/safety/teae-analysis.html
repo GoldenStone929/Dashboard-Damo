@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TEAE Analysis Dashboard</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+    }
+    .page-content {
+      margin-top: 60px;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+      color: white;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 0.95rem; }
+    
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn-secondary {
+      background: #edf2f7;
+      color: #2d3748;
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    /* Controls */
+    .controls-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+    }
+    .control-group select, .control-group input {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      min-width: 180px;
+    }
+    .control-group select:focus, .control-group input:focus {
+      outline: none;
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66,153,225,0.2);
+    }
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+      margin-left: auto;
+    }
+    
+    /* Stats */
+    .stats-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .stat-value { font-size: 1.6rem; font-weight: 700; color: #2c5282; }
+    .stat-label { font-size: 0.8rem; color: #718096; margin-top: 4px; }
+    
+    /* Table */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 70vh;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    th {
+      background: linear-gradient(135deg, #2c5282, #1e3a5f);
+      color: white;
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th:hover { background: linear-gradient(135deg, #3182ce, #2c5282); }
+    th .sort-icon {
+      margin-left: 6px;
+      opacity: 0.5;
+      font-size: 0.7rem;
+    }
+    th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity: 1; }
+    th.sort-asc .sort-icon::after { content: '▲'; }
+    th.sort-desc .sort-icon::after { content: '▼'; }
+    th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: '⇅'; }
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    td:hover { white-space: normal; word-break: break-word; }
+    tbody tr:hover { background: #f7fafc; }
+    tbody tr:nth-child(even) { background: #fafcfe; }
+    tbody tr:nth-child(even):hover { background: #f0f7ff; }
+    
+    /* Grade highlighting */
+    .grade-1 { color: #38a169; }
+    .grade-2 { color: #d69e2e; }
+    .grade-3 { color: #dd6b20; }
+    .grade-4 { color: #e53e3e; }
+    .grade-5 { color: #822727; font-weight: 700; }
+    .serious-yes { color: #e53e3e; font-weight: 600; }
+    .ongoing { color: #805ad5; font-style: italic; }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #718096;
+    }
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #4299e1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #f7fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .pagination-info { font-size: 0.85rem; color: #718096; }
+    .pagination-controls { display: flex; gap: 8px; align-items: center; }
+    .pagination-controls button {
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .pagination-controls button:hover:not(:disabled) { background: #edf2f7; }
+    .pagination-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .page-size-select {
+      padding: 6px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .error-msg {
+      background: #fed7d7;
+      color: #c53030;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    @media (max-width: 768px) {
+      .controls-row { flex-direction: column; align-items: stretch; }
+      .export-buttons { margin-left: 0; justify-content: center; }
+      .control-group select, .control-group input { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <div class="page-content">
+    <div class="header">
+      <h1>TEAE Analysis Dashboard</h1>
+      <p>Treatment-Emergent Adverse Events Analysis with Sorting & Filtering</p>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Loading Indicator -->
+    <div class="loading" id="loadingIndicator">
+      <span class="spinner"></span> Loading data from ae.csv and dm.csv...
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel" id="controlsPanel" style="display:none;">
+      <div class="controls-row">
+        <div class="control-group">
+          <label>View Mode</label>
+          <select id="viewMode">
+            <option value="all">All TEAEs</option>
+            <option value="highest">Highest Grade Only</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Filter by Condition</label>
+          <select id="conditionFilter">
+            <option value="all">All Conditions</option>
+            <option value="bilirubin">Bilirubin Events</option>
+            <option value="diarrhoea">Diarrhoea Events</option>
+            <option value="rash">Rash Events</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Search Subject</label>
+          <input type="text" id="subjectSearch" placeholder="Enter Subject ID...">
+        </div>
+        <div class="control-group">
+          <label>Grade Filter</label>
+          <select id="gradeFilter">
+            <option value="all">All Grades</option>
+            <option value="1">Grade 1</option>
+            <option value="2">Grade 2</option>
+            <option value="3">Grade 3</option>
+            <option value="4">Grade 4</option>
+            <option value="5">Grade 5</option>
+            <option value=">=3">Grade ≥3</option>
+          </select>
+        </div>
+        <div class="export-buttons">
+          <button class="btn btn-secondary" id="exportCsvBtn">📥 Export CSV</button>
+          <button class="btn btn-secondary" id="exportAllBtn">📦 Export All Reports</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel" id="statsPanel" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-value" id="totalEvents">0</div>
+        <div class="stat-label">Total Events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalSubjects">0</div>
+        <div class="stat-label">Subjects</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="uniqueTerms">0</div>
+        <div class="stat-label">Unique AE Terms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="seriousCount">0</div>
+        <div class="stat-label">Serious AEs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="grade3PlusCount">0</div>
+        <div class="stat-label">Grade ≥3</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="ongoingCount">0</div>
+        <div class="stat-label">Ongoing</div>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container" id="tableContainer" style="display:none;">
+      <div class="table-wrapper">
+        <table id="dataTable">
+          <thead>
+            <tr id="tableHeader"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <div class="pagination-info">
+          Showing <span id="showingStart">0</span>-<span id="showingEnd">0</span> of <span id="totalRows">0</span> rows
+        </div>
+        <div class="pagination-controls">
+          <button id="firstPageBtn">«</button>
+          <button id="prevPageBtn">‹</button>
+          <span style="padding:0 10px;">Page <span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+          <button id="nextPageBtn">›</button>
+          <button id="lastPageBtn">»</button>
+          <select class="page-size-select" id="pageSizeSelect">
+            <option value="25">25 rows</option>
+            <option value="50" selected>50 rows</option>
+            <option value="100">100 rows</option>
+            <option value="500">500 rows</option>
+            <option value="all">All rows</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================
+// Configuration - Data file paths
+// ============================================
+const DATA_FILES = {
+  ae: '../../data/ae.CSV',
+  dm: '../../data/dm.CSV'
+};
+
+// ============================================
+// Global State
+// ============================================
+let aeRawData = null;
+let dmRawData = null;
+let mergedData = null;
+let processedAllTEAEs = [];
+let processedHighestGrade = [];
+let currentDisplayData = [];
+let filteredData = [];
+let currentPage = 1;
+let pageSize = 50;
+let sortColumn = null;
+let sortDirection = 'asc';
+
+// Column definitions
+const COLUMNS = [
+  { key: 'Subject', label: 'Subject' },
+  { key: 'ARM', label: 'ARM' },
+  { key: 'AETERM_pt', label: 'AE Term (PT)' },
+  { key: 'TRTSDT', label: 'Treatment Start' },
+  { key: 'AESTDAT_INT', label: 'AE Start Date' },
+  { key: 'Study_days', label: 'Study Days' },
+  { key: 'AEONGO_STD', label: 'Ongoing' },
+  { key: 'AEENDAT_INT', label: 'AE End Date' },
+  { key: 'AEOUT_STD', label: 'Outcome' },
+  { key: 'AEPATT', label: 'Pattern' },
+  { key: 'AETOXGR_STD', label: 'Grade' },
+  { key: 'AESER_STD', label: 'Serious' },
+  { key: 'AEREL_STD', label: 'Related' },
+  { key: 'AEACN', label: 'Action Taken' },
+  { key: 'AECONTRT', label: 'Con. Treatment' },
+  { key: 'AE_Duration', label: 'AE Duration' }
+];
+
+// Condition filters
+const CONDITION_FILTERS = {
+  all: () => true,
+  bilirubin: (row) => ['Bilirubin conjugated increased', 'Blood bilirubin increased'].includes(row.AETERM_pt),
+  diarrhoea: (row) => row.AETERM_pt === 'Diarrhoea',
+  rash: (row) => ['Rash pustular', 'Rash', 'Rash maculo-papular'].includes(row.AETERM_pt)
+};
+
+// ============================================
+// Date Parsing Functions
+// ============================================
+function parseDate(dateStr) {
+  if (!dateStr || dateStr === '' || dateStr === 'NA') return null;
+  
+  const formats = [
+    { regex: /^(\d{2})([A-Z]{3})(\d{4})(?::.*)?$/i, parse: (m) => new Date(`${m[2]} ${m[1]}, ${m[3]}`) },
+    { regex: /^(\d{4})-(\d{2})-(\d{2})/, parse: (m) => new Date(m[0].substring(0, 10)) },
+    { regex: /^(\d{2})\/(\d{2})\/(\d{4})/, parse: (m) => new Date(`${m[3]}-${m[1]}-${m[2]}`) }
+  ];
+  
+  for (const fmt of formats) {
+    const match = dateStr.match(fmt.regex);
+    if (match) {
+      const date = fmt.parse(match);
+      if (!isNaN(date.getTime())) return date;
+    }
+  }
+  
+  const direct = new Date(dateStr);
+  return isNaN(direct.getTime()) ? null : direct;
+}
+
+function formatDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  return dateStr.split(':')[0] || dateStr;
+}
+
+// ============================================
+// Calculation Functions
+// ============================================
+function calculateAEDuration(startDate, endDate, ongoing) {
+  const ongoingVal = (ongoing || '').toUpperCase();
+  if (ongoingVal === 'Y' || ongoingVal === 'YES') return 'ongoing';
+  
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  
+  if (!start || !end) {
+    if (!end && start) return 'ongoing';
+    return '';
+  }
+  
+  const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+  return diffDays.toString();
+}
+
+function calculateStudyDays(aeStart, trtStart) {
+  const aeDate = parseDate(aeStart);
+  const trtDate = parseDate(trtStart);
+  
+  if (!aeDate || !trtDate) return '';
+  
+  const diffDays = Math.round((aeDate - trtDate) / (1000 * 60 * 60 * 24));
+  return diffDays.toString();
+}
+
+// ============================================
+// Data Processing Functions
+// ============================================
+function mergeData(aeData, dmData) {
+  const dmLookup = {};
+  dmData.forEach(row => {
+    const subject = row.Subject || row.SUBJID || row.USUBJID || row.subject;
+    if (subject) {
+      dmLookup[subject] = {
+        ARM: row.ARM || row.arm || '',
+        RFXSTDTC: row.RFXSTDTC || row.rfxstdtc || row.TRTSDT || row.trtsdt || ''
+      };
+    }
+  });
+  
+  return aeData.map(aeRow => {
+    const subject = aeRow.Subject || aeRow.SUBJID || aeRow.USUBJID;
+    const dmInfo = dmLookup[subject] || { ARM: '', RFXSTDTC: '' };
+    return { ...aeRow, Subject: subject, ARM: dmInfo.ARM, RFXSTDTC: dmInfo.RFXSTDTC };
+  });
+}
+
+function processAllTEAEs(data) {
+  return data.map(row => ({
+    Subject: row.Subject || '',
+    ARM: row.ARM || '',
+    AETERM_pt: row.AETERM_pt || row.AEDECOD || '',
+    TRTSDT: formatDateDisplay(row.RFXSTDTC),
+    AESTDAT_INT: formatDateDisplay(row.AESTDAT_INT || row.AESTDTC || ''),
+    Study_days: calculateStudyDays(row.AESTDAT_INT || row.AESTDTC, row.RFXSTDTC),
+    AEONGO_STD: row.AEONGO_STD || row.AEONGO || '',
+    AEENDAT_INT: formatDateDisplay(row.AEENDAT_INT || row.AEENDTC || ''),
+    AEOUT_STD: row.AEOUT_STD || row.AEOUT || '',
+    AEPATT: row.AEPATT_STD || row.AEPATT || '',
+    AETOXGR_STD: row.AETOXGR_STD || row.AETOXGR || row.AESEV || '',
+    AESER_STD: row.AESER_STD || row.AESER || '',
+    AEREL_STD: row.AEREL_STD || row.AEREL || '',
+    AEACN: row.AEACN_STD || row.AEACN || '',
+    AECONTRT: row.AECONTRT_STD || row.AECONTRT || '',
+    AE_Duration: calculateAEDuration(row.AESTDAT_INT || row.AESTDTC, row.AEENDAT_INT || row.AEENDTC, row.AEONGO_STD || row.AEONGO),
+    _startDateRaw: row.AESTDAT_INT || row.AESTDTC || '',
+    _gradeNumeric: parseInt(row.AETOXGR_STD || row.AETOXGR || row.AESEV || '0') || 0
+  })).sort((a, b) => {
+    if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+    return (a._startDateRaw || '').localeCompare(b._startDateRaw || '');
+  });
+}
+
+function processHighestGradeTEAEs(data) {
+  const groups = {};
+  
+  data.forEach(row => {
+    const subject = row.Subject || '';
+    const term = row.AETERM_pt || row.AEDECOD || '';
+    const key = `${subject}|||${term}`;
+    const grade = parseInt(row.AETOXGR_STD || row.AETOXGR || row.AESEV || '0') || 0;
+    
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ ...row, _gradeNumeric: grade });
+  });
+  
+  const result = [];
+  Object.values(groups).forEach(groupRows => {
+    groupRows.sort((a, b) => {
+      if (b._gradeNumeric !== a._gradeNumeric) return b._gradeNumeric - a._gradeNumeric;
+      return (a.AESTDAT_INT || '').localeCompare(b.AESTDAT_INT || '');
+    });
+    result.push(groupRows[0]);
+  });
+  
+  return result.map(row => ({
+    Subject: row.Subject || '',
+    ARM: row.ARM || '',
+    AETERM_pt: row.AETERM_pt || row.AEDECOD || '',
+    TRTSDT: formatDateDisplay(row.RFXSTDTC),
+    AESTDAT_INT: formatDateDisplay(row.AESTDAT_INT || row.AESTDTC || ''),
+    Study_days: calculateStudyDays(row.AESTDAT_INT || row.AESTDTC, row.RFXSTDTC),
+    AEONGO_STD: row.AEONGO_STD || row.AEONGO || '',
+    AEENDAT_INT: formatDateDisplay(row.AEENDAT_INT || row.AEENDTC || ''),
+    AEOUT_STD: row.AEOUT_STD || row.AEOUT || '',
+    AEPATT: row.AEPATT_STD || row.AEPATT || '',
+    AETOXGR_STD: row.AETOXGR_STD || row.AETOXGR || row.AESEV || '',
+    AESER_STD: row.AESER_STD || row.AESER || '',
+    AEREL_STD: row.AEREL_STD || row.AEREL || '',
+    AEACN: row.AEACN_STD || row.AEACN || '',
+    AECONTRT: row.AECONTRT_STD || row.AECONTRT || '',
+    AE_Duration: calculateAEDuration(row.AESTDAT_INT || row.AESTDTC, row.AEENDAT_INT || row.AEENDTC, row.AEONGO_STD || row.AEONGO),
+    _startDateRaw: row.AESTDAT_INT || row.AESTDTC || '',
+    _gradeNumeric: row._gradeNumeric
+  })).sort((a, b) => {
+    if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+    return (a._startDateRaw || '').localeCompare(b._startDateRaw || '');
+  });
+}
+
+// ============================================
+// UI Functions
+// ============================================
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('loadingIndicator').style.display = 'none';
+}
+
+function updateStats(data) {
+  document.getElementById('totalEvents').textContent = data.length;
+  document.getElementById('totalSubjects').textContent = new Set(data.map(r => r.Subject)).size;
+  document.getElementById('uniqueTerms').textContent = new Set(data.map(r => r.AETERM_pt)).size;
+  document.getElementById('seriousCount').textContent = data.filter(r => ['Y', 'YES', '1'].includes((r.AESER_STD || '').toUpperCase())).length;
+  document.getElementById('grade3PlusCount').textContent = data.filter(r => r._gradeNumeric >= 3).length;
+  document.getElementById('ongoingCount').textContent = data.filter(r => r.AE_Duration === 'ongoing' || ['Y', 'YES'].includes((r.AEONGO_STD || '').toUpperCase())).length;
+}
+
+function renderTableHeader() {
+  const headerRow = document.getElementById('tableHeader');
+  headerRow.innerHTML = '';
+  
+  COLUMNS.forEach(col => {
+    const th = document.createElement('th');
+    th.dataset.column = col.key;
+    th.innerHTML = `${col.label}<span class="sort-icon"></span>`;
+    if (sortColumn === col.key) {
+      th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+    th.addEventListener('click', () => handleSort(col.key));
+    headerRow.appendChild(th);
+  });
+}
+
+function renderTableBody() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  
+  const start = (currentPage - 1) * pageSize;
+  const end = pageSize === 'all' ? filteredData.length : Math.min(start + pageSize, filteredData.length);
+  const pageData = filteredData.slice(start, end);
+  
+  pageData.forEach(row => {
+    const tr = document.createElement('tr');
+    
+    COLUMNS.forEach(col => {
+      const td = document.createElement('td');
+      const value = row[col.key] || '';
+      td.textContent = value;
+      td.title = value;
+      
+      if (col.key === 'AETOXGR_STD' && value) td.classList.add(`grade-${value}`);
+      if (col.key === 'AESER_STD' && ['Y', 'YES', '1'].includes(value.toUpperCase())) td.classList.add('serious-yes');
+      if (col.key === 'AE_Duration' && value === 'ongoing') td.classList.add('ongoing');
+      
+      tr.appendChild(td);
+    });
+    
+    tbody.appendChild(tr);
+  });
+  
+  updatePagination();
+}
+
+function updatePagination() {
+  const total = filteredData.length;
+  const effectivePageSize = pageSize === 'all' ? total : pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
+  
+  const start = total === 0 ? 0 : (currentPage - 1) * effectivePageSize + 1;
+  const end = Math.min(currentPage * effectivePageSize, total);
+  
+  document.getElementById('showingStart').textContent = start;
+  document.getElementById('showingEnd').textContent = end;
+  document.getElementById('totalRows').textContent = total;
+  document.getElementById('currentPage').textContent = currentPage;
+  document.getElementById('totalPages').textContent = totalPages;
+  
+  document.getElementById('firstPageBtn').disabled = currentPage === 1;
+  document.getElementById('prevPageBtn').disabled = currentPage === 1;
+  document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+  document.getElementById('lastPageBtn').disabled = currentPage >= totalPages;
+}
+
+function handleSort(column) {
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = column;
+    sortDirection = 'asc';
+  }
+  
+  filteredData.sort((a, b) => {
+    let aVal = a[column] || '';
+    let bVal = b[column] || '';
+    
+    if (['Study_days', 'AE_Duration', 'AETOXGR_STD'].includes(column)) {
+      const aNum = column === 'AETOXGR_STD' ? a._gradeNumeric : parseFloat(aVal) || 0;
+      const bNum = column === 'AETOXGR_STD' ? b._gradeNumeric : parseFloat(bVal) || 0;
+      if (aVal === 'ongoing') aVal = Infinity;
+      if (bVal === 'ongoing') bVal = Infinity;
+      return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+    
+    if (['AESTDAT_INT', 'AEENDAT_INT', 'TRTSDT'].includes(column)) {
+      const aDate = parseDate(a._startDateRaw || aVal) || new Date(0);
+      const bDate = parseDate(b._startDateRaw || bVal) || new Date(0);
+      return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+    }
+    
+    const comparison = aVal.toString().localeCompare(bVal.toString());
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+  
+  currentPage = 1;
+  renderTableHeader();
+  renderTableBody();
+}
+
+function applyFilters() {
+  const viewMode = document.getElementById('viewMode').value;
+  const condition = document.getElementById('conditionFilter').value;
+  const subjectSearch = document.getElementById('subjectSearch').value.toLowerCase().trim();
+  const gradeFilter = document.getElementById('gradeFilter').value;
+  
+  currentDisplayData = viewMode === 'highest' ? [...processedHighestGrade] : [...processedAllTEAEs];
+  filteredData = currentDisplayData.filter(CONDITION_FILTERS[condition]);
+  
+  if (subjectSearch) {
+    filteredData = filteredData.filter(row => (row.Subject || '').toLowerCase().includes(subjectSearch));
+  }
+  
+  if (gradeFilter !== 'all') {
+    if (gradeFilter === '>=3') {
+      filteredData = filteredData.filter(row => row._gradeNumeric >= 3);
+    } else {
+      const targetGrade = parseInt(gradeFilter);
+      filteredData = filteredData.filter(row => row._gradeNumeric === targetGrade);
+    }
+  }
+  
+  currentPage = 1;
+  sortColumn = null;
+  sortDirection = 'asc';
+  
+  updateStats(filteredData);
+  renderTableHeader();
+  renderTableBody();
+}
+
+// ============================================
+// Export Functions
+// ============================================
+function exportToCSV(data, filename) {
+  const headers = COLUMNS.map(c => c.key);
+  const rows = data.map(row => 
+    headers.map(h => {
+      const val = row[h] || '';
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    }).join(',')
+  );
+  
+  const csv = [headers.join(','), ...rows].join('\n');
+  downloadFile(csv, filename, 'text/csv');
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAllReports() {
+  exportToCSV(processedAllTEAEs, 'all_teaes.csv');
+  setTimeout(() => exportToCSV(processedHighestGrade, 'highest_grade_teaes.csv'), 100);
+  
+  const conditions = ['bilirubin', 'diarrhoea', 'rash'];
+  let delay = 200;
+  
+  conditions.forEach(cond => {
+    const allData = processedAllTEAEs.filter(CONDITION_FILTERS[cond]);
+    const highestData = processedHighestGrade.filter(CONDITION_FILTERS[cond]);
+    
+    setTimeout(() => exportToCSV(allData, `${cond}_all.csv`), delay);
+    delay += 100;
+    setTimeout(() => exportToCSV(highestData, `${cond}_highest.csv`), delay);
+    delay += 100;
+  });
+  
+  alert('Exporting 8 reports:\n1. all_teaes.csv\n2. highest_grade_teaes.csv\n3. bilirubin_all.csv\n4. bilirubin_highest.csv\n5. diarrhoea_all.csv\n6. diarrhoea_highest.csv\n7. rash_all.csv\n8. rash_highest.csv');
+}
+
+// ============================================
+// Data Loading - Auto load from paths
+// ============================================
+async function loadCSV(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load ${url}: ${response.status}`);
+  const text = await response.text();
+  return new Promise((resolve, reject) => {
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (error) => reject(error)
+    });
+  });
+}
+
+async function initializeApp() {
+  try {
+    // Load both files in parallel
+    const [aeData, dmData] = await Promise.all([
+      loadCSV(DATA_FILES.ae),
+      loadCSV(DATA_FILES.dm)
+    ]);
+    
+    aeRawData = aeData;
+    dmRawData = dmData;
+    
+    // Merge and process data
+    mergedData = mergeData(aeRawData, dmRawData);
+    processedAllTEAEs = processAllTEAEs(mergedData);
+    processedHighestGrade = processHighestGradeTEAEs(mergedData);
+    
+    // Hide loading, show UI
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('controlsPanel').style.display = 'block';
+    document.getElementById('statsPanel').style.display = 'grid';
+    document.getElementById('tableContainer').style.display = 'block';
+    
+    // Apply initial filters and render
+    applyFilters();
+    
+    console.log('Data loaded successfully:');
+    console.log(`- AE records: ${aeRawData.length}`);
+    console.log(`- DM records: ${dmRawData.length}`);
+    console.log(`- All TEAEs: ${processedAllTEAEs.length}`);
+    console.log(`- Highest Grade: ${processedHighestGrade.length}`);
+    
+  } catch (error) {
+    console.error('Error loading data:', error);
+    showError(`Error loading data: ${error.message}. Make sure ae.CSV and dm.CSV are in the data directory.`);
+  }
+}
+
+// ============================================
+// Event Listeners
+// ============================================
+document.getElementById('viewMode').addEventListener('change', applyFilters);
+document.getElementById('conditionFilter').addEventListener('change', applyFilters);
+document.getElementById('subjectSearch').addEventListener('input', applyFilters);
+document.getElementById('gradeFilter').addEventListener('change', applyFilters);
+
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const viewMode = document.getElementById('viewMode').value;
+  const condition = document.getElementById('conditionFilter').value;
+  const filename = `teae_${viewMode}_${condition}_${new Date().toISOString().slice(0,10)}.csv`;
+  exportToCSV(filteredData, filename);
+});
+
+document.getElementById('exportAllBtn').addEventListener('click', exportAllReports);
+
+document.getElementById('firstPageBtn').addEventListener('click', () => { currentPage = 1; renderTableBody(); });
+document.getElementById('prevPageBtn').addEventListener('click', () => { currentPage--; renderTableBody(); });
+document.getElementById('nextPageBtn').addEventListener('click', () => { currentPage++; renderTableBody(); });
+document.getElementById('lastPageBtn').addEventListener('click', () => {
+  const effectivePageSize = pageSize === 'all' ? filteredData.length : pageSize;
+  currentPage = Math.ceil(filteredData.length / effectivePageSize);
+  renderTableBody();
+});
+
+document.getElementById('pageSizeSelect').addEventListener('change', function() {
+  pageSize = this.value === 'all' ? 'all' : parseInt(this.value);
+  currentPage = 1;
+  renderTableBody();
+});
+
+// ============================================
+// Initialize on page load
+// ============================================
+document.addEventListener('DOMContentLoaded', initializeApp);
+</script>
+
+<script src="../../assets/js/nav.js"></script>
+<script>
+  if (typeof renderNav === 'function') {
+    renderNav('safety', 'teae-analysis', '../../');
+  }
+</script>
+</body>
+</html>
+

@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Summary</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+    
+    .page-content {
+      padding: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #2C3E50;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 30px;
+      font-size: 1rem;
+    }
+    
+    /* Key Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-3px);
+    }
+    
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    
+    .metric-card.total::before { background: linear-gradient(90deg, #3498db, #2980b9); }
+    .metric-card.ongoing::before { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+    .metric-card.completed::before { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+    .metric-card.discontinued::before { background: linear-gradient(90deg, #e67e22, #d35400); }
+    .metric-card.deaths::before { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+    .metric-card.sae::before { background: linear-gradient(90deg, #f39c12, #e67e22); }
+    
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .metric-card.total .metric-value { color: #3498db; }
+    .metric-card.ongoing .metric-value { color: #2ecc71; }
+    .metric-card.completed .metric-value { color: #9b59b6; }
+    .metric-card.discontinued .metric-value { color: #e67e22; }
+    .metric-card.deaths .metric-value { color: #e74c3c; }
+    .metric-card.sae .metric-value { color: #f39c12; }
+    
+    .metric-label {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    .metric-sublabel {
+      font-size: 0.75rem;
+      color: #95a5a6;
+      margin-top: 3px;
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .card.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #3498db;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      color: #2C3E50;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    th {
+      background: #34495E;
+      color: white;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    td {
+      text-align: center;
+    }
+    
+    tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    tr:hover {
+      background: #e8f4f8;
+    }
+    
+    .total-row {
+      background: #34495E !important;
+      color: white;
+      font-weight: 600;
+    }
+    
+    .total-row:hover {
+      background: #2C3E50 !important;
+    }
+    
+    /* Chart container */
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+    
+    /* Status indicators */
+    .status-ongoing { color: #2ecc71; font-weight: 600; }
+    .status-completed { color: #9b59b6; font-weight: 600; }
+    .status-discontinued { color: #e67e22; font-weight: 600; }
+    .status-death { color: #e74c3c; font-weight: 600; }
+    
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #7f8c8d;
+    }
+    
+    .loading .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Mini stats in cards */
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .mini-stat {
+      text-align: center;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .mini-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2C3E50;
+    }
+    
+    .mini-stat-label {
+      font-size: 0.8rem;
+      color: #7f8c8d;
+    }
+    
+    /* Export button */
+    .export-btn {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+      background: linear-gradient(135deg, #2980b9, #1f6dad);
+      transform: translateY(-1px);
+    }
+
+    /* Data refresh date */
+    .refresh-date {
+      text-align: center;
+      color: #95a5a6;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    
+    /* Study Info Banner */
+    .study-info-banner {
+      background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 25px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    
+    .study-info-item {
+      text-align: center;
+      padding: 10px;
+      border-right: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .study-info-item:last-child {
+      border-right: none;
+    }
+    
+    .study-info-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
+    
+    .study-info-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    
+    /* Milestones Timeline */
+    .milestones-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      padding: 20px 0;
+    }
+    
+    .milestones-container::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 5%;
+      right: 5%;
+      height: 4px;
+      background: linear-gradient(90deg, #27ae60, #3498db, #9b59b6, #95a5a6);
+      border-radius: 2px;
+      z-index: 0;
+    }
+    
+    .milestone {
+      text-align: center;
+      z-index: 1;
+      flex: 1;
+    }
+    
+    .milestone-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .milestone-dot.completed {
+      background: #27ae60;
+    }
+    
+    .milestone-dot.current {
+      background: #3498db;
+      animation: pulse 2s infinite;
+    }
+    
+    .milestone-dot.pending {
+      background: #95a5a6;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+    }
+    
+    .milestone-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #2C3E50;
+    }
+    
+    .milestone-date {
+      font-size: 0.75rem;
+      color: #7f8c8d;
+      margin-top: 3px;
+    }
+    
+    /* Quick Links */
+    .quick-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    
+    .quick-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #2C3E50;
+      transition: all 0.2s ease;
+      border-left: 3px solid #3498db;
+    }
+    
+    .quick-link:hover {
+      background: #e8f4f8;
+      transform: translateX(5px);
+    }
+    
+    .quick-link-icon {
+      font-size: 1.2rem;
+    }
+    
+    .quick-link-text {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    /* Study Duration Stats */
+    .duration-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .duration-stat {
+      text-align: center;
+      padding: 15px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+      border-radius: 8px;
+    }
+    
+    .duration-stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #2C3E50;
+    }
+    
+    .duration-stat-label {
+      font-size: 0.75rem;
+      color: #7f8c8d;
+      margin-top: 3px;
+    }
+    
+    @media (max-width: 768px) {
+      .duration-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <h1>Study Summary</h1>
+    <p class="page-subtitle">BH-30643-01 | Phase 1 Dose Escalation</p>
+    <p class="refresh-date" id="refreshDate"></p>
+    
+    <!-- Loading State -->
+    <div id="loadingState" class="loading">
+      <div class="spinner"></div>
+      <p>Loading study data...</p>
+    </div>
+    
+    <!-- Dashboard Content -->
+    <div id="dashboardContent" style="display: none;">
+      
+      <!-- Study Info Banner -->
+      <div class="study-info-banner" id="studyInfoBanner">
+        <div class="study-info-item">
+          <div class="study-info-label">Protocol</div>
+          <div class="study-info-value">BH-30643-01</div>
+        </div>
+        <div class="study-info-item">
+          <div class="study-info-label">Phase</div>
+          <div class="study-info-value">Phase 1</div>
+        </div>
+        <div class="study-info-item">
+          <div class="study-info-label">First Patient In</div>
+          <div class="study-info-value" id="fpiDate">-</div>
+        </div>
+        <div class="study-info-item">
+          <div class="study-info-label">Last Patient In</div>
+          <div class="study-info-value" id="lpiDate">-</div>
+        </div>
+        <div class="study-info-item">
+          <div class="study-info-label">Study Duration</div>
+          <div class="study-info-value" id="studyDuration">-</div>
+        </div>
+        <div class="study-info-item">
+          <div class="study-info-label">Data Cutoff</div>
+          <div class="study-info-value" id="dataCutoff">-</div>
+        </div>
+      </div>
+      
+      <!-- Key Metrics -->
+      <div class="metrics-grid" id="metricsGrid"></div>
+      
+      <!-- Main Dashboard Grid -->
+      <div class="dashboard-grid">
+        
+        <!-- Enrollment Timeline -->
+        <div class="card full-width" id="cardEnrollment">
+          <div class="card-header">
+            <h3>Cumulative Enrollment Over Time</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardEnrollment', 'Enrollment_Timeline')">Export</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="enrollmentChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Subject Disposition -->
+        <div class="card" id="cardDisposition">
+          <div class="card-header">
+            <h3>Subject Disposition</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardDisposition', 'Subject_Disposition')">Export</button>
+          </div>
+          <table id="dispositionTable">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>N</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Dose Cohort Summary -->
+        <div class="card" id="cardCohorts">
+          <div class="card-header">
+            <h3>Dose Cohort Summary</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardCohorts', 'Cohort_Summary')">Export</button>
+          </div>
+          <table id="cohortTable">
+            <thead>
+              <tr>
+                <th>Cohort</th>
+                <th>N</th>
+                <th>Ongoing</th>
+                <th>Completed</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Demographics Summary -->
+        <div class="card" id="cardDemographics">
+          <div class="card-header">
+            <h3>Demographics Overview</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardDemographics', 'Demographics_Overview')">Export</button>
+          </div>
+          <div class="mini-stats" id="demoStats"></div>
+          <table id="demographicsTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>N</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Safety Highlights -->
+        <div class="card" id="cardSafety">
+          <div class="card-header">
+            <h3>Safety Highlights</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardSafety', 'Safety_Highlights')">Export</button>
+          </div>
+          <table id="safetyTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>N</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Site Enrollment -->
+        <div class="card full-width" id="cardSites">
+          <div class="card-header">
+            <h3>Enrollment by Site</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardSites', 'Site_Enrollment')">Export</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="siteChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Study Milestones -->
+        <div class="card full-width" id="cardMilestones">
+          <div class="card-header">
+            <h3>📍 Study Milestones</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardMilestones', 'Study_Milestones')">Export</button>
+          </div>
+          <div class="milestones-container" id="milestonesContainer"></div>
+          <div class="duration-stats" id="durationStats"></div>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="card" id="cardQuickLinks">
+          <div class="card-header">
+            <h3>🔗 Quick Links</h3>
+          </div>
+          <div class="quick-links">
+            <a href="demographics.html" class="quick-link">
+              <span class="quick-link-icon">👥</span>
+              <span class="quick-link-text">Demographics</span>
+            </a>
+            <a href="enrollment.html" class="quick-link">
+              <span class="quick-link-icon">📊</span>
+              <span class="quick-link-text">Enrollment</span>
+            </a>
+            <a href="dose-cohorts.html" class="quick-link">
+              <span class="quick-link-icon">💊</span>
+              <span class="quick-link-text">Dose Cohorts</span>
+            </a>
+            <a href="icf-screening.html" class="quick-link">
+              <span class="quick-link-icon">📋</span>
+              <span class="quick-link-text">ICF & Screening</span>
+            </a>
+            <a href="eot-eos.html" class="quick-link">
+              <span class="quick-link-icon">🏁</span>
+              <span class="quick-link-text">EOT / EOS</span>
+            </a>
+            <a href="../safety/dashboard.html" class="quick-link">
+              <span class="quick-link-icon">⚠️</span>
+              <span class="quick-link-text">Safety Dashboard</span>
+            </a>
+            <a href="../labs/normalized.html" class="quick-link">
+              <span class="quick-link-icon">🔬</span>
+              <span class="quick-link-text">Labs Overview</span>
+            </a>
+            <a href="../patients/patient-list.html" class="quick-link">
+              <span class="quick-link-icon">🧑‍⚕️</span>
+              <span class="quick-link-text">Patient Profiles</span>
+            </a>
+          </div>
+        </div>
+        
+        <!-- Treatment Duration Summary -->
+        <div class="card" id="cardTreatmentDuration">
+          <div class="card-header">
+            <h3>⏱️ Treatment Duration Summary</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardTreatmentDuration', 'Treatment_Duration')">Export</button>
+          </div>
+          <table id="treatmentDurationTable">
+            <thead>
+              <tr>
+                <th>Statistic</th>
+                <th>All Subjects</th>
+                <th>Ongoing</th>
+                <th>Completed/Off-Study</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+      </div>
+    </div>
+  </main>
+  
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    renderNav('study-overview', 'summary', '../../');
+    
+    // Set export filename prefix
+    if (typeof setBlockExportPrefix === 'function') {
+      setBlockExportPrefix('Study_Summary');
+    }
+    
+    // Global data
+    let dmData = [];
+    let aeData = [];
+    let ddData = [];
+    let charts = {};
+    const today = new Date();
+    let dataCutoffLabel = '';
+    
+    function parseDate(str) {
+      if (!str || str.trim() === '') return null;
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
+      const match = str.match(/(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        return new Date(parseInt(match[3], 10), months[match[2].toUpperCase()], parseInt(match[1], 10));
+      }
+      return null;
+    }
+    
+    function formatDate(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    function formatPercent(n, total) {
+      if (total === 0) return '0.0%';
+      return ((n / total) * 100).toFixed(1) + '%';
+    }
+    
+    async function loadCSV(path) {
+      return new Promise(resolve => {
+        Papa.parse(path, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: r => resolve(r.data),
+          error: () => resolve([])
+        });
+      });
+    }
+    
+    async function init() {
+      try {
+        // Load data files
+        const [dm, ae, dd, refreshJson] = await Promise.all([
+          loadCSV('../../data/dm.csv'),
+          loadCSV('../../data/ae.CSV'),
+          loadCSV('../../data/dd.CSV'),
+          fetch('../../data/refresh-date.json').then(r => r.json()).catch(() => null)
+        ]);
+        
+        dmData = dm;
+        aeData = ae;
+        ddData = dd;
+        
+        // Show refresh date
+        if (refreshJson && refreshJson.date) {
+          dataCutoffLabel = refreshJson.date;
+          document.getElementById('refreshDate').textContent = `Data as of: ${refreshJson.date}`;
+        }
+        
+        // Hide loading, show content
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        
+        // Render dashboard
+        renderDashboard();
+        
+        // Initialize export dialog
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+        }
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('loadingState').innerHTML = `
+          <p style="color: #e74c3c;">Error loading data. Please check console for details.</p>
+        `;
+      }
+    }
+    
+    function renderDashboard() {
+      // Process subjects from dm.csv
+      const subjects = dmData.filter(row => {
+        const startDate = parseDate(row.RFXSTDTC);
+        return startDate; // Has dosing start date = Safety Analysis Set
+      }).map(row => {
+        const startDate = parseDate(row.RFXSTDTC);
+        const endDate = parseDate(row.RFXENDTC);
+        const isOngoing = !endDate || endDate >= today;
+        const isDeath = row.DTHFL === 'Y';
+        
+        // Calculate treatment duration in days
+        const durationDays = startDate ? Math.round(((endDate || today) - startDate) / (1000 * 60 * 60 * 24)) : null;
+        
+        return {
+          subject: row.SUBJID || row.USUBJID,
+          arm: (row.ARM || '').trim() || 'Unknown',
+          sex: row.SEX || 'Unknown',
+          age: parseFloat(row.AGE) || null,
+          race: row.RACE || 'Unknown',
+          ethnic: row.ETHNIC || 'Unknown',
+          site: row.SITEID || 'Unknown',
+          country: row.COUNTRY || 'Unknown',
+          startDate,
+          endDate,
+          isOngoing,
+          isDeath,
+          durationDays
+        };
+      });
+      
+      const totalSubjects = subjects.length;
+      const ongoingCount = subjects.filter(s => s.isOngoing && !s.isDeath).length;
+      const completedCount = subjects.filter(s => !s.isOngoing && !s.isDeath).length;
+      const deathCount = subjects.filter(s => s.isDeath).length;
+      const discontinuedCount = totalSubjects - ongoingCount - completedCount - deathCount;
+      
+      // Count SAEs
+      const subjectsWithSAE = new Set(aeData.filter(ae => ae.AESER_STD === 'Y').map(ae => ae.Subject)).size;
+      
+      // Render study info banner
+      renderStudyInfoBanner(subjects);
+      
+      // Render key metrics
+      renderMetrics(totalSubjects, ongoingCount, completedCount, discontinuedCount, deathCount, subjectsWithSAE);
+      
+      // Render tables and charts
+      renderDisposition(subjects, totalSubjects, ongoingCount, completedCount, discontinuedCount, deathCount);
+      renderCohorts(subjects);
+      renderDemographics(subjects);
+      renderSafety(subjects, aeData);
+      renderEnrollmentChart(subjects);
+      renderSiteChart(subjects);
+      renderMilestones(subjects);
+      renderTreatmentDuration(subjects);
+    }
+    
+    function renderStudyInfoBanner(subjects) {
+      // Calculate FPI (First Patient In) and LPI (Last Patient In)
+      const withDates = subjects.filter(s => s.startDate).sort((a, b) => a.startDate - b.startDate);
+      
+      if (withDates.length > 0) {
+        const fpi = withDates[0].startDate;
+        const lpi = withDates[withDates.length - 1].startDate;
+        const studyDurationDays = Math.round((today - fpi) / (1000 * 60 * 60 * 24));
+        const studyDurationMonths = (studyDurationDays / 30.44).toFixed(1);
+        
+        document.getElementById('fpiDate').textContent = formatDate(fpi);
+        document.getElementById('lpiDate').textContent = formatDate(lpi);
+        document.getElementById('studyDuration').textContent = `${studyDurationMonths} months`;
+        document.getElementById('dataCutoff').textContent = dataCutoffLabel || formatDate(today);
+      }
+    }
+    
+    function renderMilestones(subjects) {
+      const withDates = subjects.filter(s => s.startDate).sort((a, b) => a.startDate - b.startDate);
+      
+      if (withDates.length === 0) return;
+      
+      const fpi = withDates[0].startDate;
+      const lpi = withDates[withDates.length - 1].startDate;
+      const studyDurationDays = Math.round((today - fpi) / (1000 * 60 * 60 * 24));
+      
+      // Define milestones
+      const milestones = [
+        { label: 'First Patient In', date: fpi, status: 'completed' },
+        { label: 'N=50 Enrolled', date: withDates.length >= 50 ? withDates[49].startDate : null, status: withDates.length >= 50 ? 'completed' : 'pending' },
+        { label: 'N=100 Enrolled', date: withDates.length >= 100 ? withDates[99].startDate : null, status: withDates.length >= 100 ? 'completed' : 'pending' },
+        { label: 'Last Patient In', date: lpi, status: 'current' },
+        { label: 'Database Lock', date: null, status: 'pending' }
+      ];
+      
+      let html = '';
+      milestones.forEach(m => {
+        html += `
+          <div class="milestone">
+            <div class="milestone-dot ${m.status}"></div>
+            <div class="milestone-label">${m.label}</div>
+            <div class="milestone-date">${m.date ? formatDate(m.date) : 'TBD'}</div>
+          </div>
+        `;
+      });
+      
+      document.getElementById('milestonesContainer').innerHTML = html;
+      
+      // Duration stats
+      const ongoingDurations = subjects.filter(s => s.isOngoing && s.durationDays).map(s => s.durationDays);
+      const completedDurations = subjects.filter(s => !s.isOngoing && s.durationDays).map(s => s.durationDays);
+      const allDurations = subjects.filter(s => s.durationDays).map(s => s.durationDays);
+      
+      const calcMedian = arr => {
+        if (arr.length === 0) return 0;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      };
+      
+      const avgDuration = allDurations.length > 0 ? (allDurations.reduce((a, b) => a + b, 0) / allDurations.length).toFixed(0) : 'N/A';
+      const medianDuration = allDurations.length > 0 ? calcMedian(allDurations).toFixed(0) : 'N/A';
+      const maxDuration = allDurations.length > 0 ? Math.max(...allDurations).toFixed(0) : 'N/A';
+      
+      document.getElementById('durationStats').innerHTML = `
+        <div class="duration-stat">
+          <div class="duration-stat-value">${studyDurationDays}</div>
+          <div class="duration-stat-label">Study Duration (days)</div>
+        </div>
+        <div class="duration-stat">
+          <div class="duration-stat-value">${avgDuration}</div>
+          <div class="duration-stat-label">Mean Treatment (days)</div>
+        </div>
+        <div class="duration-stat">
+          <div class="duration-stat-value">${medianDuration}</div>
+          <div class="duration-stat-label">Median Treatment (days)</div>
+        </div>
+        <div class="duration-stat">
+          <div class="duration-stat-value">${maxDuration}</div>
+          <div class="duration-stat-label">Max Treatment (days)</div>
+        </div>
+      `;
+    }
+    
+    function renderTreatmentDuration(subjects) {
+      const tbody = document.querySelector('#treatmentDurationTable tbody');
+      
+      const ongoingSubjects = subjects.filter(s => s.isOngoing && s.durationDays);
+      const completedSubjects = subjects.filter(s => !s.isOngoing && s.durationDays);
+      const allSubjectsWithDuration = subjects.filter(s => s.durationDays);
+      
+      const calcStats = arr => {
+        if (arr.length === 0) return { n: 0, mean: 'N/A', median: 'N/A', min: 'N/A', max: 'N/A' };
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return {
+          n: arr.length,
+          mean: (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1),
+          median: (sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2).toFixed(1),
+          min: sorted[0].toFixed(0),
+          max: sorted[sorted.length - 1].toFixed(0)
+        };
+      };
+      
+      const allStats = calcStats(allSubjectsWithDuration.map(s => s.durationDays));
+      const ongoingStats = calcStats(ongoingSubjects.map(s => s.durationDays));
+      const completedStats = calcStats(completedSubjects.map(s => s.durationDays));
+      
+      tbody.innerHTML = `
+        <tr>
+          <td style="text-align: left; font-weight: 500;">N</td>
+          <td>${allStats.n}</td>
+          <td>${ongoingStats.n}</td>
+          <td>${completedStats.n}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Mean (days)</td>
+          <td>${allStats.mean}</td>
+          <td>${ongoingStats.mean}</td>
+          <td>${completedStats.mean}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Median (days)</td>
+          <td>${allStats.median}</td>
+          <td>${ongoingStats.median}</td>
+          <td>${completedStats.median}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Min (days)</td>
+          <td>${allStats.min}</td>
+          <td>${ongoingStats.min}</td>
+          <td>${completedStats.min}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Max (days)</td>
+          <td>${allStats.max}</td>
+          <td>${ongoingStats.max}</td>
+          <td>${completedStats.max}</td>
+        </tr>
+      `;
+    }
+    
+    function renderMetrics(total, ongoing, completed, discontinued, deaths, sae) {
+      const html = `
+        <div class="metric-card total">
+          <div class="metric-value">${total}</div>
+          <div class="metric-label">Total Dosed</div>
+          <div class="metric-sublabel">Safety Analysis Set</div>
+        </div>
+        <div class="metric-card ongoing">
+          <div class="metric-value">${ongoing}</div>
+          <div class="metric-label">Ongoing</div>
+          <div class="metric-sublabel">${formatPercent(ongoing, total)}</div>
+        </div>
+        <div class="metric-card completed">
+          <div class="metric-value">${completed}</div>
+          <div class="metric-label">Completed</div>
+          <div class="metric-sublabel">${formatPercent(completed, total)}</div>
+        </div>
+        <div class="metric-card discontinued">
+          <div class="metric-value">${discontinued >= 0 ? discontinued : 0}</div>
+          <div class="metric-label">Discontinued</div>
+          <div class="metric-sublabel">${formatPercent(discontinued >= 0 ? discontinued : 0, total)}</div>
+        </div>
+        <div class="metric-card deaths">
+          <div class="metric-value">${deaths}</div>
+          <div class="metric-label">Deaths</div>
+          <div class="metric-sublabel">${formatPercent(deaths, total)}</div>
+        </div>
+        <div class="metric-card sae">
+          <div class="metric-value">${sae}</div>
+          <div class="metric-label">Subjects with SAE</div>
+          <div class="metric-sublabel">${formatPercent(sae, total)}</div>
+        </div>
+      `;
+      document.getElementById('metricsGrid').innerHTML = html;
+    }
+    
+    function renderDisposition(subjects, total, ongoing, completed, discontinued, deaths) {
+      const tbody = document.querySelector('#dispositionTable tbody');
+      
+      const rows = [
+        { label: 'Ongoing Treatment', value: ongoing, class: 'status-ongoing' },
+        { label: 'Completed Treatment', value: completed, class: 'status-completed' },
+        { label: 'Discontinued', value: discontinued >= 0 ? discontinued : 0, class: 'status-discontinued' },
+        { label: 'Death', value: deaths, class: 'status-death' }
+      ];
+      
+      let html = '';
+      rows.forEach(row => {
+        html += `
+          <tr>
+            <td style="text-align: left;"><span class="${row.class}">${row.label}</span></td>
+            <td>${row.value}</td>
+            <td>${formatPercent(row.value, total)}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        <tr class="total-row">
+          <td style="text-align: left;">Total</td>
+          <td>${total}</td>
+          <td>100.0%</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderCohorts(subjects) {
+      const tbody = document.querySelector('#cohortTable tbody');
+      
+      // Get unique cohorts and sort
+      const cohorts = [...new Set(subjects.map(s => s.arm))].sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      let html = '';
+      let totalN = 0, totalOngoing = 0, totalCompleted = 0;
+      
+      cohorts.forEach(cohort => {
+        const cohortSubjects = subjects.filter(s => s.arm === cohort);
+        const n = cohortSubjects.length;
+        const ongoing = cohortSubjects.filter(s => s.isOngoing && !s.isDeath).length;
+        const completed = cohortSubjects.filter(s => !s.isOngoing || s.isDeath).length;
+        
+        totalN += n;
+        totalOngoing += ongoing;
+        totalCompleted += completed;
+        
+        html += `
+          <tr>
+            <td style="text-align: left; font-weight: 500;">${cohort}</td>
+            <td>${n}</td>
+            <td class="status-ongoing">${ongoing}</td>
+            <td class="status-completed">${completed}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        <tr class="total-row">
+          <td style="text-align: left;">Total</td>
+          <td>${totalN}</td>
+          <td>${totalOngoing}</td>
+          <td>${totalCompleted}</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderDemographics(subjects) {
+      const total = subjects.length;
+      
+      // Age stats
+      const ages = subjects.map(s => s.age).filter(a => a !== null);
+      const meanAge = ages.length > 0 ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : 'N/A';
+      const minAge = ages.length > 0 ? Math.min(...ages) : 'N/A';
+      const maxAge = ages.length > 0 ? Math.max(...ages) : 'N/A';
+      
+      // Sex counts - include Unknown/Missing
+      const maleCount = subjects.filter(s => s.sex === 'Male').length;
+      const femaleCount = subjects.filter(s => s.sex === 'Female').length;
+      const unknownSexCount = subjects.filter(s => s.sex !== 'Male' && s.sex !== 'Female').length;
+      
+      // Mini stats - show all three categories
+      document.getElementById('demoStats').innerHTML = `
+        <div class="mini-stat">
+          <div class="mini-stat-value">${meanAge}</div>
+          <div class="mini-stat-label">Mean Age (years)</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-value">${minAge} - ${maxAge}</div>
+          <div class="mini-stat-label">Age Range</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-value">${maleCount} / ${femaleCount}${unknownSexCount > 0 ? ' / ' + unknownSexCount : ''}</div>
+          <div class="mini-stat-label">Male / Female${unknownSexCount > 0 ? ' / Unknown' : ''}</div>
+        </div>
+      `;
+      
+      // Demographics table
+      const tbody = document.querySelector('#demographicsTable tbody');
+      
+      const rows = [
+        { label: 'Male', value: maleCount },
+        { label: 'Female', value: femaleCount }
+      ];
+      
+      // Add Unknown sex if any
+      if (unknownSexCount > 0) {
+        rows.push({ label: 'Unknown/Missing', value: unknownSexCount });
+      }
+      
+      // Add race breakdown
+      const races = {};
+      subjects.forEach(s => {
+        const race = s.race || 'Unknown';
+        races[race] = (races[race] || 0) + 1;
+      });
+      
+      Object.entries(races).sort((a, b) => b[1] - a[1]).forEach(([race, count]) => {
+        rows.push({ label: race, value: count, isRace: true });
+      });
+      
+      let html = '';
+      let inRaceSection = false;
+      
+      rows.forEach((row, idx) => {
+        if (row.isRace && !inRaceSection) {
+          html += `<tr><td colspan="3" style="background: #ecf0f1; font-weight: 600; text-align: left;">Race</td></tr>`;
+          inRaceSection = true;
+        }
+        if (idx === 2 && !row.isRace) {
+          html += `<tr><td colspan="3" style="background: #ecf0f1; font-weight: 600; text-align: left;">Sex</td></tr>`;
+        }
+        html += `
+          <tr>
+            <td style="text-align: left; padding-left: ${row.isRace ? '20px' : '10px'};">${row.label}</td>
+            <td>${row.value}</td>
+            <td>${formatPercent(row.value, total)}</td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = `
+        <tr><td colspan="3" style="background: #ecf0f1; font-weight: 600; text-align: left;">Sex</td></tr>
+        <tr>
+          <td style="text-align: left; padding-left: 20px;">Male</td>
+          <td>${maleCount}</td>
+          <td>${formatPercent(maleCount, total)}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; padding-left: 20px;">Female</td>
+          <td>${femaleCount}</td>
+          <td>${formatPercent(femaleCount, total)}</td>
+        </tr>
+        ${unknownSexCount > 0 ? `
+        <tr>
+          <td style="text-align: left; padding-left: 20px; color: #95a5a6;">Unknown/Missing</td>
+          <td>${unknownSexCount}</td>
+          <td>${formatPercent(unknownSexCount, total)}</td>
+        </tr>
+        ` : ''}
+        <tr><td colspan="3" style="background: #ecf0f1; font-weight: 600; text-align: left;">Race</td></tr>
+        ${Object.entries(races).sort((a, b) => b[1] - a[1]).map(([race, count]) => `
+          <tr>
+            <td style="text-align: left; padding-left: 20px;">${race}</td>
+            <td>${count}</td>
+            <td>${formatPercent(count, total)}</td>
+          </tr>
+        `).join('')}
+      `;
+    }
+    
+    function renderSafety(subjects, aeData) {
+      const total = subjects.length;
+      const subjectIds = new Set(subjects.map(s => s.subject));
+      
+      // Filter AEs to only include dosed subjects
+      const relevantAEs = aeData.filter(ae => subjectIds.has(ae.Subject));
+      
+      // Calculate safety metrics
+      const subjectsWithAnyAE = new Set(relevantAEs.map(ae => ae.Subject)).size;
+      const subjectsWithSAE = new Set(relevantAEs.filter(ae => ae.AESER_STD === 'Y').map(ae => ae.Subject)).size;
+      const subjectsWithGrade3Plus = new Set(relevantAEs.filter(ae => {
+        const grade = parseInt(ae.AETOXGR_STD) || 0;
+        return grade >= 3;
+      }).map(ae => ae.Subject)).size;
+      const subjectsWithRelated = new Set(relevantAEs.filter(ae => {
+        const rel = (ae.AEREL_STD || '').toUpperCase();
+        return rel.includes('RELATED') && !rel.includes('NOT RELATED') && !rel.includes('UNLIKELY');
+      }).map(ae => ae.Subject)).size;
+      const subjectsWithDrugDiscontinued = new Set(relevantAEs.filter(ae => {
+        const action = (ae.AEACN_STD || '').toUpperCase();
+        return action.includes('DISCONTIN') || action.includes('WITHDRAWN');
+      }).map(ae => ae.Subject)).size;
+      
+      const tbody = document.querySelector('#safetyTable tbody');
+      
+      const rows = [
+        { label: 'Any TEAE', value: subjectsWithAnyAE },
+        { label: 'Grade >= 3 TEAE', value: subjectsWithGrade3Plus },
+        { label: 'Treatment-Related TEAE', value: subjectsWithRelated },
+        { label: 'SAE', value: subjectsWithSAE },
+        { label: 'TEAE Leading to Discontinuation', value: subjectsWithDrugDiscontinued }
+      ];
+      
+      let html = '';
+      rows.forEach(row => {
+        html += `
+          <tr>
+            <td style="text-align: left;">${row.label}</td>
+            <td>${row.value}</td>
+            <td>${formatPercent(row.value, total)}</td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderEnrollmentChart(subjects) {
+      // Sort subjects by start date
+      const sorted = subjects.filter(s => s.startDate).sort((a, b) => a.startDate - b.startDate);
+      
+      if (sorted.length === 0) return;
+      
+      // Build cumulative data
+      const data = [];
+      sorted.forEach((s, idx) => {
+        data.push({
+          x: s.startDate,
+          y: idx + 1
+        });
+      });
+      
+      // Add today's point
+      data.push({
+        x: today,
+        y: sorted.length
+      });
+      
+      const ctx = document.getElementById('enrollmentChart').getContext('2d');
+      charts.enrollment = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'Cumulative Enrollment',
+            data: data,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 2,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  return formatDate(new Date(context[0].parsed.x));
+                },
+                label: function(context) {
+                  return `Total Enrolled: ${context.parsed.y}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'month',
+                displayFormats: {
+                  month: 'MMM yyyy'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Date',
+                font: { weight: 'bold' }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Subjects Enrolled',
+                font: { weight: 'bold' }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderSiteChart(subjects) {
+      // Count by site
+      const siteCounts = {};
+      subjects.forEach(s => {
+        const site = s.site || 'Unknown';
+        siteCounts[site] = (siteCounts[site] || 0) + 1;
+      });
+      
+      // Sort by count descending
+      const sortedSites = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]);
+      
+      const colors = [
+        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+        '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+      ];
+      
+      const ctx = document.getElementById('siteChart').getContext('2d');
+      charts.sites = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedSites.map(([site]) => site),
+          datasets: [{
+            label: 'Subjects',
+            data: sortedSites.map(([, count]) => count),
+            backgroundColor: sortedSites.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Site',
+                font: { weight: 'bold' }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Number of Subjects',
+                font: { weight: 'bold' }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

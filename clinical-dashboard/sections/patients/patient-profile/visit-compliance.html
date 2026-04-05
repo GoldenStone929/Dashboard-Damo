@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visit Compliance - Patient Visit Performance</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../../assets/js/block-export.js"></script>
+  <style>
+    /* ========================================================================
+       Page Layout
+       ======================================================================== */
+    .visit-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 20px;
+    }
+    /* ========================================================================
+       Controls Panel
+       ======================================================================== */
+    .controls-panel {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-group label {
+      font-weight: 600;
+      color: #2C3E50;
+      font-size: 13px;
+    }
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 200px;
+    }
+    .control-group.filter-group {
+      align-items: center;
+      justify-content: center;
+    }
+    .control-group.filter-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #34495E;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    .control-group.filter-group label:hover {
+      background-color: #e9ecef;
+      color: #2C3E50;
+    }
+    .control-group.filter-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #3498db;
+      flex-shrink: 0;
+    }
+    /* ========================================================================
+       Summary Cards
+       ======================================================================== */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .summary-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    .summary-card.total::before { background: #3498db; }
+    .summary-card.completed::before { background: #27ae60; }
+    .summary-card.missed::before { background: #e74c3c; }
+    .summary-card.rate::before { background: #9b59b6; }
+    .summary-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+    .summary-card.completed .summary-value { color: #27ae60; }
+    .summary-card.missed .summary-value { color: #e74c3c; }
+    .summary-card.rate .summary-value { color: #9b59b6; }
+    .summary-label {
+      font-size: 13px;
+      color: #7F8C8D;
+      margin-top: 5px;
+    }
+    /* ========================================================================
+       Visit Timeline
+       ======================================================================== */
+    .timeline-section {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .icon {
+      font-size: 20px;
+    }
+    .timeline-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 15px 0;
+    }
+    .visit-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 80px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .visit-block:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .visit-block.completed {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      border: 2px solid #28a745;
+    }
+    .visit-block.missed {
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+      border: 2px solid #dc3545;
+    }
+    .visit-block.unknown {
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+      border: 2px solid #ffc107;
+    }
+    .visit-icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    .visit-block.completed .visit-icon::after { content: '✓'; color: #155724; }
+    .visit-block.missed .visit-icon::after { content: '✗'; color: #721c24; }
+    .visit-block.unknown .visit-icon::after { content: '?'; color: #856404; }
+    .visit-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #2C3E50;
+      text-align: center;
+      word-break: break-word;
+      max-width: 70px;
+    }
+    .visit-date {
+      font-size: 9px;
+      color: #666;
+      margin-top: 3px;
+    }
+    /* Timeline Legend */
+    .timeline-legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+    .legend-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    .legend-dot.completed { background: #28a745; }
+    .legend-dot.missed { background: #dc3545; }
+    .legend-dot.unknown { background: #ffc107; }
+    /* ========================================================================
+       Compliance Chart
+       ======================================================================== */
+    .chart-section {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    .chart-container {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
+      align-items: center;
+    }
+    @media (max-width: 800px) {
+      .chart-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .donut-wrapper {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto;
+    }
+    .donut-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .donut-percent {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+    .donut-label {
+      font-size: 12px;
+      color: #7F8C8D;
+    }
+    .bar-wrapper {
+      height: 300px;
+    }
+    /* ========================================================================
+       Details Table
+       ======================================================================== */
+    .table-section {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    .visit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .visit-table th {
+      background: #2C3E50;
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    .visit-table td {
+      padding: 10px 15px;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+    .visit-table tr:hover {
+      background: #f8f9fa;
+    }
+    .visit-table tr.missed-row {
+      background: #fff5f5;
+    }
+    .visit-table tr.missed-row:hover {
+      background: #ffe0e0;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-badge.completed {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-badge.missed {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-badge.unknown {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .reason-text {
+      color: #721c24;
+      font-style: italic;
+      max-width: 300px;
+    }
+    /* ========================================================================
+       Missed Visits Summary
+       ======================================================================== */
+    .missed-summary {
+      background: #fff5f5;
+      border: 1px solid #f5c6cb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    .missed-summary h3 {
+      color: #721c24;
+      margin: 0 0 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .missed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .missed-item {
+      display: flex;
+      gap: 15px;
+      padding: 10px 15px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #dc3545;
+    }
+    .missed-item-visit {
+      font-weight: 600;
+      color: #2C3E50;
+      min-width: 100px;
+    }
+    .missed-item-reason {
+      color: #666;
+      flex: 1;
+    }
+    .missed-item-date {
+      color: #999;
+      font-size: 12px;
+    }
+    /* ========================================================================
+       No Data Message
+       ======================================================================== */
+    .no-data-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: #7F8C8D;
+      font-size: 18px;
+    }
+    .no-data-message .icon {
+      font-size: 64px;
+      margin-bottom: 15px;
+    }
+    /* ========================================================================
+       Loading Overlay
+       ======================================================================== */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #2C3E50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #2C3E50;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab active">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content">
+    <div class="visit-container">
+      <h1 class="page-title">Patient Visit Compliance</h1>
+      <p class="page-subtitle">Track planned visit performance and identify missed visits with reasons</p>
+
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Select Patient</label>
+          <select id="patientSelect">
+            <option value="">-- Select Patient --</option>
+          </select>
+        </div>
+        <div class="control-group filter-group">
+          <label for="filterMissedUnknown">
+            <input type="checkbox" id="filterMissedUnknown">
+            <span>Only show patients with Missed or Unknown/Pending visits</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Content Container -->
+      <div id="contentContainer">
+        <!-- No Data Message (Default) -->
+        <div class="no-data-message" id="noDataMessage">
+          <div class="icon">📋</div>
+          <div>Please select a patient to view visit compliance</div>
+        </div>
+      </div>
+
+      <!-- Patient Content (Hidden by default) -->
+      <div id="patientContent" style="display: none;">
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card total">
+            <div class="summary-value" id="totalVisits">0</div>
+            <div class="summary-label">Total Planned Visits</div>
+          </div>
+          <div class="summary-card completed">
+            <div class="summary-value" id="completedVisits">0</div>
+            <div class="summary-label">Completed Visits</div>
+          </div>
+          <div class="summary-card missed">
+            <div class="summary-value" id="missedVisits">0</div>
+            <div class="summary-label">Missed Visits</div>
+          </div>
+          <div class="summary-card rate">
+            <div class="summary-value" id="complianceRate">0%</div>
+            <div class="summary-label">Compliance Rate</div>
+          </div>
+        </div>
+
+        <!-- Visual Timeline -->
+        <div class="timeline-section">
+          <div class="section-title">
+            <span class="icon">📅</span>
+            Visit Timeline
+          </div>
+          <div class="timeline-container" id="timelineContainer"></div>
+          <div class="timeline-legend">
+            <div class="legend-item">
+              <div class="legend-dot completed"></div>
+              <span>Completed</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot missed"></div>
+              <span>Missed</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot unknown"></div>
+              <span>Unknown/Pending</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div id="visitComplianceChartsExportBlock" class="chart-section" style="position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="section-title">
+              <span class="icon">📊</span>
+              Compliance Overview
+            </div>
+            <button class="export-btn" onclick="showBlockExportDialog('visitComplianceChartsExportBlock', 'Visit_Compliance_Charts')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+          </div>
+          <div class="chart-container">
+            <div class="donut-wrapper">
+              <canvas id="donutChart"></canvas>
+              <div class="donut-center">
+                <div class="donut-percent" id="donutPercent">0%</div>
+                <div class="donut-label">Compliance</div>
+              </div>
+            </div>
+            <div class="bar-wrapper">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Missed Visits Summary (only shown if there are missed visits) -->
+        <div class="missed-summary" id="missedSummary" style="display: none;">
+          <h3>⚠️ Missed Visits Details</h3>
+          <div class="missed-list" id="missedList"></div>
+        </div>
+
+        <!-- Details Table -->
+        <div class="table-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="section-title">
+              <span class="icon">📝</span>
+              Visit Details
+            </div>
+            <button type="button" class="export-csv-btn" onclick="exportVisitTableCSV()" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+          </div>
+          <table class="visit-table" id="visitTable">
+            <thead>
+              <tr>
+                <th style="width: 60px;">#</th>
+                <th style="width: 150px;">Visit/Cycle</th>
+                <th style="width: 120px;">Date</th>
+                <th style="width: 120px;">Status</th>
+                <th>Reason (if missed)</th>
+              </tr>
+            </thead>
+            <tbody id="visitTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading Visit Data...</div>
+  </div>
+
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('patients', 'pp-visit-compliance', '../../../');
+    }
+  </script>
+  <script>
+    // ========================================================================
+    // Visit Compliance - Patient Visit Performance Tracking
+    // ========================================================================
+
+    // ========================================================================
+    // State
+    // ========================================================================
+    const state = {
+      visData: [],
+      patients: [],
+      currentPatient: null,
+      patientVisits: [],
+      charts: {}
+    };
+
+    // ========================================================================
+    // Utility Functions
+    // ========================================================================
+    function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    /**
+     * Parse date from format: '18DEC2024:00:00:00.000' or '18DEC2024'
+     */
+    function parseVisitDate(dateStr) {
+      if (!dateStr) return null;
+      const str = String(dateStr).trim();
+
+      const match = str.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const months = {
+          JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+          JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+        };
+        const month = months[monthStr];
+        if (month !== undefined) {
+          return new Date(year, month, day);
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Format date for display
+     */
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    /**
+     * Format date short (for timeline)
+     */
+    function formatDateShort(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    /**
+     * Determine visit status from SVOCCUR_1 (support multiple column names)
+     */
+    function getVisitStatus(svoccur) {
+      if (!svoccur) return 'unknown';
+      const val = String(svoccur).trim().toUpperCase();
+      if (val === 'YES' || val === 'Y' || val === '1' || val === 'TRUE') {
+        return 'completed';
+      } else if (val === 'NO' || val === 'N' || val === '0' || val === 'FALSE') {
+        return 'missed';
+      }
+      return 'unknown';
+    }
+
+    // ========================================================================
+    // Data Processing
+    // ========================================================================
+
+    function processPatientData(patientId) {
+      const visits = state.visData
+        .filter(row => {
+          const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+          return subject === patientId;
+        })
+        .map(row => {
+          // Support multiple column names
+          const folder = String(row.Folder || row.FOLDER || row.folder || '').trim();
+          const svoccur = row.SVOCCUR_1 || row.svoccur_1 || row.SVOCCUR || row.svoccur || row.Occurred || row.occurred || '';
+          const reason = String(row.SVREASOC_1 || row.svreasoc_1 || row.SVREASOC || row.svreasoc || row.Reason || row.reason || '').trim();
+          const dateRaw = row.VISDAT_1 || row.visdat_1 || row.VISDAT || row.visdat || row.VisitDate || row.visitDate || '';
+
+          return {
+            folder: folder,
+            occurred: svoccur,
+            reason: reason,
+            dateRaw: dateRaw,
+            date: parseVisitDate(dateRaw),
+            status: getVisitStatus(svoccur)
+          };
+        })
+        .filter(v => v.folder); // Remove empty folders
+
+      // Sort by date
+      visits.sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date - b.date;
+      });
+
+      state.patientVisits = visits;
+      return visits;
+    }
+
+    function getVisitStats(visits) {
+      const total = visits.length;
+      const completed = visits.filter(v => v.status === 'completed').length;
+      const missed = visits.filter(v => v.status === 'missed').length;
+      const unknown = visits.filter(v => v.status === 'unknown').length;
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      return { total, completed, missed, unknown, rate };
+    }
+
+    // ========================================================================
+    // UI Rendering
+    // ========================================================================
+
+    function updateSummaryCards(stats) {
+      document.getElementById('totalVisits').textContent = stats.total;
+      document.getElementById('completedVisits').textContent = stats.completed;
+      document.getElementById('missedVisits').textContent = stats.missed;
+      document.getElementById('complianceRate').textContent = stats.rate + '%';
+    }
+
+    function renderTimeline(visits) {
+      const container = document.getElementById('timelineContainer');
+
+      // Visits are already sorted by date in processPatientData
+      container.innerHTML = visits.map(visit => `
+        <div class="visit-block ${visit.status}" 
+             title="${visit.folder}\nStatus: ${visit.status}\n${visit.reason ? 'Reason: ' + visit.reason : ''}">
+          <div class="visit-icon"></div>
+          <div class="visit-name">${visit.folder}</div>
+          <div class="visit-date">${formatDateShort(visit.date)}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderCharts(stats) {
+      // Destroy existing charts
+      if (state.charts.donut) state.charts.donut.destroy();
+      if (state.charts.bar) state.charts.bar.destroy();
+
+      // Donut Chart
+      const donutCtx = document.getElementById('donutChart').getContext('2d');
+      state.charts.donut = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Completed', 'Missed', 'Unknown'],
+          datasets: [{
+            data: [stats.completed, stats.missed, stats.unknown],
+            backgroundColor: ['#27ae60', '#e74c3c', '#f39c12'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '70%',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+
+      document.getElementById('donutPercent').textContent = stats.rate + '%';
+
+      // Bar Chart - Visit status by visit
+      const visits = state.patientVisits;
+      const barCtx = document.getElementById('barChart').getContext('2d');
+
+      state.charts.bar = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: visits.map(v => v.folder),
+          datasets: [{
+            label: 'Visit Status',
+            data: visits.map(v => v.status === 'completed' ? 1 : (v.status === 'missed' ? -1 : 0)),
+            backgroundColor: visits.map(v =>
+              v.status === 'completed' ? '#27ae60' :
+              v.status === 'missed' ? '#e74c3c' : '#f39c12'
+            ),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const visit = visits[ctx.dataIndex];
+                  let label = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
+                  if (visit.reason) label += `: ${visit.reason}`;
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: false,
+              min: -1.5,
+              max: 1.5
+            },
+            y: {
+              ticks: {
+                font: { size: 10 }
+              },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderMissedSummary(visits) {
+      const missedVisits = visits.filter(v => v.status === 'missed');
+      const container = document.getElementById('missedSummary');
+      const list = document.getElementById('missedList');
+
+      if (missedVisits.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      list.innerHTML = missedVisits.map(visit => `
+        <div class="missed-item">
+          <div class="missed-item-visit">${visit.folder}</div>
+          <div class="missed-item-reason">${visit.reason || 'No reason provided'}</div>
+          <div class="missed-item-date">${formatDate(visit.date)}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderTable(visits) {
+      const tbody = document.getElementById('visitTableBody');
+
+      // Visits are already sorted by date in processPatientData
+      tbody.innerHTML = visits.map((visit, index) => `
+        <tr class="${visit.status === 'missed' ? 'missed-row' : ''}">
+          <td>${index + 1}</td>
+          <td><strong>${visit.folder}</strong></td>
+          <td>${formatDate(visit.date)}</td>
+          <td>
+            <span class="status-badge ${visit.status}">
+              ${visit.status === 'completed' ? '✓' : visit.status === 'missed' ? '✗' : '?'}
+              ${visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+            </span>
+          </td>
+          <td>
+            ${visit.status === 'missed' && visit.reason ?
+              `<span class="reason-text">${visit.reason}</span>` :
+              '-'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPatientData() {
+      const patientId = state.currentPatient;
+
+      if (!patientId) {
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('patientContent').style.display = 'none';
+        return;
+      }
+
+      // Process data
+      const visits = processPatientData(patientId);
+
+      if (visits.length === 0) {
+        document.getElementById('noDataMessage').innerHTML = `
+          <div class="icon">⚠️</div>
+          <div>No visit data found for patient ${patientId}</div>
+        `;
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('patientContent').style.display = 'none';
+        return;
+      }
+
+      // Get stats
+      const stats = getVisitStats(visits);
+
+      // Show content
+      document.getElementById('noDataMessage').style.display = 'none';
+      document.getElementById('patientContent').style.display = 'block';
+
+      // Render all components
+      updateSummaryCards(stats);
+      renderTimeline(visits);
+      renderCharts(stats);
+      renderMissedSummary(visits);
+      renderTable(visits);
+    }
+
+    // ========================================================================
+    // Initialization
+    // ========================================================================
+
+    function populatePatientSelect(filterMissedUnknown = false) {
+      const select = document.getElementById('patientSelect');
+      const currentValue = select.value; // Save current selection
+      
+      const patients = new Set();
+      
+      if (filterMissedUnknown) {
+        // Only include patients that have at least one 'missed' or 'unknown' visit
+        const patientStatusMap = {};
+        
+        state.visData.forEach(row => {
+          const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+          if (!subject) return;
+          
+          // Support multiple column names for SVOCCUR_1
+          const svoccur = row.SVOCCUR_1 || row.svoccur_1 || row.SVOCCUR || row.svoccur || row.Occurred || row.occurred || '';
+          const status = getVisitStatus(svoccur);
+          
+          if (!patientStatusMap[subject]) {
+            patientStatusMap[subject] = { hasMissed: false, hasUnknown: false };
+          }
+          
+          if (status === 'missed') {
+            patientStatusMap[subject].hasMissed = true;
+          } else if (status === 'unknown') {
+            patientStatusMap[subject].hasUnknown = true;
+          }
+        });
+        
+        // Only add patients that have at least one missed or unknown visit
+        Object.keys(patientStatusMap).forEach(subject => {
+          if (patientStatusMap[subject].hasMissed || patientStatusMap[subject].hasUnknown) {
+            patients.add(subject);
+          }
+        });
+      } else {
+        // Include all patients
+        state.visData.forEach(row => {
+          const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+          if (subject) patients.add(subject);
+        });
+      }
+
+      state.patients = Array.from(patients).sort();
+
+      select.innerHTML = '<option value="">-- Select Patient --</option>' +
+        state.patients.map(p => `<option value="${p}">${p}</option>`).join('');
+      
+      // Restore selection if it still exists in the filtered list
+      if (currentValue && state.patients.includes(currentValue)) {
+        select.value = currentValue;
+        state.currentPatient = currentValue;
+      } else if (state.patients.length > 0) {
+        // If current selection is not in filtered list, select first patient
+        const firstPatient = state.patients[0];
+        select.value = firstPatient;
+        state.currentPatient = firstPatient;
+        renderPatientData();
+      } else {
+        // No patients match the filter
+        select.value = '';
+        state.currentPatient = null;
+        document.getElementById('noDataMessage').innerHTML = `
+          <div class="icon">📋</div>
+          <div>No patients found with Missed or Unknown/Pending visits</div>
+        `;
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('patientContent').style.display = 'none';
+      }
+    }
+
+    async function init() {
+      try {
+        // Load vis.csv - try multiple file names
+        let visData = null;
+        const visFiles = ['vis.CSV', 'vis.csv', 'VIS.CSV'];
+        for (const filename of visFiles) {
+          try {
+            visData = await loadCSV(`../../../data/${filename}`);
+            console.log(`Loaded ${visData.length} rows from ${filename}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+
+        if (!visData || visData.length === 0) {
+          throw new Error('vis.CSV not found or empty');
+        }
+
+        state.visData = visData;
+
+        // Debug: Log column names
+        if (state.visData.length > 0) {
+          console.log('Columns:', Object.keys(state.visData[0]));
+        }
+
+        // Populate patient select
+        populatePatientSelect();
+
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('Patient_Visit_Compliance');
+        }
+
+        // Event listeners
+        document.getElementById('patientSelect').addEventListener('change', (e) => {
+          state.currentPatient = e.target.value || null;
+          // Update URL parameter when patient selection changes
+          if (state.currentPatient) {
+            history.replaceState(null, '', `?id=${state.currentPatient}`);
+          } else {
+            history.replaceState(null, '', window.location.pathname);
+          }
+          renderPatientData();
+        });
+        
+        // Filter checkbox event listener
+        document.getElementById('filterMissedUnknown').addEventListener('change', (e) => {
+          const filterActive = e.target.checked;
+          populatePatientSelect(filterActive);
+          if (state.currentPatient) {
+            renderPatientData();
+          }
+        });
+
+        // Check for patient in URL params, otherwise select first patient by default
+        const urlParams = new URLSearchParams(window.location.search);
+        // Support both 'id' and 'patient' for backward compatibility
+        const patientParam = urlParams.get('id') || urlParams.get('patient');
+
+        if (patientParam && state.patients.includes(patientParam)) {
+          document.getElementById('patientSelect').value = patientParam;
+          state.currentPatient = patientParam;
+          renderPatientData();
+        } else if (state.patients.length > 0) {
+          // Select first patient by default
+          const firstPatient = state.patients[0];
+          document.getElementById('patientSelect').value = firstPatient;
+          state.currentPatient = firstPatient;
+          // Update URL with first patient
+          history.replaceState(null, '', `?id=${firstPatient}`);
+          renderPatientData();
+        }
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + error.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    function exportVisitTableCSV() {
+      var table = document.getElementById('visitTable');
+      if (!table) return;
+      var rows = [];
+      table.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+        });
+        rows.push(row.join(','));
+      });
+      var csv = rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'Visit_Compliance_Details_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+

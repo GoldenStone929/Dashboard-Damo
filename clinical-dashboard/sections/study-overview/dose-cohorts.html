@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dose Cohorts Overview</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    .page-title { font-size: 28px; font-weight: 700; color: #2C3E50; margin-bottom: 8px; }
+    .page-subtitle { font-size: 16px; color: #7F8C8D; margin-bottom: 24px; }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .card h3 {
+      color: #2C3E50;
+      margin: 0 0 16px 0;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #3498db;
+      font-size: 1.2rem;
+    }
+    
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    
+    .summary-table th {
+      background: #34495E;
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    .summary-table td {
+      padding: 10px 16px;
+      border: 1px solid #e1e8ed;
+    }
+    
+    .summary-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    .summary-table tr:hover {
+      background: #e8f4f8;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 500px;
+      margin-top: 16px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .stat-box .label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    
+    .stat-box .value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #7F8C8D;
+    }
+    
+    .filter-panel {
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .filter-panel label {
+      font-weight: 600;
+      color: #2C3E50;
+    }
+    
+    .filter-panel select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-width: 150px;
+    }
+    
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 16px;
+      font-size: 13px;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      margin-right: 6px;
+    }
+    
+    .ongoing-indicator {
+      color: #27ae60;
+      font-weight: 600;
+    }
+    
+    .completed-indicator {
+      color: #e74c3c;
+      font-weight: 600;
+    }
+    
+    /* Cohort Status Cards */
+    .cohort-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .cohort-status-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid #3498db;
+    }
+    
+    .cohort-status-card.open {
+      border-left-color: #27ae60;
+    }
+    
+    .cohort-status-card.closed {
+      border-left-color: #95a5a6;
+    }
+    
+    .cohort-status-card.evaluating {
+      border-left-color: #f39c12;
+    }
+    
+    .cohort-status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .cohort-status-name {
+      font-weight: 700;
+      color: #2C3E50;
+      font-size: 1.1rem;
+    }
+    
+    .cohort-status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .cohort-status-badge.open {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .cohort-status-badge.closed {
+      background: #e2e3e5;
+      color: #383d41;
+    }
+    
+    .cohort-status-badge.evaluating {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .cohort-status-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+    
+    .cohort-stat {
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    
+    .cohort-stat-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #2C3E50;
+    }
+    
+    .cohort-stat-label {
+      font-size: 0.7rem;
+      color: #7f8c8d;
+      text-transform: uppercase;
+    }
+    
+    .dlt-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 10px;
+      padding: 6px 10px;
+      background: #fef3f3;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #c0392b;
+    }
+    
+    .dlt-indicator.safe {
+      background: #e8f8f5;
+      color: #1e8449;
+    }
+    
+    .dlt-indicator.na {
+      background: #ecf0f1;
+      color: #7f8c8d;
+    }
+    
+    /* Phase 1 specific info */
+    .phase1-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .phase1-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .phase1-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+    }
+    
+    .phase1-metric {
+      text-align: center;
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+    }
+    
+    .phase1-metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .phase1-metric-label {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <h1 class="page-title">Dose Cohorts Overview</h1>
+    <p class="page-subtitle">Subject dosing intervals by treatment arm</p>
+    
+    <div id="loadingState" class="loading">Loading data...</div>
+    
+    <div id="dashboardContent" style="display: none;">
+      <!-- Phase 1 Dose Escalation Info -->
+      <div class="phase1-info" id="phase1Info"></div>
+      
+      <!-- Summary Stats -->
+      <div class="stats-grid" id="statsGrid"></div>
+      
+      <!-- Cohort Status Cards -->
+      <div class="cohort-status-grid" id="cohortStatusGrid"></div>
+      
+      <div class="dashboard-grid">
+        <!-- Summary Table -->
+        <div class="card" id="doseCohortsSummaryCard">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+            <h3 style="margin: 0;">📊 Dose Cohort Summary</h3>
+            <button type="button" class="export-csv-btn" onclick="exportSummaryTableCSV()" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+          </div>
+          <table class="summary-table" id="summaryTable">
+            <thead>
+              <tr>
+                <th>Dose Cohort</th>
+                <th>Total Subjects</th>
+                <th>Male</th>
+                <th>Female</th>
+                <th>Unknown Sex</th>
+                <th>Ongoing</th>
+                <th>Completed</th>
+                <th>Median Duration (days)</th>
+              </tr>
+            </thead>
+            <tbody id="summaryBody"></tbody>
+          </table>
+        </div>
+        
+        <!-- Timeline Chart -->
+        <div class="card" id="doseCohortsTimelineCard">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <h3 style="margin: 0;">📅 Dosing Timeline</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('doseCohortsTimelineCard', 'Dose_Cohorts_Timeline')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+          </div>
+          <div class="filter-panel">
+            <label>Filter by Cohort:</label>
+            <select id="cohortFilter">
+              <option value="all">All Cohorts</option>
+            </select>
+            <div id="cohortLegend" style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 12px;"></div>
+          </div>
+          <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+            <em>Solid color = Ongoing | Faded color = Completed | Hover over bars for details</em>
+          </div>
+          <div class="chart-container">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    renderNav('study-overview', 'dose-cohorts', '../../');
+    
+    let dmData = [];
+    let aeData = [];
+    let timelineChart = null;
+    const today = new Date();
+    let dataCutoffDate = null; // Will be set to max RFXENDTC to detect ongoing subjects
+    
+    // Dynamic color palette for cohorts - generates colors automatically
+    const baseColors = [
+      '#e74c3c', '#3498db', '#9b59b6', '#2ecc71', '#f39c12', 
+      '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b',
+      '#8e44ad', '#27ae60', '#d35400', '#2980b9', '#f1c40f'
+    ];
+    const cohortColorCache = {};
+    let colorIndex = 0;
+    
+    function getCohortColor(cohort) {
+      if (cohort === 'Unknown') return '#95a5a6';
+      if (!cohortColorCache[cohort]) {
+        cohortColorCache[cohort] = baseColors[colorIndex % baseColors.length];
+        colorIndex++;
+      }
+      return cohortColorCache[cohort];
+    }
+    
+    function parseDate(str) {
+      if (!str || str.trim() === '') return null;
+      // Handle YYYY-MM-DD format
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
+      const match = str.match(/(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        return new Date(parseInt(match[3], 10), months[match[2].toUpperCase()], parseInt(match[1], 10));
+      }
+      return null;
+    }
+    
+    function formatDate(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    function daysBetween(d1, d2) {
+      if (!d1 || !d2) return null;
+      return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+    }
+    
+    function median(arr) {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    }
+    
+    async function loadCSV(path) {
+      return new Promise(resolve => {
+        Papa.parse(path, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: r => resolve(r.data),
+          error: () => resolve([])
+        });
+      });
+    }
+    
+    async function init() {
+      [dmData, aeData] = await Promise.all([
+        loadCSV('../../data/dm.csv'),
+        loadCSV('../../data/ae.CSV')
+      ]);
+      
+      // Determine data cutoff date (max RFXENDTC) to identify ongoing subjects
+      const allEndDates = dmData
+        .map(row => parseDate(row.RFXENDTC))
+        .filter(d => d !== null);
+      if (allEndDates.length > 0) {
+        dataCutoffDate = new Date(Math.max(...allEndDates));
+      }
+      
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('dashboardContent').style.display = 'block';
+      
+      processData();
+    }
+    
+    function processData() {
+      // Reset color cache for consistent coloring
+      Object.keys(cohortColorCache).forEach(k => delete cohortColorCache[k]);
+      colorIndex = 0;
+      
+      // Process subjects with dosing dates
+      const subjects = dmData.filter(row => {
+        const startDate = parseDate(row.RFXSTDTC);
+        return startDate; // Include all subjects with start date, even without ARM
+      }).map(row => {
+        const startDate = parseDate(row.RFXSTDTC);
+        const endDate = parseDate(row.RFXENDTC);
+        const hasDied = row.DTHFL === 'Y';
+        
+        // Subject is ongoing if:
+        // 1. No end date, OR
+        // 2. End date equals data cutoff date (and not deceased)
+        const isOngoing = !endDate || 
+          (!hasDied && dataCutoffDate && endDate.getTime() === dataCutoffDate.getTime());
+        
+        const duration = daysBetween(startDate, endDate || today);
+        
+        // Handle empty ARM as "Unknown"
+        let arm = (row.ARM || '').trim();
+        if (!arm) arm = 'Unknown';
+        
+        return {
+          subject: row.SUBJID || row.USUBJID,
+          arm: arm,
+          sex: row.SEX || 'Unknown',
+          age: row.AGE,
+          startDate,
+          endDate,
+          isOngoing,
+          duration
+        };
+      });
+      
+      // Get unique cohorts and sort by dose (Unknown at the end)
+      const cohorts = [...new Set(subjects.map(s => s.arm))].sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      // Populate filter dropdown
+      const filterSelect = document.getElementById('cohortFilter');
+      cohorts.forEach(cohort => {
+        const option = document.createElement('option');
+        option.value = cohort;
+        option.textContent = cohort;
+        filterSelect.appendChild(option);
+      });
+      filterSelect.addEventListener('change', () => renderTimeline(subjects, cohorts));
+      
+      // Render Phase 1 info
+      renderPhase1Info(subjects, cohorts);
+      
+      // Render stats
+      renderStats(subjects);
+      
+      // Render cohort status cards
+      renderCohortStatusCards(subjects, cohorts);
+      
+      // Render summary table
+      renderSummaryTable(subjects, cohorts);
+      
+      // Render cohort legend
+      renderCohortLegend(cohorts);
+      
+      // Render timeline
+      renderTimeline(subjects, cohorts);
+    }
+    
+    function renderPhase1Info(subjects, cohorts) {
+      const totalCohorts = cohorts.filter(c => c !== 'Unknown').length;
+      const currentCohort = cohorts.filter(c => c !== 'Unknown').pop() || 'N/A';
+      const totalSubjects = subjects.length;
+      const ongoingSubjects = subjects.filter(s => s.isOngoing).length;
+      
+      // Estimate DLT window (typically 21-28 days in Phase 1)
+      const dltWindowDays = 28;
+      const subjectsInDltWindow = subjects.filter(s => s.isOngoing && s.duration <= dltWindowDays).length;
+      
+      document.getElementById('phase1Info').innerHTML = `
+        <div class="phase1-title">
+          <span>📊</span>
+          <span>Phase 1 Dose Escalation Status</span>
+        </div>
+        <div class="phase1-metrics">
+          <div class="phase1-metric">
+            <div class="phase1-metric-value">${totalCohorts}</div>
+            <div class="phase1-metric-label">Dose Levels</div>
+          </div>
+          <div class="phase1-metric">
+            <div class="phase1-metric-value">${currentCohort}</div>
+            <div class="phase1-metric-label">Current Dose</div>
+          </div>
+          <div class="phase1-metric">
+            <div class="phase1-metric-value">${totalSubjects}</div>
+            <div class="phase1-metric-label">Total Dosed</div>
+          </div>
+          <div class="phase1-metric">
+            <div class="phase1-metric-value">${ongoingSubjects}</div>
+            <div class="phase1-metric-label">On Treatment</div>
+          </div>
+          <div class="phase1-metric">
+            <div class="phase1-metric-value">${subjectsInDltWindow}</div>
+            <div class="phase1-metric-label">In DLT Window</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderCohortStatusCards(subjects, cohorts) {
+      const container = document.getElementById('cohortStatusGrid');
+      const sortedCohorts = cohorts.filter(c => c !== 'Unknown').sort((a, b) => {
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      let html = '';
+      sortedCohorts.forEach((cohort, idx) => {
+        const cohortSubjects = subjects.filter(s => s.arm === cohort);
+        const n = cohortSubjects.length;
+        const ongoing = cohortSubjects.filter(s => s.isOngoing).length;
+        const completed = n - ongoing;
+        
+        // Determine cohort status
+        const isLastCohort = idx === sortedCohorts.length - 1;
+        const hasOngoing = ongoing > 0;
+        let status, statusClass;
+        
+        if (isLastCohort && hasOngoing) {
+          status = 'Open';
+          statusClass = 'open';
+        } else if (hasOngoing) {
+          status = 'Evaluating';
+          statusClass = 'evaluating';
+        } else {
+          status = 'Closed';
+          statusClass = 'closed';
+        }
+        
+        // Calculate DLT-evaluable (subjects with >= 21 days)
+        const dltEvaluable = cohortSubjects.filter(s => s.duration >= 21).length;
+        
+        // Count DLTs from AE data for this cohort's subjects
+        const cohortSubjectIds = cohortSubjects.map(s => s.subject);
+        const dltEvents = aeData.filter(ae => {
+          const subjectId = ae.Subject || ae.SUBJID || ae.USUBJID;
+          const isDLT = ae.AEDLT_1 === 'Y' || ae.AEDLT_1 === 'Yes' || ae.AEDLT_1 === 'YES';
+          return cohortSubjectIds.includes(subjectId) && isDLT;
+        });
+        const dltCount = dltEvents.length;
+        const dltStatusClass = dltCount === 0 ? 'safe' : '';
+        const dltStatusText = dltCount === 0 
+          ? '✓ No DLTs Reported' 
+          : `⚠️ ${dltCount} DLT(s) Reported`;
+        
+        html += `
+          <div class="cohort-status-card ${statusClass}">
+            <div class="cohort-status-header">
+              <span class="cohort-status-name">${cohort}</span>
+              <span class="cohort-status-badge ${statusClass}">${status}</span>
+            </div>
+            <div class="cohort-status-stats">
+              <div class="cohort-stat">
+                <div class="cohort-stat-value">${n}</div>
+                <div class="cohort-stat-label">Enrolled</div>
+              </div>
+              <div class="cohort-stat">
+                <div class="cohort-stat-value">${dltEvaluable}</div>
+                <div class="cohort-stat-label">DLT Eval</div>
+              </div>
+              <div class="cohort-stat">
+                <div class="cohort-stat-value">${ongoing}</div>
+                <div class="cohort-stat-label">Ongoing</div>
+              </div>
+            </div>
+            <div class="dlt-indicator ${dltStatusClass}">
+              ${dltStatusText}
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    function renderStats(subjects) {
+      const totalSubjects = subjects.length;
+      const ongoingCount = subjects.filter(s => s.isOngoing).length;
+      const completedCount = subjects.filter(s => !s.isOngoing).length;
+      const avgDuration = Math.round(subjects.reduce((sum, s) => sum + (s.duration || 0), 0) / subjects.length);
+      
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-box">
+          <div class="label">Total Subjects</div>
+          <div class="value">${totalSubjects}</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+          <div class="label">Ongoing</div>
+          <div class="value">${ongoingCount}</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+          <div class="label">Completed</div>
+          <div class="value">${completedCount}</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+          <div class="label">Avg Duration</div>
+          <div class="value">${avgDuration} days</div>
+        </div>
+      `;
+    }
+    
+    function renderCohortLegend(cohorts) {
+      const legendContainer = document.getElementById('cohortLegend');
+      const sortedCohorts = [...cohorts].sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      let html = '';
+      sortedCohorts.forEach((cohort) => {
+        const color = getCohortColor(cohort);
+        html += `<span class="legend-item"><span class="legend-color" style="background: ${color};"></span>${cohort}</span>`;
+      });
+      legendContainer.innerHTML = html;
+    }
+    
+    function renderSummaryTable(subjects, cohorts) {
+      const tbody = document.getElementById('summaryBody');
+      let html = '';
+      
+      cohorts.forEach(cohort => {
+        const cohortSubjects = subjects.filter(s => s.arm === cohort);
+        const total = cohortSubjects.length;
+        const male = cohortSubjects.filter(s => s.sex === 'Male').length;
+        const female = cohortSubjects.filter(s => s.sex === 'Female').length;
+        const unknownSex = cohortSubjects.filter(s => s.sex !== 'Male' && s.sex !== 'Female').length;
+        const ongoing = cohortSubjects.filter(s => s.isOngoing).length;
+        const completed = cohortSubjects.filter(s => !s.isOngoing).length;
+        const durations = cohortSubjects.map(s => s.duration).filter(d => d !== null);
+        const medianDuration = median(durations);
+        
+        html += `
+          <tr>
+            <td><strong>${cohort}</strong></td>
+            <td>${total}</td>
+            <td>${male}</td>
+            <td>${female}</td>
+            <td style="color: #95a5a6;">${unknownSex}</td>
+            <td class="ongoing-indicator">${ongoing}</td>
+            <td class="completed-indicator">${completed}</td>
+            <td>${medianDuration}</td>
+          </tr>
+        `;
+      });
+      
+      // Total row
+      const totalMale = subjects.filter(s => s.sex === 'Male').length;
+      const totalFemale = subjects.filter(s => s.sex === 'Female').length;
+      const totalUnknownSex = subjects.filter(s => s.sex !== 'Male' && s.sex !== 'Female').length;
+      const totalOngoing = subjects.filter(s => s.isOngoing).length;
+      const totalCompleted = subjects.filter(s => !s.isOngoing).length;
+      const allDurations = subjects.map(s => s.duration).filter(d => d !== null);
+      const totalMedian = median(allDurations);
+      
+      html += `
+        <tr style="background: #34495E; color: white; font-weight: bold;">
+          <td>TOTAL</td>
+          <td>${subjects.length}</td>
+          <td>${totalMale}</td>
+          <td>${totalFemale}</td>
+          <td>${totalUnknownSex}</td>
+          <td>${totalOngoing}</td>
+          <td>${totalCompleted}</td>
+          <td>${totalMedian}</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderTimeline(subjects, cohorts) {
+      const filterValue = document.getElementById('cohortFilter').value;
+      
+      let filteredSubjects = subjects;
+      let displayCohorts = cohorts;
+      if (filterValue !== 'all') {
+        filteredSubjects = subjects.filter(s => s.arm === filterValue);
+        displayCohorts = [filterValue];
+      }
+      
+      // Sort by cohort (by dose number) then by start date
+      filteredSubjects.sort((a, b) => {
+        const numA = parseInt(a.arm) || 0;
+        const numB = parseInt(b.arm) || 0;
+        if (numA !== numB) return numA - numB;
+        return a.startDate - b.startDate;
+      });
+      
+      // Group subjects by cohort and add separator rows
+      const groupedData = [];
+      const groupedColors = [];
+      const groupedBorderColors = [];
+      const groupedLabels = [];
+      const subjectLookup = [];
+      
+      // Sort cohorts by dose number (Unknown at the end)
+      const sortedCohorts = [...displayCohorts].sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      // Track where each cohort section starts for drawing borders
+      const cohortBoundaries = [];
+      let currentIndex = 0;
+      
+      sortedCohorts.forEach((cohort, cohortIndex) => {
+        const cohortSubjects = filteredSubjects.filter(s => s.arm === cohort);
+        const cohortColor = getCohortColor(cohort);
+        
+        // Record start of this cohort section
+        cohortBoundaries.push({
+          cohort: cohort,
+          startIndex: currentIndex,
+          count: cohortSubjects.length,
+          color: cohortColor
+        });
+        
+        cohortSubjects.forEach(s => {
+          const start = s.startDate.getTime();
+          const end = (s.endDate || today).getTime();
+          groupedData.push([start, end]);
+          
+          // Use cohort color with opacity based on ongoing status
+          if (s.isOngoing) {
+            groupedColors.push(cohortColor);
+          } else {
+            // Lighter/grayer version for completed
+            groupedColors.push(cohortColor + '80'); // 50% opacity
+          }
+          groupedBorderColors.push(cohortColor);
+          groupedLabels.push(cohort); // Use cohort name instead of subject ID
+          subjectLookup.push(s);
+          currentIndex++;
+        });
+        
+        // Add separator row between cohorts (except after last)
+        if (cohortIndex < sortedCohorts.length - 1) {
+          groupedData.push(null);
+          groupedColors.push('transparent');
+          groupedBorderColors.push('transparent');
+          groupedLabels.push('---'); // Separator marker
+          subjectLookup.push(null);
+          currentIndex++;
+        }
+      });
+      
+      // Store boundaries for the plugin
+      window.cohortBoundaries = cohortBoundaries;
+      
+      const validSubjects = filteredSubjects.filter(s => s.startDate);
+      const minDate = new Date(Math.min(...validSubjects.map(s => s.startDate)));
+      const maxDate = new Date(Math.max(...validSubjects.map(s => s.endDate || today)));
+      
+      if (timelineChart) {
+        timelineChart.destroy();
+      }
+      
+      // Calculate dynamic height based on number of subjects
+      const chartContainer = document.querySelector('.chart-container');
+      const rowHeight = 12;
+      const minHeight = 400;
+      const calculatedHeight = Math.max(minHeight, groupedLabels.length * rowHeight + 100);
+      chartContainer.style.height = calculatedHeight + 'px';
+      
+      // Custom plugin to draw cohort section backgrounds, borders, and labels
+      const cohortBorderPlugin = {
+        id: 'cohortBorder',
+        beforeDatasetsDraw: function(chart) {
+          const ctx = chart.ctx;
+          const yAxis = chart.scales.y;
+          const chartArea = chart.chartArea;
+          
+          // Draw light background colors for each cohort section on chart area
+          cohortBoundaries.forEach((boundary) => {
+            const startY = yAxis.getPixelForValue(boundary.startIndex - 0.5);
+            const endIndex = boundary.startIndex + boundary.count - 1;
+            const endY = yAxis.getPixelForValue(endIndex + 0.5);
+            
+            ctx.save();
+            ctx.fillStyle = boundary.color + '15'; // Very light opacity
+            ctx.fillRect(chartArea.left, Math.min(startY, endY), 
+                        chartArea.right - chartArea.left, 
+                        Math.abs(endY - startY));
+            ctx.restore();
+          });
+        },
+        afterDraw: function(chart) {
+          const ctx = chart.ctx;
+          const yAxis = chart.scales.y;
+          const xAxis = chart.scales.x;
+          const chartArea = chart.chartArea;
+          
+          // Draw border lines between cohorts (at separator positions)
+          groupedLabels.forEach((label, index) => {
+            if (label === '---') {
+              const yPos = yAxis.getPixelForValue(index);
+              
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(chartArea.left, yPos);
+              ctx.lineTo(chartArea.right, yPos);
+              ctx.strokeStyle = '#34495E';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+              ctx.restore();
+            }
+          });
+          
+          // Draw cohort labels with background colors on Y-axis
+          cohortBoundaries.forEach((boundary) => {
+            const startY = yAxis.getPixelForValue(boundary.startIndex - 0.5);
+            const endIndex = boundary.startIndex + boundary.count - 1;
+            const endY = yAxis.getPixelForValue(endIndex + 0.5);
+            const centerY = (startY + endY) / 2;
+            
+            // Calculate label area dimensions
+            const labelText = boundary.cohort;
+            ctx.font = 'bold 10px sans-serif';
+            const textWidth = ctx.measureText(labelText).width;
+            const padding = 4;
+            const labelHeight = Math.abs(endY - startY);
+            const labelWidth = textWidth + padding * 2;
+            const labelX = chartArea.left - labelWidth - 8;
+            
+            // Draw background rectangle with cohort color
+            ctx.save();
+            ctx.fillStyle = boundary.color + '40'; // 25% opacity
+            ctx.fillRect(labelX, Math.min(startY, endY), labelWidth, labelHeight);
+            
+            // Draw border around label background
+            ctx.strokeStyle = boundary.color;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(labelX, Math.min(startY, endY), labelWidth, labelHeight);
+            
+            // Draw the text centered
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(labelText, labelX + labelWidth / 2, centerY);
+            ctx.restore();
+          });
+        }
+      };
+      
+      const ctx = document.getElementById('timelineChart').getContext('2d');
+      timelineChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: groupedLabels,
+          datasets: [{
+            label: 'Dosing Period',
+            data: groupedData,
+            backgroundColor: groupedColors,
+            borderColor: groupedBorderColors,
+            borderWidth: 1,
+            borderSkipped: false,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
+          }]
+        },
+        plugins: [cohortBorderPlugin],
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              left: 100 // Space for custom cohort labels with backgrounds
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              filter: function(tooltipItem) {
+                return subjectLookup[tooltipItem.dataIndex] !== null;
+              },
+              callbacks: {
+                title: function(context) {
+                  const subject = subjectLookup[context[0].dataIndex];
+                  if (!subject) return '';
+                  return subject.subject;
+                },
+                label: function(context) {
+                  const subject = subjectLookup[context.dataIndex];
+                  if (!subject) return '';
+                  const startStr = formatDate(subject.startDate);
+                  const endStr = subject.endDate ? formatDate(subject.endDate) : 'Ongoing';
+                  return [
+                    `Cohort: ${subject.arm}`,
+                    `Start: ${startStr}`,
+                    `End: ${endStr}`,
+                    `Duration: ${subject.duration} days`,
+                    `Sex: ${subject.sex}`,
+                    `Status: ${subject.isOngoing ? 'Ongoing' : 'Completed'}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'month',
+                displayFormats: {
+                  month: 'MMM yyyy'
+                }
+              },
+              min: minDate,
+              max: maxDate,
+              title: {
+                display: true,
+                text: 'Date',
+                font: { weight: 'bold' }
+              }
+            },
+            y: {
+              ticks: {
+                display: false // Hide default ticks, we draw custom labels with backgrounds
+              },
+              grid: {
+                display: true,
+                drawOnChartArea: true,
+                color: function(context) {
+                  const label = groupedLabels[context.index];
+                  if (label === '---') return 'transparent'; // Hide default grid for separators
+                  return '#f0f0f0';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function exportSummaryTableCSV() {
+      var table = document.getElementById('summaryTable');
+      if (!table) return;
+      var rows = [];
+      table.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+        });
+        rows.push(row.join(','));
+      });
+      var csv = rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'Dose_Cohorts_Summary_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    if (typeof initBlockExportDialog === 'function') {
+      initBlockExportDialog();
+      setBlockExportPrefix('Dose_Cohorts');
+    }
+    init();
+  </script>
+</body>
+</html>

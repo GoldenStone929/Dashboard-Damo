@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task 2: ECG Patient Listing</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    .ecg-page { max-width: 1800px; margin: 0 auto; padding: 20px; }
+    .page-title { font-size: 28px; font-weight: bold; color: #2C3E50; margin-bottom: 5px; }
+    .page-subtitle { font-size: 14px; color: #7F8C8D; margin-bottom: 20px; }
+
+    .controls-bar {
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+      background: #f8f9fa; border: 1px solid #dee2e6;
+      border-radius: 8px; padding: 12px 20px; margin-bottom: 20px;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    .control-group label { font-size: 12px; font-weight: 600; color: #7F8C8D; text-transform: uppercase; letter-spacing: 0.5px; }
+    .control-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 13px; min-width: 220px; background: white; }
+
+    .chart-box { background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px; }
+    .listing-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    .export-csv-btn { padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .export-csv-btn:hover { background: #219a52; }
+
+    .listing-wrapper { border: 1px solid #dee2e6; border-radius: 8px; overflow-x: auto; width: 100%; }
+    .listing-table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+    .listing-table th { background: #3498db; color: white; padding: 8px 12px; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+    .listing-table th:first-child { position: sticky; left: 0; z-index: 3; background: #2980b9; }
+    .listing-table td { padding: 6px 12px; border-bottom: 1px solid #eee; text-align: center; }
+    .listing-table td:first-child { position: sticky; left: 0; background: #f8f9fa; font-weight: 600; text-align: left; z-index: 1; border-right: 2px solid #dee2e6; }
+    .listing-table tr:hover td { background: #e8f4f8; }
+    .listing-table tr:hover td:first-child { background: #d4ecf7; }
+
+    .cell-normal { background: #d4edda; color: #155724; }
+    .cell-borderline { background: #fff3cd; color: #856404; }
+    .cell-prolonged { background: #f8d7da; color: #721c24; }
+    .cell-empty { color: #ccc; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-box { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-box .val { font-size: 24px; font-weight: bold; color: #2C3E50; }
+    .stat-box .val.warn { color: #e67e22; }
+    .stat-box .val.danger { color: #c0392b; }
+    .stat-box .lbl { font-size: 11px; color: #7F8C8D; margin-top: 3px; }
+
+    .info-box { background: #e8f4f8; border: 1px solid #90caf9; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; }
+    .info-box h4 { margin: 0 0 8px 0; color: #1565c0; font-size: 14px; }
+    .info-box ul { margin: 0; padding-left: 20px; font-size: 13px; color: #34495E; }
+    .info-box li { margin-bottom: 4px; }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    .spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { margin-top: 15px; font-size: 16px; color: #34495E; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='index.html'">Overview Plot</button>
+    <button class="local-tab active">Patient Listing</button>
+    <button class="local-tab" onclick="location.href='individual.html'">Individual Profiles</button>
+  </nav>
+
+  <main class="page-content">
+    <div class="ecg-page">
+
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading ECG data...</div>
+      </div>
+
+      <h1 class="page-title">Task 2: ECG Patient Listing</h1>
+      <p class="page-subtitle">Spreadsheet view — all patients × all visits, averaged ECG values</p>
+
+      <div class="info-box">
+        <h4>How to Read</h4>
+        <ul>
+          <li>Rows = Patients, Columns = Visits (sorted by earliest CollectionDateTime)</li>
+          <li>Each cell shows the <strong>averaged</strong> value for the selected parameter at that visit</li>
+          <li>Color coded: <span style="color:#155724;font-weight:600">Green</span> = Normal,
+              <span style="color:#856404;font-weight:600">Yellow</span> = Borderline,
+              <span style="color:#721c24;font-weight:600">Red</span> = Prolonged</li>
+          <li>Dash (-) means the patient did not have that visit</li>
+        </ul>
+      </div>
+
+      <div class="controls-bar">
+        <div class="control-group">
+          <label>Parameter</label>
+          <select id="metricSelect">
+            <option value="qtcf_value">QTcF Absolute Value (ms)</option>
+            <option value="qtcf_change">QTcF Change from Baseline (ms)</option>
+            <option value="pr">PR Interval (ms)</option>
+            <option value="qrs">QRS Duration (ms)</option>
+            <option value="hr">Heart Rate (bpm)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ecgListingExportBlock" class="chart-box" style="padding: 20px;">
+        <div class="listing-controls">
+          <div style="font-size: 14px; font-weight: 600; color: #2C3E50;" id="listingTitle">
+            QTcF Averaged Values by Patient and Visit
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="export-btn" onclick="showBlockExportDialog('ecgListingExportBlock', 'QTcF_Patient_Listing')">Export</button>
+            <button class="export-csv-btn" id="exportBtn">&#x2B07; Export CSV</button>
+          </div>
+        </div>
+        <div class="stats-row" id="listingStats"></div>
+        <div class="listing-wrapper">
+          <table class="listing-table" id="listingTable">
+            <thead id="listingHead"></thead>
+            <tbody id="listingBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script src="ecg-data.js"></script>
+  <script>
+    if (typeof renderNav === 'function') renderNav('ecg', 'ecg-listing', '../../');
+
+    // ================================================================
+    // Listing Rendering
+    // ================================================================
+    function renderListing() {
+      var metricId = document.getElementById('metricSelect').value;
+      var metricConfig = ECG_METRICS[metricId];
+      var metricKey = metricConfig.key;
+      var metricLabel = metricConfig.label;
+
+      document.getElementById('listingTitle').textContent = metricLabel + ' \u2014 Averaged by Patient and Visit';
+
+      var visits = STATE.visits;
+      var patients = STATE.patients;
+
+      var borderlineCount = 0, prolongedCount = 0, filledCells = 0;
+      patients.forEach(function(pid) {
+        visits.forEach(function(v) {
+          var vd = STATE.byPatient[pid] ? STATE.byPatient[pid][v] : null;
+          if (vd && isFinite(vd.avg[metricKey])) {
+            filledCells++;
+            var cls = metricConfig.classify(vd.avg[metricKey]);
+            if (cls === 'prolonged') prolongedCount++;
+            else if (cls === 'borderline') borderlineCount++;
+          }
+        });
+      });
+
+      var statsHtml =
+        '<div class="stat-box"><div class="val">' + patients.length + '</div><div class="lbl">Patients</div></div>' +
+        '<div class="stat-box"><div class="val">' + visits.length + '</div><div class="lbl">Visits</div></div>' +
+        '<div class="stat-box"><div class="val">' + filledCells + '</div><div class="lbl">Data Points</div></div>';
+      if (metricConfig.statLabels.borderline) {
+        statsHtml += '<div class="stat-box"><div class="val' + (borderlineCount > 0 ? ' warn' : '') + '">' + borderlineCount + '</div><div class="lbl">' + metricConfig.statLabels.borderline + '</div></div>';
+      }
+      if (metricConfig.statLabels.prolonged) {
+        statsHtml += '<div class="stat-box"><div class="val' + (prolongedCount > 0 ? ' danger' : '') + '">' + prolongedCount + '</div><div class="lbl">' + metricConfig.statLabels.prolonged + '</div></div>';
+      }
+      document.getElementById('listingStats').innerHTML = statsHtml;
+
+      // Header
+      var headHtml = '<tr><th>Patient ID</th>';
+      visits.forEach(function(v) { headHtml += '<th>' + v + '</th>'; });
+      headHtml += '</tr>';
+      document.getElementById('listingHead').innerHTML = headHtml;
+
+      // Body
+      var bodyHtml = '';
+      patients.forEach(function(pid) {
+        bodyHtml += '<tr><td>' + pid + '</td>';
+        visits.forEach(function(v) {
+          var vd = STATE.byPatient[pid] ? STATE.byPatient[pid][v] : null;
+          if (!vd || !isFinite(vd.avg[metricKey])) {
+            bodyHtml += '<td class="cell-empty">-</td>';
+          } else {
+            var val = vd.avg[metricKey];
+            var classification = metricConfig.classify(val);
+            var cls = classification === 'prolonged' ? 'cell-prolonged'
+                    : classification === 'borderline' ? 'cell-borderline'
+                    : 'cell-normal';
+            bodyHtml += '<td class="' + cls + '">' + val.toFixed(1) + '</td>';
+          }
+        });
+        bodyHtml += '</tr>';
+      });
+      document.getElementById('listingBody').innerHTML = bodyHtml;
+    }
+
+    // ================================================================
+    // CSV Export
+    // ================================================================
+    function exportCSV() {
+      var metricId = document.getElementById('metricSelect').value;
+      var metricConfig = ECG_METRICS[metricId];
+      var metricKey = metricConfig.key;
+      var header = ['Patient ID'].concat(STATE.visits);
+      var rows = [header.map(function(c) { return '"' + c + '"'; }).join(',')];
+      STATE.patients.forEach(function(pid) {
+        var row = ['"' + pid + '"'];
+        STATE.visits.forEach(function(v) {
+          var vd = STATE.byPatient[pid] ? STATE.byPatient[pid][v] : null;
+          row.push(vd && isFinite(vd.avg[metricKey]) ? vd.avg[metricKey].toFixed(1) : '');
+        });
+        rows.push(row.join(','));
+      });
+      var blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url;
+      a.download = 'ECG_' + metricId + '_listing.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ================================================================
+    // Events & Init
+    // ================================================================
+    document.getElementById('metricSelect').addEventListener('change', renderListing);
+    document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        await initECGData();
+        renderListing();
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('ECG_Listing');
+        }
+      } catch (err) {
+        console.error(err);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + err.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

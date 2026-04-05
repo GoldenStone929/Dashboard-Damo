@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Vital Signs</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <style>
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    
+    .back-link:hover {
+      color: var(--text-primary);
+      background: var(--border-light);
+    }
+    
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 8px;
+    }
+    
+    .patient-id {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    
+    .patient-status {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    
+    .chart-placeholder {
+      height: 300px;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    
+    <div class="profile-header">
+      <h1 class="patient-id">P-001</h1>
+      <span class="patient-status">Ongoing</span>
+    </div>
+    <p class="page-subtitle">Site 001 · Cohort 3 - 50mg · Enrolled 2024-01-15</p>
+    
+    <!-- Local Tab Navigation - Vitals is active -->
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'">Summary</button>
+      <button class="local-tab" onclick="location.href='dosing.html'">Dosing</button>
+      <button class="local-tab" onclick="location.href='visits.html'">Visits</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'">CM Timeline</button>
+      <button class="local-tab" onclick="location.href='cm-listing.html'">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'">Prior Tx</button>
+      <button class="local-tab active" onclick="location.href='vitals.html'">Vitals</button>
+      <button class="local-tab" onclick="location.href='ecg-qtcf.html'">ECG/QTcF</button>
+      <button class="local-tab" onclick="location.href='labs.html'">Labs</button>
+      <button class="local-tab" onclick="location.href='pkpd.html'">PK/PD</button>
+    </nav>
+    
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Systolic Blood Pressure</h3>
+        <div class="chart-placeholder">📈 SBP trend chart will be rendered here</div>
+      </div>
+      
+      <div class="card">
+        <h3 class="card-title">Diastolic Blood Pressure</h3>
+        <div class="chart-placeholder">📈 DBP trend chart will be rendered here</div>
+      </div>
+      
+      <div class="card">
+        <h3 class="card-title">Heart Rate</h3>
+        <div class="chart-placeholder">📈 HR trend chart will be rendered here</div>
+      </div>
+      
+      <div class="card">
+        <h3 class="card-title">Respiration Rate</h3>
+        <div class="chart-placeholder">📈 RR trend chart will be rendered here</div>
+      </div>
+    </div>
+  </main>
+  
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'profile-vitals', '../../../');
+  </script>
+</body>
+</html>

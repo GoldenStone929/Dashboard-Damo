@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adverse Events Summary - Phase 1 Safety Analysis</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f7fa;
+      color: #2c3e50;
+      line-height: 1.6;
+      padding: 0;
+      font-size: 14px;
+    }
+    
+    .page-content {
+      padding: 16px;
+    }
+    
+    .container { max-width: 1800px; margin: 0 auto; }
+    
+    /* Header */
+    .page-header {
+      background: #ffffff;
+      color: #2c3e50;
+      padding: 24px 32px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      border: 1px solid #e1e8ed;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1a252f;
+      letter-spacing: -0.3px;
+    }
+    
+    .page-header .subtitle {
+      color: #6c757d;
+      font-size: 0.875rem;
+      margin-top: 6px;
+      font-weight: 400;
+    }
+    
+    .header-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .badge {
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-weight: 500;
+      font-size: 0.8125rem;
+      letter-spacing: 0.2px;
+    }
+    
+    .badge-primary { background: #e3f2fd; color: #1976d2; }
+    .badge-purple { background: #f3e5f5; color: #7b1fa2; }
+    .badge-orange { background: #fff3e0; color: #e65100; }
+    .badge-danger { background: #ffebee; color: #c62828; }
+    
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      background: white;
+      padding: 4px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e1e8ed;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      padding: 16px 28px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #5a6c7d;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      position: relative;
+      letter-spacing: 0.2px;
+    }
+    
+    .tab-btn:hover { 
+      background: #f8f9fa; 
+      color: #2c3e50; 
+    }
+    
+    .tab-btn.active { 
+      background: #2c3e50; 
+      color: white; 
+      font-weight: 600;
+    }
+    
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 2px;
+      background: #3498db;
+    }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Filter Panel */
+    .filter-panel {
+      background: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 24px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e1e8ed;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .filter-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .filter-group select, .filter-group input {
+      padding: 9px 14px;
+      border: 1px solid #d1d9e0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      min-width: 160px;
+      background: #ffffff;
+      color: #2c3e50;
+      transition: border-color 0.2s;
+    }
+    
+    .filter-group select:focus, .filter-group input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      letter-spacing: 0.2px;
+    }
+    
+    .btn-primary { 
+      background: #e74c3c; 
+      color: white; 
+    }
+    .btn-primary:hover { 
+      background: #c0392b; 
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+    }
+    .btn-secondary { background: #95a5a6; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    
+    /* Summary Cards */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .summary-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.2s ease;
+      border: 1px solid #e1e8ed;
+    }
+    
+    .summary-card:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+    
+    .summary-card .number {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #3498db;
+    }
+    
+    .summary-card .number.purple { color: #9b59b6; }
+    .summary-card .number.orange { color: #f39c12; }
+    .summary-card .number.danger { color: #e74c3c; }
+    .summary-card .number.success { color: #27ae60; }
+    
+    .summary-card .label {
+      font-size: 0.75rem;
+      color: #7f8c8d;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Section Headers */
+    .section-header {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a252f;
+      margin: 24px 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e1e8ed;
+      display: flex;
+      align-items: center;
+      letter-spacing: -0.2px;
+    }
+    
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+      overflow: hidden;
+      border: 1px solid #e1e8ed;
+    }
+    
+    .card-header {
+      background: #f8f9fa;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .card-header h3 {
+      font-size: 0.95rem;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    
+    .card-body { padding: 16px; }
+    .card-body.no-padding { padding: 0; }
+    
+    /* Tables */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    
+    .summary-table th {
+      background: #2c3e50;
+      color: white;
+      padding: 22px 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .summary-table th.left { text-align: left; }
+    
+    .summary-table th.header-row {
+      background: #34495e;
+      font-size: 0.8rem;
+    }
+    
+    .summary-table td {
+      padding: 22px 12px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+      line-height: 2.0;
+    }
+    
+    .summary-table td.left { text-align: left; }
+    
+    .summary-table td.pt-name {
+      text-align: left;
+      font-weight: 500;
+      max-width: 300px;
+    }
+    
+    .summary-table tbody tr:hover { background: #f8f9fa; }
+    
+    .summary-table tbody tr.any-row {
+      background: #e8f4fc;
+      font-weight: 600;
+    }
+    
+    .summary-table tbody tr.any-row:hover { background: #d4ebf7; }
+    
+    /* Clickable cells */
+    td.clickable {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    
+    td.clickable:hover {
+      background: #d5e8f7 !important;
+    }
+    
+    td.clickable.active {
+      background: #3498db !important;
+      color: white;
+    }
+    
+    /* Detail Listing */
+    .detail-container {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+    }
+    
+    .detail-container.hidden {
+      display: none;
+    }
+    
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    
+    .detail-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .detail-close {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .detail-close:hover {
+      background: #c0392b;
+    }
+    
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    
+    .detail-table th {
+      background: #7f8c8d;
+      color: white;
+      padding: 20px 10px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .detail-table td {
+      padding: 18px 10px;
+      border: 1px solid #e1e8ed;
+      text-align: center;
+      line-height: 2.0;
+    }
+    
+    .detail-table td:first-child {
+      text-align: left;
+    }
+    
+    .detail-table tbody tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    /* Dose Group Headers */
+    .dose-group {
+      margin-bottom: 24px;
+    }
+    
+    .dose-group-header {
+      background: linear-gradient(90deg, #3498db 0%, #5dade2 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    
+    .dose-group-header.total {
+      background: linear-gradient(90deg, #2c3e50 0%, #34495e 100%);
+    }
+    
+    .dose-group-table {
+      border: 1px solid #dee2e6;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+    }
+    
+    /* Listing Table */
+    .listing-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    
+    .listing-table th {
+      background: #2c3e50;
+      color: white;
+      padding: 10px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+    }
+    
+    .listing-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .listing-table tbody tr:hover { background: #f8f9fa; }
+    .listing-table tbody tr:nth-child(even) { background: #fafbfc; }
+    
+    .cell-subject { font-weight: 600; color: #3498db; }
+    
+    .cell-dose {
+      background: #e8f4fc;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #2980b9;
+      display: inline-block;
+    }
+    
+    .cell-serious { color: #e74c3c; font-weight: 600; }
+    .cell-related { color: #9b59b6; font-weight: 500; }
+    .cell-grade-high { color: #e74c3c; font-weight: 600; }
+    
+    /* Pagination */
+    .pagination {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid #dce1e6;
+      background: white;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    
+    .pagination button:hover { background: #f0f2f5; }
+    .pagination button.active { background: #3498db; color: white; border-color: #3498db; }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* DLT Table */
+    .dlt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    
+    .dlt-table th {
+      background: #e74c3c;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+      font-weight: 600;
+    }
+    
+    .dlt-table th.left { text-align: left; }
+    
+    .dlt-table td {
+      padding: 22px 16px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+      line-height: 2.0;
+    }
+    
+    .dlt-table td.left { text-align: left; }
+    
+    .dlt-table tbody tr:hover { background: #fff5f5; }
+    
+    .dlt-table tbody tr.total-row {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    
+    /* Footnotes */
+    .footnotes {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-size: 0.78rem;
+      color: #5a6c7d;
+    }
+    
+    .footnotes p { margin: 4px 0; }
+    .footnotes strong { color: #2c3e50; }
+    .footnotes hr { border: none; border-top: 1px solid #dee2e6; margin: 10px 0; }
+    
+    /* Loading & No Data */
+    .loading, .no-data {
+      padding: 60px 40px;
+      text-align: center;
+      color: #7f8c8d;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e9ecef;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .no-data .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .summary-table th, .summary-table td { padding: 8px 6px; font-size: 0.75rem; }
+      .filter-panel { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <div class="container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Adverse Events Summary Tables</h1>
+        <div class="subtitle">Phase 1 Safety Analysis – All Patients</div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-primary" id="badgeN">N = --</span>
+        <span class="badge badge-purple" id="badgeTEAE">TEAE: --</span>
+        <span class="badge badge-orange" id="badgeTRAE">TRAE: --</span>
+        <span class="badge badge-danger" id="badgeSAE">SAE: --</span>
+      </div>
+    </div>
+    
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+      <button class="tab-btn" onclick="switchTab('teae')">TEAE by PT</button>
+      <button class="tab-btn" onclick="switchTab('trae')">TRAE by PT</button>
+      <button class="tab-btn" onclick="switchTab('grade3')">Grade ≥3</button>
+      <button class="tab-btn" onclick="switchTab('serious')">Serious TRAE</button>
+      <button class="tab-btn" onclick="switchTab('dlt')">DLT Rate</button>
+      <button class="tab-btn" onclick="switchTab('death')">Death Rate</button>
+    </div>
+    
+    <!-- TAB: Overview -->
+    <div id="tab-overview" class="tab-content active">
+      <div class="summary-row" id="summaryCards">
+        <!-- Populated by JS -->
+      </div>
+      
+      <div class="section-header">Quick Summary</div>
+      <div class="card">
+        <div class="card-body" id="overviewContent">
+          <div class="loading"><div class="spinner"></div><p>Loading data...</p></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB: TEAE by PT -->
+    <div id="tab-teae" class="tab-content">
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label>Dose Cohort</label>
+          <select id="teaeDoseFilter" onchange="renderTEAETable()">
+            <option value="all">All Doses</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="exportTable('teae')">📥 Export CSV</button>
+      </div>
+      
+      <div class="section-header">Table 14.3.2.2.x – TEAE by Preferred Term and Maximum CTCAE Grade</div>
+      <div id="teaeTableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="footnotes" id="teaeFootnotes"></div>
+    </div>
+    
+    <!-- TAB: TRAE by PT -->
+    <div id="tab-trae" class="tab-content">
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label>Dose Cohort</label>
+          <select id="traeDoseFilter" onchange="renderTRAETable()">
+            <option value="all">All Doses</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="exportTable('trae')">📥 Export CSV</button>
+      </div>
+      
+      <div class="section-header">Table 14.3.2.3.x – TRAE by Preferred Term and Maximum CTCAE Grade</div>
+      <div id="traeTableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="footnotes" id="traeFootnotes"></div>
+    </div>
+    
+    <!-- TAB: Grade ≥3 -->
+    <div id="tab-grade3" class="tab-content">
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label>Table Type</label>
+          <select id="grade3TypeFilter" onchange="renderGrade3Table()">
+            <option value="teae">Grade ≥3 TEAE</option>
+            <option value="trae">Grade ≥3 TRAE</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Dose Cohort</label>
+          <select id="grade3DoseFilter" onchange="renderGrade3Table()">
+            <option value="all">All Doses</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="exportTable('grade3')">📥 Export CSV</button>
+      </div>
+      
+      <div class="section-header">Table 14.3.2.7.x – Grade ≥3 AE by Preferred Term</div>
+      <div id="grade3TableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="footnotes" id="grade3Footnotes"></div>
+    </div>
+    
+    <!-- TAB: Serious TRAE -->
+    <div id="tab-serious" class="tab-content">
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label>Dose Cohort</label>
+          <select id="seriousDoseFilter" onchange="renderSeriousTable()">
+            <option value="all">All Doses</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="exportTable('serious')">📥 Export CSV</button>
+      </div>
+      
+      <div class="section-header">Table 14.3.2.4.x – Serious TRAE by Preferred Term</div>
+      <div id="seriousTableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="footnotes" id="seriousFootnotes"></div>
+    </div>
+    
+    <!-- TAB: DLT Rate -->
+    <div id="tab-dlt" class="tab-content">
+      <div class="section-header">Table 14.3.3.1 – DLT Rate Summary</div>
+      <div id="dltTableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="section-header">DLT Details by Preferred Term</div>
+      <div id="dltDetailContainer"></div>
+      
+      <div class="footnotes" id="dltFootnotes"></div>
+    </div>
+    
+    <!-- TAB: Death Rate -->
+    <div id="tab-death" class="tab-content">
+      <div class="section-header">Table 14.3.3.2 – Death Rate Summary</div>
+      <div id="deathTableContainer">
+        <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+      </div>
+      
+      <div class="section-header">Death Details</div>
+      <div id="deathDetailContainer"></div>
+      
+      <div class="footnotes" id="deathFootnotes"></div>
+    </div>
+    
+    <!-- Detail Listing (shown when clicking a cell) -->
+    <div class="detail-container hidden" id="detailContainer">
+      <div class="detail-header">
+        <div class="detail-title" id="detailTitle">Detail Listing</div>
+        <button class="detail-close" onclick="hideDetail()">✕ Close</button>
+      </div>
+      <table class="detail-table" id="detailTable">
+        <thead id="detailTableHead">
+          <tr>
+            <th>Subject</th>
+            <th>Preferred Term</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Grade</th>
+            <th>Serious</th>
+            <th>Relatedness</th>
+            <th>Outcome</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+    </div>
+    </div>
+  </main>
+
+<script>
+// ============================================
+// GLOBAL DATA & STATE
+// ============================================
+
+let AE_DATA = [];           // Raw AE records
+let DM_DATA = [];           // Demographics
+let DD_DATA = [];           // Death data
+let SAFETY_SET = new Map(); // Subject -> {ARM, RFXSTDTC}
+let TEAE_DATA = [];         // Processed TEAE records
+let DEATH_DATA = [];        // Processed death records
+let BIG_N = 0;
+let N_PER_DOSE = [];        // [{ARM, dose_numeric, N_dose}]
+let DOSE_OPTIONS = [];      // Unique doses for filters
+
+// Stats
+let STATS = {
+  totalTEAE: 0,
+  totalTRAE: 0,
+  totalSAE: 0,
+  totalDLT: 0,
+  uniqueTEAESubjects: 0,
+  uniqueTRAESubjects: 0,
+  grade3Plus: 0
+};
+
+// Pagination state for listing
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function loadCSV(filename) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(filename, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (err) => reject(err)
+    });
+  });
+}
+
+/** Extract numeric dose from ARM string */
+function extractDose(arm) {
+  if (!arm) return 0;
+  const str = String(arm);
+  const mgMatch = str.match(/(\d+\.?\d*)\s*[mM][gG]/);
+  if (mgMatch) return parseFloat(mgMatch[1]);
+  const numbers = str.match(/(?<![A-Za-z-])\d+\.?\d*/g);
+  if (numbers && numbers.length > 0) return parseFloat(numbers[0]);
+  return 0;
+}
+
+/** Parse date safely */
+function parseDate(dateStr) {
+  if (!dateStr || String(dateStr).trim() === '' || String(dateStr).trim() === '.') return null;
+  let s = String(dateStr).trim();
+  
+  // SAS datetime: ddMONyyyy:hh:mm:ss
+  if (/^\d{2}[A-Za-z]{3}\d{4}:/.test(s)) s = s.substring(0, 9);
+  // ISO datetime
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) s = s.substring(0, 10);
+  
+  const formats = [
+    { regex: /^(\d{4})-(\d{2})-(\d{2})$/, parse: (m) => new Date(m[1], m[2]-1, m[3]) },
+    { regex: /^(\d{2})([A-Za-z]{3})(\d{4})$/, parse: (m) => {
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      return new Date(m[3], months[m[2].toUpperCase()], m[1]);
+    }}
+  ];
+  
+  for (const fmt of formats) {
+    const match = s.match(fmt.regex);
+    if (match) {
+      const d = fmt.parse(match);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+}
+
+/** Format date for display */
+function formatDateDisplay(dateStr, isEndDate = false) {
+  if (!dateStr || String(dateStr).trim() === '' || String(dateStr).trim() === '.') {
+    return isEndDate ? 'Ongoing' : '';
+  }
+  return String(dateStr).trim().substring(0, 10);
+}
+
+/** Check if value means Yes */
+function isYes(val) {
+  if (!val) return false;
+  const v = String(val).toLowerCase().trim();
+  return ['y', 'yes', 'dlt', '1', 'true'].includes(v);
+}
+
+/** Check if TRAE */
+function isTRAE(relVal) {
+  if (!relVal) return false;
+  const v = String(relVal).toUpperCase().trim();
+  return v === 'POSSIBLY RELATED' || v === 'RELATED';
+}
+
+/** Extract CTCAE grade (1-5), returns null if invalid */
+function getGrade(val) {
+  if (!val) return null;
+  const match = String(val).match(/\d+/);
+  if (!match) return null;
+  const g = parseInt(match[0]);
+  return (g >= 1 && g <= 5) ? g : null;
+}
+
+/** Format n (pct%) */
+function formatNPct(n, N) {
+  if (N === 0) return '0';
+  const pct = ((n / N) * 100).toFixed(1);
+  return `${n} (${pct}%)`;
+}
+
+/** Check if RFXSTDTC is valid */
+function isValidRFXSTDTC(val) {
+  if (!val) return false;
+  const s = String(val).trim();
+  return s.length >= 2 && s.toUpperCase() !== 'UNKNOWN';
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================
+// TAB SWITCHING
+// ============================================
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  
+  document.querySelector(`.tab-btn[onclick*="${tabId}"]`).classList.add('active');
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+  
+  // Trigger render for the tab
+  switch(tabId) {
+    case 'teae': renderTEAETable(); break;
+    case 'trae': renderTRAETable(); break;
+    case 'grade3': renderGrade3Table(); break;
+    case 'serious': renderSeriousTable(); break;
+    case 'dlt': renderDLTTable(); break;
+    case 'death': renderDeathTable(); break;
+  }
+}
+
+// ============================================
+// MAIN INIT
+// ============================================
+
+async function init() {
+  try {
+    // Load data
+    const [aeData, dmData, ddData] = await Promise.all([
+      loadCSV('../../data/ae.CSV'),
+      loadCSV('../../data/dm.CSV'),
+      loadCSV('../../data/dd.CSV').catch(() => []) // Optional file
+    ]);
+    
+    AE_DATA = aeData;
+    DM_DATA = dmData;
+    DD_DATA = ddData || [];
+    console.log(`Loaded ${DD_DATA.length} death records from dd.CSV`);
+    if (DD_DATA.length > 0) {
+      console.log('Sample DD_DATA row:', DD_DATA[0]);
+      console.log('DD_DATA columns:', Object.keys(DD_DATA[0]));
+    }
+    
+    // Build Safety Analysis Set
+    for (const row of DM_DATA) {
+      const subjId = String(row.SUBJID || row.Subject || '').trim();
+      if (subjId && isValidRFXSTDTC(row.RFXSTDTC)) {
+        SAFETY_SET.set(subjId, {
+          ARM: row.ARM || 'Unknown Dose',
+          RFXSTDTC: row.RFXSTDTC
+        });
+      }
+    }
+    
+    BIG_N = SAFETY_SET.size;
+    document.getElementById('badgeN').textContent = `N = ${BIG_N}`;
+    
+    // Calculate N per dose
+    const doseMap = new Map();
+    for (const [subj, info] of SAFETY_SET) {
+      const arm = info.ARM || 'Unknown Dose';
+      if (!doseMap.has(arm)) doseMap.set(arm, new Set());
+      doseMap.get(arm).add(subj);
+    }
+    
+    N_PER_DOSE = [];
+    let unknownDose = null;
+    for (const [arm, subjects] of doseMap) {
+      const doseInfo = {
+        ARM: arm,
+        dose_numeric: extractDose(arm),
+        N_dose: subjects.size
+      };
+      if (arm === 'Unknown Dose' || arm.toLowerCase().includes('unknown')) {
+        unknownDose = doseInfo;
+      } else {
+        N_PER_DOSE.push(doseInfo);
+      }
+    }
+    N_PER_DOSE.sort((a, b) => a.dose_numeric - b.dose_numeric);
+    // Add unknown dose at the end if it exists
+    if (unknownDose) {
+      N_PER_DOSE.push(unknownDose);
+    }
+    
+    DOSE_OPTIONS = N_PER_DOSE.map(d => d.ARM);
+    
+    // Populate dose filters
+    populateDoseFilters();
+    
+    // Process TEAE data
+    processAEData();
+    
+    // Process death data
+    processDeathData();
+    
+    // Calculate stats
+    calculateStats();
+    
+    // Render overview
+    renderOverview();
+    
+  } catch (error) {
+    console.error('Error loading data:', error);
+    document.getElementById('overviewContent').innerHTML = `
+      <div class="no-data">
+        <div class="icon"></div>
+        <p>Error loading data: ${error.message}</p>
+        <p style="font-size:0.85rem;">Please ensure ae.CSV and dm.CSV are in the ../../data/ directory.</p>
+      </div>
+    `;
+  }
+}
+
+function populateDoseFilters() {
+  const filterIds = ['teaeDoseFilter', 'traeDoseFilter', 'grade3DoseFilter', 'seriousDoseFilter'];
+  for (const id of filterIds) {
+    const select = document.getElementById(id);
+    if (!select) continue;
+    select.innerHTML = '<option value="all">All Doses</option>';
+    for (const dose of DOSE_OPTIONS) {
+      const opt = document.createElement('option');
+      opt.value = dose;
+      opt.textContent = dose;
+      select.appendChild(opt);
+    }
+  }
+}
+
+function processAEData() {
+  TEAE_DATA = [];
+  
+  for (const row of AE_DATA) {
+    const subjId = String(row.Subject || '').trim();
+    if (!subjId || !SAFETY_SET.has(subjId)) continue;
+    
+    const dmInfo = SAFETY_SET.get(subjId);
+    const aeStartDate = parseDate(row.AESTDAT_INT);
+    const trtStartDate = parseDate(dmInfo.RFXSTDTC);
+    
+    // TEAE: AE start >= treatment start
+    if (!aeStartDate || !trtStartDate || aeStartDate < trtStartDate) continue;
+    
+    const pt = row.AETERM_pt || row.AETERM || '';
+    if (!pt.trim()) continue;
+    
+    const grade = getGrade(row.AETOXGR_STD);
+    const arm = dmInfo.ARM || 'Unknown Dose';
+    
+    TEAE_DATA.push({
+      Subject: subjId,
+      ARM: arm,
+      dose_numeric: extractDose(arm),
+      AETERM_pt: pt.trim(),
+      grade_numeric: grade,
+      AETOXGR_STD: row.AETOXGR_STD || '',
+      is_TRAE: isTRAE(row.AEREL_STD),
+      is_serious: isYes(row.AESER_STD),
+      is_DLT: isYes(row.AEDLT_1_STD) || isYes(row.AEDLT_1),
+      AEREL_STD: row.AEREL_STD || '',
+      AESER_STD: row.AESER_STD || '',
+      AEOUT_STD: row.AEOUT_STD || row.AEOUT || '',
+      AEACN_STD: row.AEACN_STD || row.AEACN || '',
+      AESTDAT_INT: row.AESTDAT_INT || '',
+      AEENDAT_INT: row.AEENDAT_INT || '',
+      ae_start_date: aeStartDate
+    });
+  }
+  
+  // Sort by dose, subject, date
+  TEAE_DATA.sort((a, b) => {
+    if (a.dose_numeric !== b.dose_numeric) return a.dose_numeric - b.dose_numeric;
+    if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+    return (a.ae_start_date || new Date(0)) - (b.ae_start_date || new Date(0));
+  });
+}
+
+function processDeathData() {
+  DEATH_DATA = [];
+  
+  if (!DD_DATA || DD_DATA.length === 0) {
+    console.log('No DD_DATA available');
+    return;
+  }
+  
+  // Find subject column (try multiple possible names)
+  const firstRow = DD_DATA[0];
+  const subjectCol = Object.keys(firstRow).find(k => 
+    k.toUpperCase() === 'SUBJECT' || 
+    k.toUpperCase() === 'SUBJID' || 
+    k.toUpperCase() === 'USUBJID'
+  ) || 'Subject';
+  
+  console.log(`Processing ${DD_DATA.length} death records, using column: ${subjectCol}`);
+  
+  for (const row of DD_DATA) {
+    const subjId = String(row[subjectCol] || row.Subject || row.SUBJID || row.USUBJID || '').trim();
+    if (!subjId) continue;
+    
+    // Get ARM from SAFETY_SET
+    const safetyInfo = SAFETY_SET.get(subjId);
+    const arm = safetyInfo?.ARM || 'Unknown Dose';
+    
+    // Parse death date (format: '07APR2025:00:00:00.000')
+    // Try multiple possible column names
+    const dateCol = Object.keys(row).find(k => 
+      k.toUpperCase() === 'DDDAT_INT' || 
+      k.toUpperCase() === 'DDDAT' ||
+      k.toUpperCase().includes('DEATH') && k.toUpperCase().includes('DATE')
+    ) || 'DDDAT_INT';
+    
+    let deathDate = null;
+    let deathDateStr = '';
+    const dateStr = String(row[dateCol] || row.DDDAT_INT || '').trim();
+    if (dateStr && dateStr !== '.') {
+      // Handle SAS datetime format: ddMONyyyy:hh:mm:ss
+      const dateMatch = dateStr.match(/^(\d{2})([A-Za-z]{3})(\d{4})/);
+      if (dateMatch) {
+        const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+        const month = months[dateMatch[2].toUpperCase()];
+        if (month !== undefined) {
+          deathDate = new Date(parseInt(dateMatch[3]), month, parseInt(dateMatch[1]));
+          deathDateStr = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
+        }
+      } else {
+        deathDate = parseDate(dateStr);
+        deathDateStr = formatDateDisplay(dateStr);
+      }
+    }
+    
+    // Get reason - use OTHER_PRCDTH_DDORRES if PRCDTH_DDORRES_STD is 'OTHER'
+    const reasonCol = Object.keys(row).find(k => 
+      k.toUpperCase() === 'PRCDTH_DDORRES_STD' || 
+      k.toUpperCase() === 'PRCDTH_DDORRES'
+    ) || 'PRCDTH_DDORRES_STD';
+    
+    const otherReasonCol = Object.keys(row).find(k => 
+      k.toUpperCase() === 'OTHER_PRCDTH_DDORRES'
+    ) || 'OTHER_PRCDTH_DDORRES';
+    
+    let reason = String(row[reasonCol] || row.PRCDTH_DDORRES_STD || '').trim();
+    if (reason.toUpperCase() === 'OTHER') {
+      reason = String(row[otherReasonCol] || row.OTHER_PRCDTH_DDORRES || reason).trim();
+    }
+    if (!reason || reason === '.') reason = '';
+    
+    const autopsyCol = Object.keys(row).find(k => 
+      k.toUpperCase() === 'AUTOPIND_DDORRES' || 
+      k.toUpperCase() === 'AUTOPIND'
+    ) || 'AUTOPIND_DDORRES';
+    
+    const evalCol = Object.keys(row).find(k => 
+      k.toUpperCase() === 'DDEVAL' || 
+      k.toUpperCase() === 'DEATH_EVAL'
+    ) || 'DDEVAL';
+    
+    DEATH_DATA.push({
+      Subject: subjId,
+      ARM: arm,
+      dose_numeric: extractDose(arm),
+      DeathDate: deathDate,
+      DeathDateStr: deathDateStr,
+      Reason: reason,
+      Autopsy: String(row[autopsyCol] || row.AUTOPIND_DDORRES || '').trim(),
+      Evaluation: String(row[evalCol] || row.DDEVAL || '').trim()
+    });
+  }
+  
+  console.log(`Processed ${DEATH_DATA.length} death records`);
+  
+  // Sort by dose, then by subject
+  DEATH_DATA.sort((a, b) => {
+    if (a.dose_numeric !== b.dose_numeric) return a.dose_numeric - b.dose_numeric;
+    return a.Subject.localeCompare(b.Subject);
+  });
+}
+
+function calculateStats() {
+  const teaeSubjects = new Set(TEAE_DATA.map(r => r.Subject));
+  const traeSubjects = new Set(TEAE_DATA.filter(r => r.is_TRAE).map(r => r.Subject));
+  
+  STATS = {
+    totalTEAE: TEAE_DATA.length,
+    totalTRAE: TEAE_DATA.filter(r => r.is_TRAE).length,
+    totalSAE: TEAE_DATA.filter(r => r.is_serious).length,
+    totalDLT: TEAE_DATA.filter(r => r.is_DLT).length,
+    uniqueTEAESubjects: teaeSubjects.size,
+    uniqueTRAESubjects: traeSubjects.size,
+    grade3Plus: TEAE_DATA.filter(r => r.grade_numeric && r.grade_numeric >= 3).length
+  };
+  
+  document.getElementById('badgeTEAE').textContent = `TEAE: ${STATS.uniqueTEAESubjects} patients`;
+  document.getElementById('badgeTRAE').textContent = `TRAE: ${STATS.uniqueTRAESubjects} patients`;
+  document.getElementById('badgeSAE').textContent = `SAE: ${STATS.totalSAE} events`;
+}
+
+// ============================================
+// RENDER OVERVIEW
+// ============================================
+
+function renderOverview() {
+  // Summary cards
+  const cardsHtml = `
+    <div class="summary-card">
+      <div class="number">${BIG_N}</div>
+      <div class="label">Safety Set (N)</div>
+    </div>
+    <div class="summary-card">
+      <div class="number purple">${STATS.uniqueTEAESubjects}</div>
+      <div class="label">Patients with TEAE</div>
+    </div>
+    <div class="summary-card">
+      <div class="number orange">${STATS.uniqueTRAESubjects}</div>
+      <div class="label">Patients with TRAE</div>
+    </div>
+    <div class="summary-card">
+      <div class="number danger">${STATS.totalSAE}</div>
+      <div class="label">Serious Events</div>
+    </div>
+    <div class="summary-card">
+      <div class="number danger">${STATS.grade3Plus}</div>
+      <div class="label">Grade ≥3 Events</div>
+    </div>
+    <div class="summary-card">
+      <div class="number danger">${STATS.totalDLT}</div>
+      <div class="label">DLT Events</div>
+    </div>
+  `;
+  document.getElementById('summaryCards').innerHTML = cardsHtml;
+  
+  // Overview content
+  let html = `
+    <h4 style="margin-bottom:12px; color:#2c3e50;">Subjects per Dose Cohort</h4>
+    <table class="summary-table" style="max-width:600px;">
+      <thead>
+        <tr>
+          <th class="left">Dose Cohort</th>
+          <th>N</th>
+          <th>TEAE Subjects</th>
+          <th>TRAE Subjects</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  for (const dose of N_PER_DOSE) {
+    const teaeSubj = new Set(TEAE_DATA.filter(r => r.ARM === dose.ARM).map(r => r.Subject)).size;
+    const traeSubj = new Set(TEAE_DATA.filter(r => r.ARM === dose.ARM && r.is_TRAE).map(r => r.Subject)).size;
+    
+    html += `
+      <tr>
+        <td class="left">${escapeHtml(dose.ARM)}</td>
+        <td>${dose.N_dose}</td>
+        <td>${formatNPct(teaeSubj, dose.N_dose)}</td>
+        <td>${formatNPct(traeSubj, dose.N_dose)}</td>
+      </tr>
+    `;
+  }
+  
+  html += `
+      </tbody>
+    </table>
+    <p style="margin-top:20px; color:#7f8c8d; font-size:0.85rem;">
+      Use the tabs above to view detailed tables: TEAE by PT, TRAE by PT, Grade ≥3, Serious TRAE, and DLT Rate.
+    </p>
+  `;
+  
+  document.getElementById('overviewContent').innerHTML = html;
+  
+  // Add click handlers to overview table if it has clickable cells
+  const overviewContainer = document.getElementById('overviewContent');
+  overviewContainer.addEventListener('click', function(e) {
+    const cell = e.target.closest('td.clickable');
+    if (cell) {
+      handleCellClick({ target: cell });
+    }
+  });
+}
+
+// ============================================
+// MAX GRADE LOGIC (Core R code equivalent)
+// ============================================
+
+/**
+ * Get maximum grade per Subject + PT combination
+ * Returns: [{Subject, AETERM_pt, max_grade, ARM, dose_numeric, is_TRAE, is_serious}]
+ */
+function getMaxGradePerSubjectPT(data) {
+  const map = new Map(); // key: "Subject|PT"
+  
+  for (const row of data) {
+    const key = `${row.Subject}|${row.AETERM_pt}`;
+    
+    if (!map.has(key)) {
+      map.set(key, {
+        Subject: row.Subject,
+        AETERM_pt: row.AETERM_pt,
+        max_grade: row.grade_numeric,
+        ARM: row.ARM,
+        dose_numeric: row.dose_numeric,
+        is_TRAE: row.is_TRAE,
+        is_serious: row.is_serious
+      });
+    } else {
+      const existing = map.get(key);
+      // Update max grade (null means missing)
+      if (row.grade_numeric !== null) {
+        if (existing.max_grade === null || row.grade_numeric > existing.max_grade) {
+          existing.max_grade = row.grade_numeric;
+        }
+      }
+      // Aggregate flags
+      if (row.is_TRAE) existing.is_TRAE = true;
+      if (row.is_serious) existing.is_serious = true;
+    }
+  }
+  
+  return Array.from(map.values());
+}
+
+/**
+ * Create summary subtable for a dose group
+ * tableType: "all" or "grade3"
+ */
+function createDoseSubtable(data, N_dose, tableType = 'all') {
+  // Get max grade per subject+PT
+  let maxGradeData = getMaxGradePerSubjectPT(data);
+  
+  // For grade3 tables, filter by max_grade >= 3
+  if (tableType === 'grade3') {
+    maxGradeData = maxGradeData.filter(r => r.max_grade !== null && r.max_grade >= 3);
+  }
+  
+  // Get unique PTs sorted
+  const pts = [...new Set(maxGradeData.map(r => r.AETERM_pt))].sort();
+  
+  // Calculate "Any AE" row using OVERALL max grade per subject
+  const subjectOverallMax = new Map();
+  for (const row of maxGradeData) {
+    if (!subjectOverallMax.has(row.Subject)) {
+      subjectOverallMax.set(row.Subject, row.max_grade);
+    } else {
+      const existing = subjectOverallMax.get(row.Subject);
+      if (row.max_grade !== null) {
+        if (existing === null || row.max_grade > existing) {
+          subjectOverallMax.set(row.Subject, row.max_grade);
+        }
+      }
+    }
+  }
+  
+  const anySubj = subjectOverallMax.size;
+  
+  const result = [];
+  
+  // Any AE row
+  if (tableType === 'all') {
+    result.push({
+      pt: 'Any Adverse Event',
+      isAnyRow: true,
+      anyGrade: formatNPct(anySubj, N_dose),
+      grd1: formatNPct([...subjectOverallMax.values()].filter(g => g === 1).length, N_dose),
+      grd2: formatNPct([...subjectOverallMax.values()].filter(g => g === 2).length, N_dose),
+      grd3: formatNPct([...subjectOverallMax.values()].filter(g => g === 3).length, N_dose),
+      grd4: formatNPct([...subjectOverallMax.values()].filter(g => g === 4).length, N_dose),
+      grd5: formatNPct([...subjectOverallMax.values()].filter(g => g === 5).length, N_dose)
+    });
+  } else {
+    result.push({
+      pt: 'Any Adverse Event',
+      isAnyRow: true,
+      anyGrade3: formatNPct(anySubj, N_dose),
+      grd3: formatNPct([...subjectOverallMax.values()].filter(g => g === 3).length, N_dose),
+      grd4: formatNPct([...subjectOverallMax.values()].filter(g => g === 4).length, N_dose),
+      grd5: formatNPct([...subjectOverallMax.values()].filter(g => g === 5).length, N_dose)
+    });
+  }
+  
+  // Per PT rows
+  for (const pt of pts) {
+    const ptData = maxGradeData.filter(r => r.AETERM_pt === pt);
+    const ptSubjects = new Set(ptData.map(r => r.Subject)).size;
+    
+    if (tableType === 'all') {
+      result.push({
+        pt: pt,
+        isAnyRow: false,
+        anyGrade: formatNPct(ptSubjects, N_dose),
+        grd1: formatNPct(ptData.filter(r => r.max_grade === 1).length, N_dose),
+        grd2: formatNPct(ptData.filter(r => r.max_grade === 2).length, N_dose),
+        grd3: formatNPct(ptData.filter(r => r.max_grade === 3).length, N_dose),
+        grd4: formatNPct(ptData.filter(r => r.max_grade === 4).length, N_dose),
+        grd5: formatNPct(ptData.filter(r => r.max_grade === 5).length, N_dose)
+      });
+    } else {
+      result.push({
+        pt: pt,
+        isAnyRow: false,
+        anyGrade3: formatNPct(ptSubjects, N_dose),
+        grd3: formatNPct(ptData.filter(r => r.max_grade === 3).length, N_dose),
+        grd4: formatNPct(ptData.filter(r => r.max_grade === 4).length, N_dose),
+        grd5: formatNPct(ptData.filter(r => r.max_grade === 5).length, N_dose)
+      });
+    }
+  }
+  
+  return result;
+}
+
+// ============================================
+// RENDER TEAE TABLE
+// ============================================
+
+function renderTEAETable() {
+  const container = document.getElementById('teaeTableContainer');
+  const doseFilter = document.getElementById('teaeDoseFilter').value;
+  
+  let html = '';
+  
+  // If "All Doses" is selected, show Total table and Unknown Dose if it exists
+  if (doseFilter === 'all') {
+    const totalSubtable = createDoseSubtable(TEAE_DATA, BIG_N, 'all');
+    html += `
+      <div class="dose-group">
+        <div class="dose-group-header total">Total (N=${BIG_N})</div>
+        <div class="dose-group-table">
+          ${renderSubtableHTML(totalSubtable, 'all')}
+        </div>
+      </div>
+    `;
+    
+    // Check if Unknown Dose exists and has data
+    const unknownDose = N_PER_DOSE.find(d => d.ARM === 'Unknown Dose' || d.ARM.toLowerCase().includes('unknown'));
+    if (unknownDose) {
+      const unknownData = TEAE_DATA.filter(r => r.ARM === unknownDose.ARM);
+      if (unknownData.length > 0) {
+        const unknownSubtable = createDoseSubtable(unknownData, unknownDose.N_dose, 'all');
+        html += `
+          <div class="dose-group">
+            <div class="dose-group-header">${escapeHtml(unknownDose.ARM)} (N=${unknownDose.N_dose})</div>
+            <div class="dose-group-table">
+              ${renderSubtableHTML(unknownSubtable, 'all')}
+            </div>
+          </div>
+        `;
+      }
+    }
+  } else {
+    // If a specific dose is selected, show only that dose
+    const selectedDose = N_PER_DOSE.find(d => d.ARM === doseFilter);
+    if (selectedDose) {
+      const doseData = TEAE_DATA.filter(r => r.ARM === selectedDose.ARM);
+      const subtable = createDoseSubtable(doseData, selectedDose.N_dose, 'all');
+      
+      html += `
+        <div class="dose-group">
+          <div class="dose-group-header">${escapeHtml(selectedDose.ARM)} (N=${selectedDose.N_dose})</div>
+          <div class="dose-group-table">
+            ${renderSubtableHTML(subtable, 'all')}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  container.innerHTML = html || '<div class="no-data"><div class="icon"></div><p>No TEAE data available.</p></div>';
+  
+  // Use event delegation on the container for better reliability
+  container.addEventListener('click', function(e) {
+    const cell = e.target.closest('td.clickable');
+    if (cell) {
+      handleCellClick({ target: cell });
+    }
+  });
+  
+  // Footnotes
+  document.getElementById('teaeFootnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients (received at least one dose)</p>
+    <p><strong>N</strong> = number of subjects in each dose group; <strong>n</strong> = number of subjects with at least one event</p>
+    <p><strong>%</strong> = (n/N) × 100</p>
+    <p>Each subject counted once per Preferred Term at their <strong>MAXIMUM CTCAE Grade</strong></p>
+    <p><strong>TEAE</strong> = Treatment-Emergent AE (AE start date ≥ first dose date)</p>
+    <p><strong>CTCAE Grade:</strong> 1=Mild, 2=Moderate, 3=Severe, 4=Life-threatening, 5=Death</p>
+    <p>Any Grade includes subjects with missing grade; grade-specific columns exclude missing</p>
+  `;
+}
+
+function renderSubtableHTML(subtable, tableType) {
+  if (subtable.length === 0) {
+    return '<div style="padding:20px; text-align:center; color:#7f8c8d;">No events in this group.</div>';
+  }
+  
+  let html = '<table class="summary-table"><thead>';
+  
+  if (tableType === 'all') {
+    html += `
+      <tr class="header-row">
+        <th class="left" rowspan="2" style="width:35%">Preferred Term</th>
+        <th colspan="6">Maximum CTCAE Grade</th>
+      </tr>
+      <tr>
+        <th>Any Grade</th>
+        <th>Grd 1</th>
+        <th>Grd 2</th>
+        <th>Grd 3</th>
+        <th>Grd 4</th>
+        <th>Grd 5</th>
+      </tr>
+    `;
+  } else {
+    html += `
+      <tr class="header-row">
+        <th class="left" rowspan="2" style="width:40%">Preferred Term</th>
+        <th colspan="4">Maximum CTCAE Grade (≥3)</th>
+      </tr>
+      <tr>
+        <th>Any Grade ≥3</th>
+        <th>Grd 3</th>
+        <th>Grd 4</th>
+        <th>Grd 5</th>
+      </tr>
+    `;
+  }
+  
+  html += '</thead><tbody>';
+  
+  for (const row of subtable) {
+    const rowClass = row.isAnyRow ? 'any-row' : '';
+    
+    if (tableType === 'all') {
+      html += `
+        <tr class="${rowClass}">
+          <td class="pt-name">${escapeHtml(row.pt)}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="any">${row.anyGrade}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="1">${row.grd1}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="2">${row.grd2}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="3">${row.grd3}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="4">${row.grd4}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="5">${row.grd5}</td>
+        </tr>
+      `;
+    } else {
+      html += `
+        <tr class="${rowClass}">
+          <td class="pt-name">${escapeHtml(row.pt)}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="any3">${row.anyGrade3}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="3">${row.grd3}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="4">${row.grd4}</td>
+          <td class="clickable" data-pt="${escapeHtml(row.pt)}" data-grade="5">${row.grd5}</td>
+        </tr>
+      `;
+    }
+  }
+  
+  html += '</tbody></table>';
+  return html;
+}
+
+// ============================================
+// RENDER TRAE TABLE
+// ============================================
+
+function renderTRAETable() {
+  const container = document.getElementById('traeTableContainer');
+  const doseFilter = document.getElementById('traeDoseFilter').value;
+  
+  // Filter to TRAE only
+  const traeData = TEAE_DATA.filter(r => r.is_TRAE);
+  
+  let html = '';
+  
+  // If "All Doses" is selected, show Total table and Unknown Dose if it exists
+  if (doseFilter === 'all') {
+    const totalSubtable = createDoseSubtable(traeData, BIG_N, 'all');
+    html += `
+      <div class="dose-group">
+        <div class="dose-group-header total">Total (N=${BIG_N})</div>
+        <div class="dose-group-table">
+          ${renderSubtableHTML(totalSubtable, 'all')}
+        </div>
+      </div>
+    `;
+    
+    // Check if Unknown Dose exists and has data
+    const unknownDose = N_PER_DOSE.find(d => d.ARM === 'Unknown Dose' || d.ARM.toLowerCase().includes('unknown'));
+    if (unknownDose) {
+      const unknownData = traeData.filter(r => r.ARM === unknownDose.ARM);
+      if (unknownData.length > 0) {
+        const unknownSubtable = createDoseSubtable(unknownData, unknownDose.N_dose, 'all');
+        html += `
+          <div class="dose-group">
+            <div class="dose-group-header">${escapeHtml(unknownDose.ARM)} (N=${unknownDose.N_dose})</div>
+            <div class="dose-group-table">
+              ${renderSubtableHTML(unknownSubtable, 'all')}
+            </div>
+          </div>
+        `;
+      }
+    }
+  } else {
+    // If a specific dose is selected, show only that dose
+    const selectedDose = N_PER_DOSE.find(d => d.ARM === doseFilter);
+    if (selectedDose) {
+      const doseData = traeData.filter(r => r.ARM === selectedDose.ARM);
+      const subtable = createDoseSubtable(doseData, selectedDose.N_dose, 'all');
+      
+      html += `
+        <div class="dose-group">
+          <div class="dose-group-header">${escapeHtml(selectedDose.ARM)} (N=${selectedDose.N_dose})</div>
+          <div class="dose-group-table">
+            ${renderSubtableHTML(subtable, 'all')}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  container.innerHTML = html || '<div class="no-data"><div class="icon"></div><p>No TRAE data available.</p></div>';
+  
+  // Add click handlers to all clickable cells
+  document.querySelectorAll('td.clickable').forEach(cell => {
+    cell.addEventListener('click', handleCellClick);
+  });
+  
+  document.getElementById('traeFootnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients (received at least one dose)</p>
+    <p><strong>TRAE</strong> = Treatment-Related AE (AEREL_STD = 'POSSIBLY RELATED' or 'RELATED')</p>
+    <p>Each subject counted once per Preferred Term at their <strong>MAXIMUM CTCAE Grade</strong></p>
+  `;
+}
+
+// ============================================
+// RENDER GRADE ≥3 TABLE
+// ============================================
+
+function renderGrade3Table() {
+  const container = document.getElementById('grade3TableContainer');
+  const typeFilter = document.getElementById('grade3TypeFilter').value;
+  const doseFilter = document.getElementById('grade3DoseFilter').value;
+  
+  // Filter data
+  let filteredData = typeFilter === 'trae' ? TEAE_DATA.filter(r => r.is_TRAE) : TEAE_DATA;
+  
+  let html = '';
+  
+  // If "All Doses" is selected, show Total table and Unknown Dose if it exists
+  if (doseFilter === 'all') {
+    const totalSubtable = createDoseSubtable(filteredData, BIG_N, 'grade3');
+    html += `
+      <div class="dose-group">
+        <div class="dose-group-header total">Total (N=${BIG_N})</div>
+        <div class="dose-group-table">
+          ${renderSubtableHTML(totalSubtable, 'grade3')}
+        </div>
+      </div>
+    `;
+    
+    // Check if Unknown Dose exists and has data
+    const unknownDose = N_PER_DOSE.find(d => d.ARM === 'Unknown Dose' || d.ARM.toLowerCase().includes('unknown'));
+    if (unknownDose) {
+      const unknownData = filteredData.filter(r => r.ARM === unknownDose.ARM);
+      if (unknownData.length > 0) {
+        const unknownSubtable = createDoseSubtable(unknownData, unknownDose.N_dose, 'grade3');
+        html += `
+          <div class="dose-group">
+            <div class="dose-group-header">${escapeHtml(unknownDose.ARM)} (N=${unknownDose.N_dose})</div>
+            <div class="dose-group-table">
+              ${renderSubtableHTML(unknownSubtable, 'grade3')}
+            </div>
+          </div>
+        `;
+      }
+    }
+  } else {
+    // If a specific dose is selected, show only that dose
+    const selectedDose = N_PER_DOSE.find(d => d.ARM === doseFilter);
+    if (selectedDose) {
+      const doseData = filteredData.filter(r => r.ARM === selectedDose.ARM);
+      const subtable = createDoseSubtable(doseData, selectedDose.N_dose, 'grade3');
+      
+      html += `
+        <div class="dose-group">
+          <div class="dose-group-header">${escapeHtml(selectedDose.ARM)} (N=${selectedDose.N_dose})</div>
+          <div class="dose-group-table">
+            ${renderSubtableHTML(subtable, 'grade3')}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  container.innerHTML = html || '<div class="no-data"><div class="icon"></div><p>No Grade ≥3 events available.</p></div>';
+  
+  // Add click handlers to all clickable cells
+  document.querySelectorAll('td.clickable').forEach(cell => {
+    cell.addEventListener('click', handleCellClick);
+  });
+  
+  const typeLabel = typeFilter === 'trae' ? 'TRAE' : 'TEAE';
+  document.getElementById('grade3Footnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients</p>
+    <p>Includes only subjects whose maximum grade for a PT is ≥ 3</p>
+    <p>${typeLabel} = ${typeFilter === 'trae' ? 'Treatment-Related AE' : 'Treatment-Emergent AE'}</p>
+    <p><strong>CTCAE Grade:</strong> 3=Severe, 4=Life-threatening, 5=Death</p>
+  `;
+}
+
+// ============================================
+// RENDER SERIOUS TRAE TABLE
+// ============================================
+
+function renderSeriousTable() {
+  const container = document.getElementById('seriousTableContainer');
+  const doseFilter = document.getElementById('seriousDoseFilter').value;
+  
+  // Filter to serious AND TRAE
+  const seriousTRAE = TEAE_DATA.filter(r => r.is_serious && r.is_TRAE);
+  
+  let html = '';
+  
+  // If "All Doses" is selected, show Total table and Unknown Dose if it exists
+  if (doseFilter === 'all') {
+    const totalSubtable = createDoseSubtable(seriousTRAE, BIG_N, 'all');
+    html += `
+      <div class="dose-group">
+        <div class="dose-group-header total">Total (N=${BIG_N})</div>
+        <div class="dose-group-table">
+          ${renderSubtableHTML(totalSubtable, 'all')}
+        </div>
+      </div>
+    `;
+    
+    // Check if Unknown Dose exists and has data
+    const unknownDose = N_PER_DOSE.find(d => d.ARM === 'Unknown Dose' || d.ARM.toLowerCase().includes('unknown'));
+    if (unknownDose) {
+      const unknownData = seriousTRAE.filter(r => r.ARM === unknownDose.ARM);
+      if (unknownData.length > 0) {
+        const unknownSubtable = createDoseSubtable(unknownData, unknownDose.N_dose, 'all');
+        html += `
+          <div class="dose-group">
+            <div class="dose-group-header">${escapeHtml(unknownDose.ARM)} (N=${unknownDose.N_dose})</div>
+            <div class="dose-group-table">
+              ${renderSubtableHTML(unknownSubtable, 'all')}
+            </div>
+          </div>
+        `;
+      }
+    }
+  } else {
+    // If a specific dose is selected, show only that dose
+    const selectedDose = N_PER_DOSE.find(d => d.ARM === doseFilter);
+    if (selectedDose) {
+      const doseData = seriousTRAE.filter(r => r.ARM === selectedDose.ARM);
+      const subtable = createDoseSubtable(doseData, selectedDose.N_dose, 'all');
+      
+      html += `
+        <div class="dose-group">
+          <div class="dose-group-header">${escapeHtml(selectedDose.ARM)} (N=${selectedDose.N_dose})</div>
+          <div class="dose-group-table">
+            ${renderSubtableHTML(subtable, 'all')}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  container.innerHTML = html || '<div class="no-data"><div class="icon"></div><p>No Serious TRAE data available.</p></div>';
+  
+  // Add click handlers to all clickable cells
+  document.querySelectorAll('td.clickable').forEach(cell => {
+    cell.addEventListener('click', handleCellClick);
+  });
+  
+  document.getElementById('seriousFootnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients</p>
+    <p><strong>Serious AE:</strong> AESER_STD = 'Y'</p>
+    <p><strong>Treatment-Related:</strong> AEREL_STD = 'POSSIBLY RELATED' or 'RELATED'</p>
+    <p>Each subject counted once per Preferred Term at their MAXIMUM CTCAE Grade</p>
+  `;
+}
+
+// ============================================
+// RENDER DLT TABLE
+// ============================================
+
+function renderDLTTable() {
+  const container = document.getElementById('dltTableContainer');
+  const detailContainer = document.getElementById('dltDetailContainer');
+  
+  // DLT data
+  const dltData = TEAE_DATA.filter(r => r.is_DLT);
+  
+  // DLT Rate table
+  let html = `
+    <div class="card">
+      <div class="card-body">
+        <table class="dlt-table">
+          <thead>
+            <tr>
+              <th class="left">Dose Cohort</th>
+              <th>N (Evaluable)</th>
+              <th>n (Subjects with DLT)</th>
+              <th>DLT Events</th>
+              <th>DLT Rate</th>
+              <th>n/N</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+  
+  let totalDLTSubjects = 0;
+  let totalDLTEvents = 0;
+  
+  for (const dose of N_PER_DOSE) {
+    const doseDLT = dltData.filter(r => r.ARM === dose.ARM);
+    const nSubjects = new Set(doseDLT.map(r => r.Subject)).size;
+    const nEvents = doseDLT.length;
+    const rate = dose.N_dose > 0 ? ((nSubjects / dose.N_dose) * 100).toFixed(1) + '%' : '0%';
+    
+    totalDLTSubjects += nSubjects;
+    totalDLTEvents += nEvents;
+    
+    html += `
+      <tr>
+        <td class="left">${escapeHtml(dose.ARM)}</td>
+        <td>${dose.N_dose}</td>
+        <td>${nSubjects}</td>
+        <td>${nEvents}</td>
+        <td>${rate}</td>
+        <td>${nSubjects}/${dose.N_dose}</td>
+      </tr>
+    `;
+  }
+  
+  // Overall row
+  const overallRate = BIG_N > 0 ? ((new Set(dltData.map(r => r.Subject)).size / BIG_N) * 100).toFixed(1) + '%' : '0%';
+  const overallDLTSubjects = new Set(dltData.map(r => r.Subject)).size;
+  
+  html += `
+      <tr class="total-row">
+        <td class="left">Overall</td>
+        <td>${BIG_N}</td>
+        <td>${overallDLTSubjects}</td>
+        <td>${dltData.length}</td>
+        <td>${overallRate}</td>
+        <td>${overallDLTSubjects}/${BIG_N}</td>
+      </tr>
+    </tbody></table>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+  
+  // DLT Details
+  if (dltData.length > 0) {
+    // Group by ARM + PT
+    const detailMap = new Map();
+    for (const row of dltData) {
+      const key = `${row.ARM}|${row.AETERM_pt}|${row.AETOXGR_STD}`;
+      if (!detailMap.has(key)) {
+        detailMap.set(key, { ARM: row.ARM, PT: row.AETERM_pt, Grade: row.AETOXGR_STD, dose_numeric: row.dose_numeric, subjects: new Set(), events: 0 });
+      }
+      detailMap.get(key).subjects.add(row.Subject);
+      detailMap.get(key).events++;
+    }
+    
+    const details = [...detailMap.values()].sort((a, b) => a.dose_numeric - b.dose_numeric || a.PT.localeCompare(b.PT));
+    
+    let detailHtml = `
+      <div class="card">
+        <div class="card-body">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th class="left">Dose</th>
+                <th class="left">Preferred Term</th>
+                <th>CTCAE Grade</th>
+                <th>n Subjects</th>
+                <th>Events</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    for (const d of details) {
+      detailHtml += `
+        <tr>
+          <td class="left">${escapeHtml(d.ARM)}</td>
+          <td class="left">${escapeHtml(d.PT)}</td>
+          <td>${escapeHtml(d.Grade)}</td>
+          <td>${d.subjects.size}</td>
+          <td>${d.events}</td>
+        </tr>
+      `;
+    }
+    
+    detailHtml += '</tbody></table></div></div>';
+    detailContainer.innerHTML = detailHtml;
+  } else {
+    detailContainer.innerHTML = '<div class="no-data"><div class="icon">✓</div><p>No DLT events recorded.</p></div>';
+  }
+  
+  document.getElementById('dltFootnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients</p>
+    <p><strong>N</strong> = Number of evaluable subjects in each dose cohort</p>
+    <p><strong>n</strong> = Number of subjects experiencing at least one DLT</p>
+    <p><strong>DLT Rate</strong> = (n/N) × 100%</p>
+    <p>DLT identified by: AEDLT_1_STD = 'Y', 'YES', 'DLT', or '1'</p>
+  `;
+}
+
+// ============================================
+// RENDER DEATH RATE TABLE
+// ============================================
+
+function renderDeathTable() {
+  const container = document.getElementById('deathTableContainer');
+  const detailContainer = document.getElementById('deathDetailContainer');
+  
+  // Death Rate table
+  let html = `
+    <div class="card">
+      <div class="card-body">
+        <table class="dlt-table">
+          <thead>
+            <tr>
+              <th class="left">Dose Cohort</th>
+              <th>N (Evaluable)</th>
+              <th>n (Deaths)</th>
+              <th>Death Rate</th>
+              <th>n/N</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+  
+  for (const dose of N_PER_DOSE) {
+    const doseDeaths = DEATH_DATA.filter(r => r.ARM === dose.ARM);
+    const nDeaths = doseDeaths.length;
+    const rate = dose.N_dose > 0 ? ((nDeaths / dose.N_dose) * 100).toFixed(1) + '%' : '0%';
+    
+    html += `
+      <tr>
+        <td class="left clickable" data-dose="${escapeHtml(dose.ARM)}">${escapeHtml(dose.ARM)}</td>
+        <td>${dose.N_dose}</td>
+        <td class="clickable" data-dose="${escapeHtml(dose.ARM)}">${nDeaths}</td>
+        <td>${rate}</td>
+        <td>${nDeaths}/${dose.N_dose}</td>
+      </tr>
+    `;
+  }
+  
+  // Overall row
+  const overallRate = BIG_N > 0 ? ((DEATH_DATA.length / BIG_N) * 100).toFixed(1) + '%' : '0%';
+  
+  html += `
+      <tr class="total-row">
+        <td class="left clickable" data-dose="all">Overall</td>
+        <td>${BIG_N}</td>
+        <td class="clickable" data-dose="all">${DEATH_DATA.length}</td>
+        <td>${overallRate}</td>
+        <td>${DEATH_DATA.length}/${BIG_N}</td>
+      </tr>
+    </tbody></table>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+  
+  // Add click handlers to clickable cells
+  container.addEventListener('click', function(e) {
+    const cell = e.target.closest('td.clickable');
+    if (cell) {
+      const dose = cell.getAttribute('data-dose');
+      if (dose) {
+        let filtered = dose === 'all' ? DEATH_DATA : DEATH_DATA.filter(r => r.ARM === dose);
+        showDeathDetail(dose, filtered);
+      }
+    }
+  });
+  
+  // Death Details
+  if (DEATH_DATA.length > 0) {
+    let detailHtml = `
+      <div class="card">
+        <div class="card-body">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th class="left">Dose</th>
+                <th class="left">Subject</th>
+                <th>Death Date</th>
+                <th class="left">Reason</th>
+                <th>Autopsy</th>
+                <th>Evaluation</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    for (const d of DEATH_DATA) {
+      detailHtml += `
+        <tr>
+          <td class="left">${escapeHtml(d.ARM)}</td>
+          <td class="left">${escapeHtml(d.Subject)}</td>
+          <td>${d.DeathDateStr || '-'}</td>
+          <td class="left">${escapeHtml(d.Reason || '-')}</td>
+          <td>${escapeHtml(d.Autopsy || '-')}</td>
+          <td>${escapeHtml(d.Evaluation || '-')}</td>
+        </tr>
+      `;
+    }
+    
+    detailHtml += '</tbody></table></div></div>';
+    detailContainer.innerHTML = detailHtml;
+  } else {
+    detailContainer.innerHTML = '<div class="no-data"><div class="icon"></div><p>No deaths recorded.</p></div>';
+  }
+  
+  document.getElementById('deathFootnotes').innerHTML = `
+    <hr>
+    <p><strong>Population:</strong> Safety Analysis Set - All Patients</p>
+    <p><strong>N</strong> = Number of evaluable subjects in each dose cohort</p>
+    <p><strong>n</strong> = Number of deaths</p>
+    <p><strong>Death Rate</strong> = (n/N) × 100%</p>
+    <p>Death data source: dd.csv</p>
+  `;
+}
+
+function showDeathDetail(dose, records) {
+  const doseLabel = dose === 'all' ? 'All Doses' : dose;
+  document.getElementById('detailTitle').textContent = 
+    `Death Details - ${doseLabel} (${records.length} ${records.length === 1 ? 'death' : 'deaths'})`;
+  
+  // Update table header for death details
+  const thead = document.getElementById('detailTableHead');
+  thead.innerHTML = `
+    <tr>
+      <th>Subject</th>
+      <th>Dose Cohort</th>
+      <th>Death Date</th>
+      <th>Reason</th>
+      <th>Autopsy</th>
+      <th>Evaluation</th>
+    </tr>
+  `;
+  
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">No records</td></tr>';
+  } else {
+    // Sort by subject
+    records.sort((a, b) => a.Subject.localeCompare(b.Subject));
+    
+    records.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.Subject}</td>
+        <td>${escapeHtml(r.ARM)}</td>
+        <td>${r.DeathDateStr || '-'}</td>
+        <td>${escapeHtml(r.Reason || '-')}</td>
+        <td>${escapeHtml(r.Autopsy || '-')}</td>
+        <td>${escapeHtml(r.Evaluation || '-')}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  document.getElementById('detailContainer').classList.remove('hidden');
+  document.getElementById('detailContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================
+// RENDER AE LISTING
+// ============================================
+
+
+// ============================================
+// DETAIL VIEW HANDLERS
+// ============================================
+
+function handleCellClick(e) {
+  // Handle both direct event and delegated event
+  const cell = e.target || e.currentTarget;
+  if (!cell || cell.tagName !== 'TD' || !cell.classList.contains('clickable')) {
+    return;
+  }
+  
+  const pt = cell.dataset.pt;
+  const grade = cell.dataset.grade;
+  
+  if (!pt || !grade) {
+    console.log('Missing data:', { pt, grade, cell });
+    return;
+  }
+  
+  // Remove previous active state
+  document.querySelectorAll('td.clickable.active').forEach(c => c.classList.remove('active'));
+  cell.classList.add('active');
+  
+  // Find the dose group this cell belongs to
+  const doseGroup = cell.closest('.dose-group');
+  const doseHeader = doseGroup?.querySelector('.dose-group-header');
+  let targetDose = null;
+  
+  if (doseHeader) {
+    const headerText = doseHeader.textContent.trim();
+    if (headerText.startsWith('Total')) {
+      targetDose = 'all';
+    } else {
+      // Extract dose from header like "40 mg BID (N=5)" -> "40 mg BID"
+      const match = headerText.match(/^(.+?)\s*\(N=/);
+      if (match) {
+        targetDose = match[1].trim();
+      }
+    }
+  }
+  
+  // Get current table context (which tab are we in?)
+  const currentTab = document.querySelector('.tab-content.active')?.id;
+  let filteredData = [...TEAE_DATA];
+  
+  // Apply filters based on current tab
+  if (currentTab === 'tab-trae') {
+    filteredData = filteredData.filter(r => r.is_TRAE);
+  } else if (currentTab === 'tab-grade3') {
+    const typeFilter = document.getElementById('grade3TypeFilter')?.value;
+    if (typeFilter === 'trae') {
+      filteredData = filteredData.filter(r => r.is_TRAE);
+    }
+    // Grade 3+ filter will be applied below
+  } else if (currentTab === 'tab-serious') {
+    filteredData = filteredData.filter(r => r.is_serious && r.is_TRAE);
+  }
+  
+  // Filter by dose group if not "Total"
+  if (targetDose && targetDose !== 'all') {
+    filteredData = filteredData.filter(r => r.ARM === targetDose);
+  }
+  
+  // Filter by Preferred Term
+  filteredData = filteredData.filter(r => r.AETERM_pt === pt);
+  
+  // Get max grade per subject for this PT
+  const subjectMaxGrade = new Map();
+  filteredData.forEach(r => {
+    const key = r.Subject;
+    const gradeNum = r.grade_numeric;
+    if (gradeNum !== null) {
+      if (!subjectMaxGrade.has(key) || gradeNum > subjectMaxGrade.get(key)) {
+        subjectMaxGrade.set(key, gradeNum);
+      }
+    }
+  });
+  
+  // Filter by grade
+  let finalRecords = [];
+  if (grade === 'any') {
+    // All subjects with this PT (any grade)
+    const subjects = new Set(filteredData.map(r => r.Subject));
+    subjects.forEach(subj => {
+      const maxGrade = subjectMaxGrade.get(subj);
+      const records = filteredData.filter(r => r.Subject === subj && r.grade_numeric === maxGrade);
+      if (records.length > 0) {
+        finalRecords.push(records[0]); // Take first record with max grade
+      }
+    });
+  } else if (grade === 'any3') {
+    // All subjects with grade >= 3
+    const subjects = new Set(filteredData.map(r => r.Subject));
+    subjects.forEach(subj => {
+      const maxGrade = subjectMaxGrade.get(subj);
+      if (maxGrade !== null && maxGrade >= 3) {
+        const records = filteredData.filter(r => r.Subject === subj && r.grade_numeric === maxGrade);
+        if (records.length > 0) {
+          finalRecords.push(records[0]);
+        }
+      }
+    });
+  } else {
+    // Specific grade
+    const gradeNum = parseInt(grade);
+    const subjects = new Set(filteredData.map(r => r.Subject));
+    subjects.forEach(subj => {
+      const maxGrade = subjectMaxGrade.get(subj);
+      if (maxGrade === gradeNum) {
+        const records = filteredData.filter(r => r.Subject === subj && r.grade_numeric === maxGrade);
+        if (records.length > 0) {
+          finalRecords.push(records[0]);
+        }
+      }
+    });
+  }
+  
+  showDetail(pt, grade, finalRecords, targetDose);
+}
+
+function showDetail(pt, grade, records, doseGroup = null) {
+  // Reset table header for AE details
+  const thead = document.getElementById('detailTableHead');
+  if (thead) {
+    thead.innerHTML = `
+      <tr>
+        <th>Subject</th>
+        <th>Preferred Term</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Grade</th>
+        <th>Serious</th>
+        <th>Relatedness</th>
+        <th>Outcome</th>
+        <th>Action</th>
+      </tr>
+    `;
+  }
+  
+  const gradeLabel = grade === 'any' ? 'Any Grade' : 
+                     grade === 'any3' ? 'Any Grade ≥3' : 
+                     `Grade ${grade}`;
+  
+  let title = `${pt} - ${gradeLabel}`;
+  if (doseGroup && doseGroup !== 'all') {
+    title += ` (${doseGroup})`;
+  }
+  title += ` (${records.length} ${records.length === 1 ? 'subject' : 'subjects'})`;
+  
+  document.getElementById('detailTitle').textContent = title;
+  
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">No records</td></tr>';
+  } else {
+    // Sort by subject, then by start date
+    records.sort((a, b) => {
+      const subjCompare = a.Subject.localeCompare(b.Subject);
+      if (subjCompare !== 0) return subjCompare;
+      const dateA = parseDate(a.AESTDAT_INT);
+      const dateB = parseDate(b.AESTDAT_INT);
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return dateA - dateB;
+    });
+    
+    records.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.Subject}</td>
+        <td>${escapeHtml(r.AETERM_pt)}</td>
+        <td>${formatDateDisplay(r.AESTDAT_INT)}</td>
+        <td>${formatDateDisplay(r.AEENDAT_INT, true)}</td>
+        <td><strong>${r.AETOXGR_STD || '-'}</strong></td>
+        <td>${r.is_serious ? 'Y' : 'N'}</td>
+        <td>${r.AEREL_STD || '-'}</td>
+        <td>${r.AEOUT_STD || '-'}</td>
+        <td>${r.AEACN_STD || '-'}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  document.getElementById('detailContainer').classList.remove('hidden');
+  document.getElementById('detailContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideDetail() {
+  document.getElementById('detailContainer').classList.add('hidden');
+  document.querySelectorAll('td.clickable.active').forEach(c => c.classList.remove('active'));
+}
+
+// ============================================
+// EXPORT FUNCTIONS
+// ============================================
+
+function exportTable(type) {
+  // Simplified export - just export the full data as CSV
+  let data = [];
+  let filename = '';
+  
+  switch(type) {
+    case 'teae':
+      data = TEAE_DATA;
+      filename = 'TEAE_Summary_Export.csv';
+      break;
+    case 'trae':
+      data = TEAE_DATA.filter(r => r.is_TRAE);
+      filename = 'TRAE_Summary_Export.csv';
+      break;
+    case 'grade3':
+      const typeFilter = document.getElementById('grade3TypeFilter').value;
+      data = typeFilter === 'trae' 
+        ? TEAE_DATA.filter(r => r.is_TRAE && r.grade_numeric >= 3) 
+        : TEAE_DATA.filter(r => r.grade_numeric >= 3);
+      filename = 'Grade3_AE_Export.csv';
+      break;
+    case 'serious':
+      data = TEAE_DATA.filter(r => r.is_serious && r.is_TRAE);
+      filename = 'Serious_TRAE_Export.csv';
+      break;
+  }
+  
+  if (data.length === 0) {
+    alert('No data to export.');
+    return;
+  }
+  
+  const headers = ['Subject', 'Dose', 'Preferred Term', 'Grade', 'Serious', 'Relatedness', 'Start Date', 'End Date'];
+  let csv = headers.join(',') + '\n';
+  
+  for (const row of data) {
+    csv += [
+      row.Subject,
+      `"${row.ARM}"`,
+      `"${row.AETERM_pt}"`,
+      row.AETOXGR_STD,
+      row.is_serious ? 'Y' : 'N',
+      `"${row.AEREL_STD}"`,
+      formatDateDisplay(row.AESTDAT_INT),
+      formatDateDisplay(row.AEENDAT_INT, true)
+    ].join(',') + '\n';
+  }
+  
+  downloadCSV(csv, filename);
+}
+
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+// ============================================
+// INIT
+// ============================================
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('safety', 'ae-summary-table', '../../');
+    }
+  </script>
+</body>
+</html>

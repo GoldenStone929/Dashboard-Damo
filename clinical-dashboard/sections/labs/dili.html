@@ -1,0 +1,2117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DILI Plots - Drug-Induced Liver Injury Analysis (Post-Treatment)</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script src="../../assets/js/labs-config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    /* ========================================================================
+       Page Layout
+       ======================================================================== */
+    .dili-container {
+      max-width: 1900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 20px;
+    }
+
+    /* ========================================================================
+       Info Panel
+       ======================================================================== */
+    .info-panel {
+      background: #fff3e0;
+      border: 1px solid #ffcc80;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+
+    .info-panel h4 {
+      margin: 0 0 10px 0;
+      color: #e65100;
+    }
+
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #34495E;
+    }
+
+    .info-panel li {
+      margin-bottom: 5px;
+    }
+
+    .info-panel .exclusion-note {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #c62828;
+    }
+
+    /* ========================================================================
+       Controls Panel
+       ======================================================================== */
+    .controls-panel {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+    .controls-panel .control-group,
+    .controls-panel .search-group {
+      align-self: flex-end;
+    }
+    .search-group {
+      margin-left: auto;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: #2C3E50;
+      font-size: 13px;
+    }
+
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 180px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      font-size: 15px;
+      color: #34495E;
+    }
+
+    .control-placeholder {
+      visibility: hidden;
+      height: 13px;
+      margin: 0;
+    }
+
+    .search-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-direction: row;
+      margin-left: auto;
+      border: 2px solid #4F81BD;
+      background: #f5f9ff;
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .search-input {
+      padding: 8px 12px;
+      border: 1px solid #4F81BD;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 200px;
+      background: #ffffff;
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background: #4F81BD;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #2C3E50;
+    }
+
+    /* ========================================================================
+       Plot Grid
+       ======================================================================== */
+    .plots-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 1400px) {
+      .plots-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .plot-container {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      position: relative;
+    }
+
+    .plot-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+
+    .plot-subtitle {
+      font-size: 12px;
+      color: #7F8C8D;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 500px;
+    }
+
+    /* ========================================================================
+       Legend Panel
+       ======================================================================== */
+    .legend-panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+    }
+
+    .legend-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-section-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #2C3E50;
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .ref-line {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #34495E;
+    }
+
+    .ref-line-sample {
+      width: 30px;
+      height: 0;
+      border-top: 2px dashed;
+    }
+
+    .ref-line-sample.green { border-color: darkgreen; }
+    .ref-line-sample.orange { border-color: orange; }
+    .ref-line-sample.red { border-color: red; }
+
+    .alp-gradient {
+      width: 120px;
+      height: 15px;
+      background: linear-gradient(to right, green, yellow, red);
+      border-radius: 3px;
+      border: 1px solid #ccc;
+    }
+
+    .alp-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #666;
+      width: 120px;
+    }
+
+    .shape-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #34495E;
+    }
+
+    .shape-sample {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .shape-sample svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ========================================================================
+       Stats Cards
+       ======================================================================== */
+    .stats-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      border-color: #4F81BD;
+      box-shadow: 0 2px 8px rgba(79, 129, 189, 0.2);
+    }
+
+    .stat-card.active {
+      border-color: #4F81BD;
+      border-width: 2px;
+      background: #f0f7ff;
+      box-shadow: 0 2px 8px rgba(79, 129, 189, 0.3);
+    }
+
+    .stat-card.active .stat-label::after {
+      content: ' (filtered)';
+      color: #4F81BD;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+
+    .stat-value.warning { color: #e67e22; }
+    .stat-value.danger { color: #c0392b; }
+    .stat-value.muted { color: #95a5a6; }
+
+    .stat-label {
+      font-size: 11px;
+      color: #7F8C8D;
+      margin-top: 3px;
+    }
+
+    /* ========================================================================
+       Risk Table
+       ======================================================================== */
+    .risk-table-container {
+      margin-top: 20px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .risk-table-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #c0392b;
+      margin-bottom: 10px;
+    }
+
+    .risk-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .risk-table th {
+      background: #2C3E50;
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .risk-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .risk-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .risk-table tr:hover {
+      background: #e3f2fd;
+    }
+
+    /* ========================================================================
+       Loading Overlay
+       ======================================================================== */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #2C3E50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #2C3E50;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <main class="page-content">
+    <div class="dili-container">
+      <h1 class="page-title">DILI Analysis - Drug-Induced Liver Injury (Post-Treatment)</h1>
+      <p class="page-subtitle">Hy's Law Evaluation: ALT/AST vs Bilirubin with ALP Coloring | Log Scale X-Axis | Shape by Treatment Group</p>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <h4>📊 Hy's Law Criteria (Post-Treatment Analysis)</h4>
+        <ul>
+          <li><strong>BILI >2× ULN</strong> (Y-axis threshold, red line)</li>
+          <li><strong>ALT/AST >3× ULN</strong> (X-axis threshold, red line) — considered "at risk"</li>
+          <li><strong>ALP</strong>: Color gradient (green → yellow → red) indicates hepatocellular vs cholestatic injury</li>
+          <li><strong>Shape</strong>: Different shapes represent different treatment groups (ARM)</li>
+        </ul>
+        <div class="exclusion-note">
+          <strong>⚠️ Post-Treatment Only:</strong> This analysis excludes SCRN, C0D1, and any visits with date ≤ baseline (later of SCRN or C0D1). Only subjects with valid baseline dates are included.
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Log Scale</label>
+          <select id="logScale">
+            <option value="log2">Log₂ Scale</option>
+            <option value="log10">Log₁₀ Scale</option>
+            <option value="linear">Linear Scale</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Treatment Group (ARM)</label>
+          <select id="armFilter">
+            <option value="all">All Treatment Groups</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Dose Level</label>
+          <select id="doseFilter">
+            <option value="all">All Dose Levels</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-placeholder">.</label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="showLabels">
+            <label for="showLabels">Show Patient Labels</label>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-placeholder">.</label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="showHardcoded" checked>
+            <label for="showHardcoded">Include Hardcoded Data</label>
+          </div>
+        </div>
+        <div class="search-group">
+          <label>Patient ID</label>
+          <input class="search-input" id="patientSearch" type="text" placeholder="Enter Subject ID" list="patientSuggestions">
+          <datalist id="patientSuggestions"></datalist>
+          <div class="search-actions">
+            <button class="btn btn-primary" id="patientSearchBtn">Search</button>
+            <button class="btn btn-secondary" id="patientClearBtn">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend Panel -->
+      <div class="legend-panel">
+        <div class="legend-section">
+          <div class="legend-section-title">Reference Lines</div>
+          <div class="legend-items">
+            <div class="ref-line"><span class="ref-line-sample green"></span> 1× ULN</div>
+            <div class="ref-line"><span class="ref-line-sample orange"></span> 2× ULN</div>
+            <div class="ref-line"><span class="ref-line-sample red"></span> 3× ULN</div>
+          </div>
+        </div>
+        <div class="legend-section">
+          <div class="legend-section-title">ALP (×ULN) on Reference Visit</div>
+          <div class="alp-gradient"></div>
+          <div class="alp-labels"><span>0</span><span>2.5</span><span>5+</span></div>
+        </div>
+        <div class="legend-section" id="shapeLegend">
+          <div class="legend-section-title">Treatment Group (ARM)</div>
+          <div class="legend-items" id="shapeItems">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Panel -->
+      <div class="stats-panel">
+        <div class="stat-card" id="cardTotal" onclick="toggleStatFilter('all')" title="Click to show all subjects">
+          <div class="stat-value" id="statTotal">-</div>
+          <div class="stat-label">Total Subjects</div>
+        </div>
+        <div class="stat-card" id="cardMissingULN" onclick="toggleStatFilter('missingULN')" title="Click to show subjects with missing ULN">
+          <div class="stat-value muted" id="statMissingULN">-</div>
+          <div class="stat-label">Missing ULN</div>
+        </div>
+        <div class="stat-card" id="cardALT3" onclick="toggleStatFilter('alt3x')" title="Click to filter ALT ≥3× ULN">
+          <div class="stat-value warning" id="statALT3">-</div>
+          <div class="stat-label">ALT ≥3× ULN</div>
+        </div>
+        <div class="stat-card" id="cardAST3" onclick="toggleStatFilter('ast3x')" title="Click to filter AST ≥3× ULN">
+          <div class="stat-value warning" id="statAST3">-</div>
+          <div class="stat-label">AST ≥3× ULN</div>
+        </div>
+        <div class="stat-card" id="cardBILI2" onclick="toggleStatFilter('bili2x')" title="Click to filter BILI ≥2× ULN">
+          <div class="stat-value danger" id="statBILI2">-</div>
+          <div class="stat-label">BILI ≥2× ULN</div>
+        </div>
+        <div class="stat-card" id="cardHysLaw" onclick="toggleStatFilter('hysLaw')" title="Click to filter Hy's Law cases">
+          <div class="stat-value danger" id="statHysLaw">-</div>
+          <div class="stat-label">Hy's Law Cases</div>
+        </div>
+      </div>
+
+      <!-- Plot Grid -->
+      <div id="diliPlotsExportBlock" style="position: relative;">
+        <button class="export-btn" onclick="showBlockExportDialog('diliPlotsExportBlock', 'DILI_Plots')" style="position:absolute;top:0;right:0;z-index:5;background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+        <div class="plots-grid">
+        <div class="plot-container">
+          <div class="plot-title">Plot 1: BILI Reference vs ALT</div>
+          <div class="plot-subtitle">X: ALT on BILI-max visit | Y: BILI [max across study]</div>
+          <div class="chart-wrapper">
+            <canvas id="plot1Canvas"></canvas>
+          </div>
+        </div>
+        <div class="plot-container">
+          <div class="plot-title">Plot 2: ALT Reference</div>
+          <div class="plot-subtitle">X: ALT [max across study] | Y: BILI on ALT-max visit</div>
+          <div class="chart-wrapper">
+            <canvas id="plot2Canvas"></canvas>
+          </div>
+        </div>
+        <div class="plot-container">
+          <div class="plot-title">Plot 3: AST Reference</div>
+          <div class="plot-subtitle">X: AST [max across study] | Y: BILI on AST-max visit</div>
+          <div class="chart-wrapper">
+            <canvas id="plot3Canvas"></canvas>
+          </div>
+        </div>
+        <div class="plot-container">
+          <div class="plot-title">Plot 4: BILI Reference vs AST</div>
+          <div class="plot-subtitle">X: AST on BILI-max visit | Y: BILI [max across study]</div>
+          <div class="chart-wrapper">
+            <canvas id="plot4Canvas"></canvas>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Missing ULN Table -->
+      <div class="risk-table-container" id="missingULNContainer" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div class="risk-table-title" style="color: #95a5a6;">⚠️ Subjects Missing ULN Reference Values</div>
+          <button type="button" class="export-csv-btn" onclick="exportTableToCSV('missingULNContainer')" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+        </div>
+        <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">These subjects cannot be included in ratio calculations due to missing Upper Limit of Normal (ULN) values for one or more analytes.</p>
+        <table class="risk-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>ARM</th>
+              <th>ALT ULN</th>
+              <th>AST ULN</th>
+              <th>BILI ULN</th>
+              <th>ALP ULN</th>
+              <th>Missing</th>
+            </tr>
+          </thead>
+          <tbody id="missingULNBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Hy's Law Risk Table -->
+      <div class="risk-table-container" id="riskTableContainer" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div class="risk-table-title">⚠️ Hy's Law Cases (ALT/AST ≥3× ULN AND BILI ≥2× ULN)</div>
+          <button type="button" class="export-csv-btn" onclick="exportTableToCSV('riskTableContainer')" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+        </div>
+        <table class="risk-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>ARM</th>
+              <th>Reference Visit</th>
+              <th>ALT (×ULN)</th>
+              <th>AST (×ULN)</th>
+              <th>BILI (×ULN)</th>
+              <th>ALP (×ULN)</th>
+            </tr>
+          </thead>
+          <tbody id="riskTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading DILI Analysis Data...</div>
+  </div>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'dili', '../../');
+    }
+  </script>
+  <script>
+    // ========================================================================
+    // DILI Plots - Post-Treatment Analysis with Log Scale
+    // Matching R code: DILI All Four Plots Script - LOG SCALE VERSIONS
+    // ========================================================================
+
+    // ========================================================================
+    // Constants & Configuration
+    // ========================================================================
+    const PRE_TREATMENT_VISITS = ['SCRN', 'C0D1'];
+
+    // Shape mapping for ARM - expanded for better distinction
+    // Chart.js supported pointStyle values:
+    // circle, triangle, rect, rectRot, rectRounded, cross, crossRot, star, line, dash
+    // Custom fillable shapes - using canvas-drawn images
+    // We need at least 9 distinct fillable shapes
+    const SHAPE_DEFINITIONS = [
+      { name: 'circle', label: '圆形' },
+      { name: 'triangleUp', label: '向上三角' },
+      { name: 'triangleDown', label: '向下三角' },
+      { name: 'square', label: '正方形' },
+      { name: 'diamond', label: '菱形' },
+      { name: 'pentagon', label: '五边形' },
+      { name: 'hexagon', label: '六边形' },
+      { name: 'triangleRight', label: '向右三角' },
+      { name: 'triangleLeft', label: '向左三角' },
+      { name: 'octagon', label: '八边形' }
+    ];
+
+    // Create a filled shape image for use as Chart.js pointStyle
+    function createShapeImage(shapeName, fillColor, size = 16) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const cx = size / 2;
+      const cy = size / 2;
+      const r = size / 2 - 1;
+
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 0.5;
+
+      ctx.beginPath();
+      switch (shapeName) {
+        case 'circle':
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          break;
+        case 'triangleUp':
+          ctx.moveTo(cx, cy - r);
+          ctx.lineTo(cx + r, cy + r * 0.8);
+          ctx.lineTo(cx - r, cy + r * 0.8);
+          ctx.closePath();
+          break;
+        case 'triangleDown':
+          ctx.moveTo(cx, cy + r);
+          ctx.lineTo(cx + r, cy - r * 0.8);
+          ctx.lineTo(cx - r, cy - r * 0.8);
+          ctx.closePath();
+          break;
+        case 'triangleRight':
+          ctx.moveTo(cx + r, cy);
+          ctx.lineTo(cx - r * 0.8, cy - r);
+          ctx.lineTo(cx - r * 0.8, cy + r);
+          ctx.closePath();
+          break;
+        case 'triangleLeft':
+          ctx.moveTo(cx - r, cy);
+          ctx.lineTo(cx + r * 0.8, cy - r);
+          ctx.lineTo(cx + r * 0.8, cy + r);
+          ctx.closePath();
+          break;
+        case 'square':
+          ctx.rect(cx - r * 0.75, cy - r * 0.75, r * 1.5, r * 1.5);
+          break;
+        case 'diamond':
+          ctx.moveTo(cx, cy - r);
+          ctx.lineTo(cx + r, cy);
+          ctx.lineTo(cx, cy + r);
+          ctx.lineTo(cx - r, cy);
+          ctx.closePath();
+          break;
+        case 'pentagon':
+          for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        case 'hexagon':
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * 2 * Math.PI / 6) - Math.PI / 2;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        case 'octagon':
+          for (let i = 0; i < 8; i++) {
+            const angle = (i * 2 * Math.PI / 8) - Math.PI / 2;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        default:
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      const img = new Image();
+      img.src = canvas.toDataURL();
+      return img;
+    }
+
+    // Get shape name for an ARM index
+    function getShapeName(armIndex) {
+      return SHAPE_DEFINITIONS[armIndex % SHAPE_DEFINITIONS.length].name;
+    }
+
+    // ========================================================================
+    // Get hardcoded DILI data from LABS_CONFIG
+    // ========================================================================
+    function getHardcodedDILIData() {
+      const hardcodedData = [];
+      
+      if (typeof LABS_CONFIG === 'undefined' || !LABS_CONFIG.hardcodedPatients) {
+        return hardcodedData;
+      }
+      
+      // Map analyte names to DILI groups
+      const analyteMap = {
+        'Alanine Aminotransferase; ALT': 'ALT',
+        'Aspartate Aminotransferase; AST': 'AST',
+        'Bilirubin; BILI': 'BILI',
+        'Alkaline Phosphatase; ALP': 'ALP'
+      };
+      
+      Object.entries(LABS_CONFIG.hardcodedPatients).forEach(([patientId, patientData]) => {
+        // Group data by date/folder
+        const dataByDate = {};
+        
+        patientData.data.forEach(d => {
+          const analyteGroup = analyteMap[d.analyte];
+          if (!analyteGroup) return;
+          
+          const ranges = patientData.ranges[d.analyte];
+          if (!ranges || !ranges.high) return;
+          
+          if (!dataByDate[d.date]) {
+            dataByDate[d.date] = {};
+          }
+          
+          dataByDate[d.date][analyteGroup] = {
+            value: d.value,
+            high: ranges.high
+          };
+        });
+        
+        // Create records for each date that has data
+        Object.entries(dataByDate).forEach(([date, analytes]) => {
+          Object.entries(analytes).forEach(([analyteGroup, data]) => {
+            hardcodedData.push({
+              Subject: patientId,
+              Folder: `HC-${date}`,
+              AnalyteGroup: analyteGroup,
+              NumericValue: data.value,
+              LabHigh_clean: data.high
+            });
+          });
+        });
+      });
+      
+      return hardcodedData;
+    }
+
+    // ========================================================================
+    // State
+    // ========================================================================
+    const state = {
+      labData: [],
+      lblhData: [],
+      dmData: [],
+      dsenData: [],
+      baselineDates: {},
+      postTreatmentData: [],
+      altData: [],
+      astData: [],
+      biliData: [],
+      alpData: [],
+      ulnFixed: { ALT: {}, AST: {}, BILI: {}, ALP: {} },
+      plotData: { plot1: [], plot2: [], plot3: [], plot4: [] },
+      charts: {},
+      armList: [],
+      shapeMap: {},
+      highlightSubject: '',
+      uniqueDoseLevels: [],
+      debug: [],
+      // Filter state
+      activeStatFilter: null,
+      filterSubjects: {
+        all: new Set(),
+        missingULN: new Set(),
+        alt3x: new Set(),
+        ast3x: new Set(),
+        bili2x: new Set(),
+        hysLaw: new Set()
+      },
+      // Detailed missing ULN info: { subject: { ALT: value/null, AST: value/null, BILI: value/null, ALP: value/null, ARM: string } }
+      missingULNDetails: {}
+    };
+
+    // ========================================================================
+    // Utility Functions
+    // ========================================================================
+    function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    function log(msg) {
+      state.debug.push(msg);
+      console.log(msg);
+    }
+
+    function normalizeSubjectId(val) {
+      return String(val || '').trim().toUpperCase();
+    }
+
+    function isHighlightedSubject(subject) {
+      if (!state.highlightSubject) return false;
+      return normalizeSubjectId(subject) === state.highlightSubject;
+    }
+
+    // Parse date from LBDAT_INT format: '18DEC2024:00:00:00.000'
+    function parseLBDAT(dateStr) {
+      if (!dateStr) return null;
+      const str = String(dateStr).trim();
+      const datePart = str.split(':')[0];
+      if (!datePart) return null;
+
+      // Try format: 18DEC2024
+      const match = datePart.match(/^(\d{1,2})([A-Z]{3})(\d{4})$/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+                        JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        const month = months[monthStr];
+        if (month !== undefined) {
+          return new Date(year, month, day);
+        }
+      }
+      return null;
+    }
+
+    function extractFirstNumber(str) {
+      if (typeof str === 'number') return str;
+      if (!str) return null;
+      const match = String(str).match(/-?\d+(?:\.\d+)?/);
+      return match ? parseFloat(match[0]) : null;
+    }
+
+    function categorizeAnalyte(analyteName) {
+      if (!analyteName) return null;
+      const lower = String(analyteName).toLowerCase();
+
+      const altNames = ['alanine aminotransferase', 'alt'];
+      const astNames = ['aspartate aminotransferase', 'ast'];
+      const biliNames = ['bilirubin', 'bili', 'total bilirubin', 'tbili'];
+      const alpNames = ['alkaline phosphatase', 'alp'];
+
+      // Split by semicolon and check each part
+      const parts = lower.split(';').map(p => p.trim());
+
+      for (const part of parts) {
+        if (altNames.includes(part) || part.includes('alanine') || /\balt\b/.test(part)) return 'ALT';
+        if (astNames.includes(part) || part.includes('aspartate') || /\bast\b/.test(part)) return 'AST';
+        if (biliNames.includes(part) || part.includes('bilirubin') || /\bbili\b/.test(part)) return 'BILI';
+        if (alpNames.includes(part) || part.includes('alkaline') || /\balp\b/.test(part)) return 'ALP';
+      }
+      return null;
+    }
+
+    function getLabHigh(row) {
+      // Priority: LabHigh > stdHigh > extract from range
+      let value = parseFloat(row.LabHigh || row.LABHIGH || row.labHigh || '');
+      if (!isNaN(value) && value > 0) return value;
+
+      value = parseFloat(row.stdHigh || row.STDHIGH || row.StdHigh || '');
+      if (!isNaN(value) && value > 0) return value;
+
+      // Try to extract from various range columns
+      const rangeCols = ['ULN', 'UpperLimit', 'Upper.Limit', 'LabRange', 'ReferenceRange', 'NormalRange'];
+      for (const col of rangeCols) {
+        if (row[col]) {
+          const nums = String(row[col]).match(/-?\d+(?:\.\d+)?/g);
+          if (nums && nums.length > 0) {
+            const max = Math.max(...nums.map(n => parseFloat(n)));
+            if (max > 0) return max;
+          }
+        }
+      }
+      return null;
+    }
+
+    function roundUpHalf(v) {
+      if (!v || !isFinite(v) || v <= 0) return 1;
+      return Math.ceil(v * 2) / 2;
+    }
+
+    // ========================================================================
+    // Data Processing (Matching R Code) - POST-TREATMENT LOGIC
+    // ========================================================================
+    function processData() {
+      log('=== Starting Data Processing (Post-Treatment Only) ===');
+
+      // Step 1: Parse lblh.csv to get visit dates
+      const visitDates = {};
+      state.lblhData.forEach(row => {
+        const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+        const folder = String(row.Folder || row.FOLDER || row.folder || '').trim();
+        const date = parseLBDAT(row.LBDAT_INT || row.LBDAT || row.lbdat_int || '');
+        if (subject && folder && date) {
+          const key = `${subject}|${folder}`;
+          if (!visitDates[key] || date > visitDates[key]) {
+            visitDates[key] = date;
+          }
+        }
+      });
+      log(`Parsed visit dates: ${Object.keys(visitDates).length} Subject-Folder combinations`);
+
+      // Step 2: Get baseline date for each subject (later of SCRN or C0D1)
+      // POST-TREATMENT: Baseline is the later of SCRN or C0D1
+      const baselineDates = {};
+      PRE_TREATMENT_VISITS.forEach(visit => {
+        state.lblhData.forEach(row => {
+          const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+          const folder = String(row.Folder || row.FOLDER || row.folder || '').trim().toUpperCase();
+          if (folder === visit) {
+            const date = parseLBDAT(row.LBDAT_INT || row.LBDAT || row.lbdat_int || '');
+            if (date) {
+              if (!baselineDates[subject] || date > baselineDates[subject]) {
+                baselineDates[subject] = date;
+              }
+            }
+          }
+        });
+      });
+      state.baselineDates = baselineDates;
+      log(`Baseline dates found for ${Object.keys(baselineDates).length} subjects`);
+
+      // Step 3: Build ARM lookup
+      const armLookup = {};
+      state.dmData.forEach(row => {
+        const subject = String(row.SUBJID || row.Subject || row.subject || row.subjid || '').trim();
+        const arm = String(row.ARM || row.arm || row.ARMCD || row.Treatment || row.TRT01P || '').trim() || 'Unknown';
+        if (subject) armLookup[subject] = arm;
+      });
+      log(`ARM data loaded for ${Object.keys(armLookup).length} subjects`);
+
+      // Step 4: Build Dose lookup
+      const doseLookup = {};
+      state.dsenData.forEach(row => {
+        const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+        const dose = String(row.DOSE_LVL || row.DoseLevel || row.dose_lvl || '').trim();
+        if (subject && dose) doseLookup[subject] = dose;
+      });
+
+      // Step 5: Process lab data - categorize analytes and filter
+      // POST-TREATMENT: Exclude SCRN, C0D1, and visits with date <= baseline
+      const processedLab = [];
+      let rowId = 0;
+
+      state.labData.forEach(row => {
+        const subject = String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+        const folder = String(row.Folder || row.FOLDER || row.folder || '').trim().toUpperCase();
+
+        if (!subject) return;
+
+        // POST-TREATMENT: Skip pre-treatment visits
+        if (PRE_TREATMENT_VISITS.includes(folder)) return;
+
+        // POST-TREATMENT: Check if subject has baseline date
+        if (!baselineDates[subject]) return;
+
+        // POST-TREATMENT: Check if visit date is after baseline
+        const visitKey = `${subject}|${folder}`;
+        const visitDate = visitDates[visitKey];
+        if (!visitDate || visitDate <= baselineDates[subject]) return;
+
+        const analyteGroup = categorizeAnalyte(row.AnalyteName || row.ANALYTENAME || row.analyteName || '');
+        if (!analyteGroup) return;
+
+        const numericValue = extractFirstNumber(row.NumericValue || row.AnalyteValue || row.stdValue || row.STDVALUE || '');
+        if (numericValue === null || numericValue < 0) return;
+
+        const labHigh = getLabHigh(row);
+
+        processedLab.push({
+          rowId: rowId++,
+          Subject: subject,
+          Folder: folder,
+          AnalyteGroup: analyteGroup,
+          NumericValue: numericValue,
+          LabHigh_clean: labHigh,
+          ARM: armLookup[subject] || 'Unknown',
+          DoseLevel: doseLookup[subject] || ''
+        });
+      });
+
+      log(`Post-treatment lab records: ${processedLab.length}`);
+
+      // Step 6: Add hardcoded data if enabled
+      const includeHardcoded = document.getElementById('showHardcoded').checked;
+      if (includeHardcoded) {
+        const hardcodedData = getHardcodedDILIData();
+        hardcodedData.forEach(hc => {
+          processedLab.push({
+            rowId: rowId++,
+            Subject: hc.Subject,
+            Folder: hc.Folder,
+            AnalyteGroup: hc.AnalyteGroup,
+            NumericValue: hc.NumericValue,
+            LabHigh_clean: hc.LabHigh_clean,
+            ARM: armLookup[hc.Subject] || 'Unknown',
+            DoseLevel: doseLookup[hc.Subject] || ''
+          });
+        });
+        log(`Added ${hardcodedData.length} hardcoded records from LABS_CONFIG`);
+      }
+
+      state.postTreatmentData = processedLab;
+
+      // Step 7: Split by analyte and take max per visit
+      const takeMaxPerVisit = (data) => {
+        const bySubjectFolder = {};
+        data.forEach(row => {
+          const key = `${row.Subject}|${row.Folder}`;
+          if (!bySubjectFolder[key] || row.NumericValue > bySubjectFolder[key].NumericValue) {
+            bySubjectFolder[key] = row;
+          }
+        });
+        return Object.values(bySubjectFolder);
+      };
+
+      state.altData = takeMaxPerVisit(processedLab.filter(r => r.AnalyteGroup === 'ALT'));
+      state.astData = takeMaxPerVisit(processedLab.filter(r => r.AnalyteGroup === 'AST'));
+      state.biliData = takeMaxPerVisit(processedLab.filter(r => r.AnalyteGroup === 'BILI'));
+      state.alpData = takeMaxPerVisit(processedLab.filter(r => r.AnalyteGroup === 'ALP'));
+
+      log(`ALT records: ${state.altData.length}`);
+      log(`AST records: ${state.astData.length}`);
+      log(`BILI records: ${state.biliData.length}`);
+      log(`ALP records: ${state.alpData.length}`);
+
+      // Step 8: Get fixed ULN per subject (first valid ULN)
+      const getFixedULN = (data) => {
+        const uln = {};
+        data.sort((a, b) => a.rowId - b.rowId);
+        data.forEach(row => {
+          if (!uln[row.Subject] && row.LabHigh_clean > 0) {
+            uln[row.Subject] = row.LabHigh_clean;
+          }
+        });
+        return uln;
+      };
+
+      state.ulnFixed.ALT = getFixedULN(state.altData);
+      state.ulnFixed.AST = getFixedULN(state.astData);
+      state.ulnFixed.BILI = getFixedULN(state.biliData);
+      state.ulnFixed.ALP = getFixedULN(state.alpData);
+
+      // Step 9: Build ARM list and shape map
+      const allARMs = new Set();
+      processedLab.forEach(row => allARMs.add(row.ARM));
+      state.armList = Array.from(allARMs).sort();
+
+      // Shapes are now assigned by index using SHAPE_DEFINITIONS
+      log(`Treatment groups (${state.armList.length}): ${state.armList.join(', ')}`);
+
+      // Step 10: Build dose level list
+      const doseSet = new Set();
+      processedLab.forEach(row => {
+        if (row.DoseLevel) doseSet.add(row.DoseLevel);
+      });
+      state.uniqueDoseLevels = Array.from(doseSet).sort();
+
+      // Step 11: Build plot data
+      buildPlotData();
+
+      // Step 12: Update stats
+      updateStats();
+    }
+
+    function getSameFolderValue(data, subject, folder, ulnFixed) {
+      const row = data.find(r => r.Subject === subject && r.Folder === folder);
+      if (!row) return { value: null, ratio: null };
+      const uln = ulnFixed[subject] || row.LabHigh_clean;
+      const ratio = (uln && uln > 0) ? row.NumericValue / uln : null;
+      return { value: row.NumericValue, ratio };
+    }
+
+    function buildPlotData() {
+      // Plot 1: BILI Reference vs ALT
+      // X: ALT on BILI-max visit, Y: BILI (max across study)
+      const biliMaxRows = getBiliMaxRows();
+      state.plotData.plot1 = biliMaxRows.map(row => {
+        const altInfo = getSameFolderValue(state.altData, row.Subject, row.Folder, state.ulnFixed.ALT);
+        const alpInfo = getSameFolderValue(state.alpData, row.Subject, row.Folder, state.ulnFixed.ALP);
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          X: altInfo.ratio,
+          Y: row.Ratio_BILI,
+          ALP: alpInfo.ratio
+        };
+      }).filter(r => r.X !== null && r.Y !== null && r.X > 0);
+
+      // Plot 2: ALT Reference
+      // X: ALT (max across study), Y: BILI on ALT-max visit
+      const altMaxRows = getALTMaxRows();
+      state.plotData.plot2 = altMaxRows.map(row => {
+        const biliInfo = getSameFolderValue(state.biliData, row.Subject, row.Folder, state.ulnFixed.BILI);
+        const alpInfo = getSameFolderValue(state.alpData, row.Subject, row.Folder, state.ulnFixed.ALP);
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          X: row.Ratio_ALT,
+          Y: biliInfo.ratio,
+          ALP: alpInfo.ratio
+        };
+      }).filter(r => r.X !== null && r.Y !== null && r.X > 0);
+
+      // Plot 3: AST Reference
+      // X: AST (max across study), Y: BILI on AST-max visit
+      const astMaxRows = getASTMaxRows();
+      state.plotData.plot3 = astMaxRows.map(row => {
+        const biliInfo = getSameFolderValue(state.biliData, row.Subject, row.Folder, state.ulnFixed.BILI);
+        const alpInfo = getSameFolderValue(state.alpData, row.Subject, row.Folder, state.ulnFixed.ALP);
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          X: row.Ratio_AST,
+          Y: biliInfo.ratio,
+          ALP: alpInfo.ratio
+        };
+      }).filter(r => r.X !== null && r.Y !== null && r.X > 0);
+
+      // Plot 4: BILI Reference vs AST
+      // X: AST on BILI-max visit, Y: BILI (max across study)
+      state.plotData.plot4 = biliMaxRows.map(row => {
+        const astInfo = getSameFolderValue(state.astData, row.Subject, row.Folder, state.ulnFixed.AST);
+        const alpInfo = getSameFolderValue(state.alpData, row.Subject, row.Folder, state.ulnFixed.ALP);
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          X: astInfo.ratio,
+          Y: row.Ratio_BILI,
+          ALP: alpInfo.ratio
+        };
+      }).filter(r => r.X !== null && r.Y !== null && r.X > 0);
+
+      log(`Plot 1 data points: ${state.plotData.plot1.length}`);
+      log(`Plot 2 data points: ${state.plotData.plot2.length}`);
+      log(`Plot 3 data points: ${state.plotData.plot3.length}`);
+      log(`Plot 4 data points: ${state.plotData.plot4.length}`);
+    }
+
+    function getBiliMaxRows() {
+      // Get max BILI per subject, then return that row with ratio
+      const bySubject = {};
+      state.biliData.forEach(row => {
+        if (!bySubject[row.Subject] || row.NumericValue > bySubject[row.Subject].NumericValue) {
+          bySubject[row.Subject] = row;
+        }
+      });
+
+      return Object.values(bySubject).map(row => {
+        const uln = state.ulnFixed.BILI[row.Subject] || row.LabHigh_clean;
+        const ratio = (uln && uln > 0) ? row.NumericValue / uln : null;
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          Ratio_BILI: ratio
+        };
+      });
+    }
+
+    function getALTMaxRows() {
+      const bySubject = {};
+      state.altData.forEach(row => {
+        if (!bySubject[row.Subject] || row.NumericValue > bySubject[row.Subject].NumericValue) {
+          bySubject[row.Subject] = row;
+        }
+      });
+
+      return Object.values(bySubject).map(row => {
+        const uln = state.ulnFixed.ALT[row.Subject] || row.LabHigh_clean;
+        const ratio = (uln && uln > 0) ? row.NumericValue / uln : null;
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          Ratio_ALT: ratio
+        };
+      });
+    }
+
+    function getASTMaxRows() {
+      const bySubject = {};
+      state.astData.forEach(row => {
+        if (!bySubject[row.Subject] || row.NumericValue > bySubject[row.Subject].NumericValue) {
+          bySubject[row.Subject] = row;
+        }
+      });
+
+      return Object.values(bySubject).map(row => {
+        const uln = state.ulnFixed.AST[row.Subject] || row.LabHigh_clean;
+        const ratio = (uln && uln > 0) ? row.NumericValue / uln : null;
+        return {
+          Subject: row.Subject,
+          Folder: row.Folder,
+          ARM: row.ARM,
+          DoseLevel: row.DoseLevel,
+          Ratio_AST: ratio
+        };
+      });
+    }
+
+    function updateStats() {
+      const allSubjects = new Set();
+      state.postTreatmentData.forEach(r => allSubjects.add(r.Subject));
+
+      // Count subjects missing ULN for any analyte and store details
+      const missingULN = new Set();
+      state.missingULNDetails = {};
+      
+      allSubjects.forEach(subject => {
+        const altULN = state.ulnFixed.ALT[subject];
+        const astULN = state.ulnFixed.AST[subject];
+        const biliULN = state.ulnFixed.BILI[subject];
+        const alpULN = state.ulnFixed.ALP[subject];
+        
+        const hasALT_ULN = altULN > 0;
+        const hasAST_ULN = astULN > 0;
+        const hasBILI_ULN = biliULN > 0;
+        
+        // Subject is "missing ULN" if missing ANY of the key liver analytes (ALT, AST, BILI)
+        if (!hasALT_ULN || !hasAST_ULN || !hasBILI_ULN) {
+          missingULN.add(subject);
+          
+          // Get ARM from any data point
+          const anyData = state.postTreatmentData.find(r => r.Subject === subject);
+          const missingList = [];
+          if (!hasALT_ULN) missingList.push('ALT');
+          if (!hasAST_ULN) missingList.push('AST');
+          if (!hasBILI_ULN) missingList.push('BILI');
+          
+          state.missingULNDetails[subject] = {
+            ALT: altULN || null,
+            AST: astULN || null,
+            BILI: biliULN || null,
+            ALP: alpULN || null,
+            ARM: anyData?.ARM || 'Unknown',
+            missing: missingList
+          };
+        }
+      });
+
+      document.getElementById('statTotal').textContent = allSubjects.size;
+      document.getElementById('statMissingULN').textContent = missingULN.size;
+
+      // Count subjects with ALT >= 3x ULN
+      const alt3x = new Set();
+      state.altData.forEach(row => {
+        const uln = state.ulnFixed.ALT[row.Subject] || row.LabHigh_clean;
+        if (uln && row.NumericValue >= 3 * uln) alt3x.add(row.Subject);
+      });
+      document.getElementById('statALT3').textContent = alt3x.size;
+
+      // Count subjects with AST >= 3x ULN
+      const ast3x = new Set();
+      state.astData.forEach(row => {
+        const uln = state.ulnFixed.AST[row.Subject] || row.LabHigh_clean;
+        if (uln && row.NumericValue >= 3 * uln) ast3x.add(row.Subject);
+      });
+      document.getElementById('statAST3').textContent = ast3x.size;
+
+      // Count subjects with BILI >= 2x ULN
+      const bili2x = new Set();
+      state.biliData.forEach(row => {
+        const uln = state.ulnFixed.BILI[row.Subject] || row.LabHigh_clean;
+        if (uln && row.NumericValue >= 2 * uln) bili2x.add(row.Subject);
+      });
+      document.getElementById('statBILI2').textContent = bili2x.size;
+
+      // Hy's Law cases (ALT or AST >= 3x AND BILI >= 2x)
+      const hysLaw = new Set();
+      const altOrAst3x = new Set([...alt3x, ...ast3x]);
+      altOrAst3x.forEach(subj => {
+        if (bili2x.has(subj)) hysLaw.add(subj);
+      });
+      document.getElementById('statHysLaw').textContent = hysLaw.size;
+
+      // Store filter subject sets in state
+      state.filterSubjects.all = allSubjects;
+      state.filterSubjects.missingULN = missingULN;
+      state.filterSubjects.alt3x = alt3x;
+      state.filterSubjects.ast3x = ast3x;
+      state.filterSubjects.bili2x = bili2x;
+      state.filterSubjects.hysLaw = hysLaw;
+
+      // Update risk table
+      updateRiskTable(hysLaw);
+    }
+
+    // Toggle stat filter on click
+    function toggleStatFilter(filterType) {
+      // Clear all active states
+      document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+      
+      // Hide missing ULN table by default
+      const missingULNContainer = document.getElementById('missingULNContainer');
+      
+      if (state.activeStatFilter === filterType || filterType === 'all') {
+        // Toggle off or click "all" - show all data
+        state.activeStatFilter = null;
+        missingULNContainer.style.display = 'none';
+      } else {
+        // Activate filter
+        state.activeStatFilter = filterType;
+        const cardId = {
+          'missingULN': 'cardMissingULN',
+          'alt3x': 'cardALT3',
+          'ast3x': 'cardAST3',
+          'bili2x': 'cardBILI2',
+          'hysLaw': 'cardHysLaw'
+        }[filterType];
+        if (cardId) {
+          document.getElementById(cardId).classList.add('active');
+        }
+        
+        // Special handling for missingULN - show table instead of filtering charts
+        if (filterType === 'missingULN') {
+          updateMissingULNTable();
+          missingULNContainer.style.display = 'block';
+          state.activeStatFilter = null; // Don't filter charts for this one
+        } else {
+          missingULNContainer.style.display = 'none';
+        }
+      }
+      
+      renderAllCharts();
+    }
+    
+    // Update the Missing ULN table
+    function updateMissingULNTable() {
+      const tbody = document.getElementById('missingULNBody');
+      tbody.innerHTML = '';
+      
+      const subjects = Object.keys(state.missingULNDetails).sort();
+      
+      subjects.forEach(subject => {
+        const info = state.missingULNDetails[subject];
+        const row = document.createElement('tr');
+        
+        const formatULN = (val) => {
+          if (val === null || val === undefined) {
+            return '<span style="color: #e74c3c; font-weight: bold;">Missing</span>';
+          }
+          return `<span style="color: #27ae60;">${val}</span>`;
+        };
+        
+        row.innerHTML = `
+          <td><strong>${subject}</strong></td>
+          <td>${info.ARM}</td>
+          <td>${formatULN(info.ALT)}</td>
+          <td>${formatULN(info.AST)}</td>
+          <td>${formatULN(info.BILI)}</td>
+          <td>${formatULN(info.ALP)}</td>
+          <td style="color: #e74c3c; font-weight: 600;">${info.missing.join(', ')}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateRiskTable(hysLawSubjects) {
+      const container = document.getElementById('riskTableContainer');
+      const tbody = document.getElementById('riskTableBody');
+
+      if (hysLawSubjects.size === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      tbody.innerHTML = '';
+
+      // For each Hy's Law subject, show their max values
+      Array.from(hysLawSubjects).sort().forEach(subject => {
+        const altMax = state.altData.filter(r => r.Subject === subject)
+          .reduce((max, r) => r.NumericValue > (max?.NumericValue || 0) ? r : max, null);
+        const astMax = state.astData.filter(r => r.Subject === subject)
+          .reduce((max, r) => r.NumericValue > (max?.NumericValue || 0) ? r : max, null);
+        const biliMax = state.biliData.filter(r => r.Subject === subject)
+          .reduce((max, r) => r.NumericValue > (max?.NumericValue || 0) ? r : max, null);
+        const alpMax = state.alpData.filter(r => r.Subject === subject)
+          .reduce((max, r) => r.NumericValue > (max?.NumericValue || 0) ? r : max, null);
+
+        const altULN = state.ulnFixed.ALT[subject];
+        const astULN = state.ulnFixed.AST[subject];
+        const biliULN = state.ulnFixed.BILI[subject];
+        const alpULN = state.ulnFixed.ALP[subject];
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${subject}</strong></td>
+          <td>${altMax?.ARM || 'Unknown'}</td>
+          <td>${biliMax?.Folder || '-'}</td>
+          <td>${altMax && altULN ? (altMax.NumericValue / altULN).toFixed(2) : '-'}</td>
+          <td>${astMax && astULN ? (astMax.NumericValue / astULN).toFixed(2) : '-'}</td>
+          <td>${biliMax && biliULN ? (biliMax.NumericValue / biliULN).toFixed(2) : '-'}</td>
+          <td>${alpMax && alpULN ? (alpMax.NumericValue / alpULN).toFixed(2) : '-'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // ========================================================================
+    // Chart Rendering
+    // ========================================================================
+    function getALPColor(alpRatio) {
+      if (alpRatio === null || alpRatio === undefined) return 'rgba(128, 128, 128, 0.7)';
+
+      // Clamp to 0-5 range (matching R: limits = c(0, 5))
+      const v = Math.max(0, Math.min(5, alpRatio)) / 5;
+
+      // Green -> Yellow -> Red gradient
+      let r, g, b;
+      if (v < 0.5) {
+        const t = v * 2;
+        r = Math.round(255 * t);
+        g = Math.round(128 + 127 * (1 - t));
+        b = 0;
+      } else {
+        const t = (v - 0.5) * 2;
+        r = 255;
+        g = Math.round(255 * (1 - t));
+        b = 0;
+      }
+
+      return `rgba(${r}, ${g}, ${b}, 0.8)`;
+    }
+
+    // Cache for shape images to avoid recreating them
+    const shapeImageCache = {};
+
+    function getShapeImage(shapeName, color, size = 16) {
+      const cacheKey = `${shapeName}_${color}_${size}`;
+      if (!shapeImageCache[cacheKey]) {
+        shapeImageCache[cacheKey] = createShapeImage(shapeName, color, size);
+      }
+      return shapeImageCache[cacheKey];
+    }
+
+    function getPointStyleForData(arm, alpColor, size = 16) {
+      const armIndex = state.armList.indexOf(arm);
+      const shapeName = getShapeName(armIndex >= 0 ? armIndex : 0);
+      return getShapeImage(shapeName, alpColor, size);
+    }
+
+    function renderChart(canvasId, plotData, xLabel, yLabel, title) {
+      const armFilter = document.getElementById('armFilter').value;
+      const doseFilter = document.getElementById('doseFilter').value;
+      const logScale = document.getElementById('logScale').value;
+      const showLabels = document.getElementById('showLabels').checked;
+      const showFolder = false;
+
+      let data = plotData;
+      if (armFilter !== 'all') {
+        data = data.filter(d => d.ARM === armFilter);
+      }
+      if (doseFilter !== 'all') {
+        data = data.filter(d => d.DoseLevel === doseFilter);
+      }
+      if (state.highlightSubject) {
+        data = data.filter(d => normalizeSubjectId(d.Subject) === state.highlightSubject);
+      }
+      
+      // Apply stat card filter
+      if (state.activeStatFilter && state.filterSubjects[state.activeStatFilter]) {
+        const filterSet = state.filterSubjects[state.activeStatFilter];
+        data = data.filter(d => filterSet.has(d.Subject));
+      }
+
+      if (data.length === 0) {
+        // Show empty chart
+        if (state.charts[canvasId]) {
+          state.charts[canvasId].destroy();
+        }
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        state.charts[canvasId] = new Chart(ctx, {
+          type: 'scatter',
+          data: { datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              title: { display: true, text: 'No data available' }
+            }
+          }
+        });
+        return;
+      }
+
+      // Calculate axis limits
+      const xMax = roundUpHalf(Math.max(...data.map(d => d.X), 1));
+      const yMax = roundUpHalf(Math.max(...data.map(d => d.Y), 1));
+      const xMin = Math.min(...data.map(d => d.X));
+
+      const formatAxisTick = (value) => {
+        if (value == null || Number.isNaN(value)) return '';
+        const rounded = Math.round(value * 100) / 100;
+        if (Number.isInteger(rounded)) return String(rounded);
+        return String(rounded).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+      };
+
+      // Determine scale configuration
+      let xScaleConfig;
+      if (logScale === 'log2') {
+        const breaks = [0.5, 1, 2, 4, 8, 16, 32, 64, 128].filter(b => b >= xMin * 0.8 && b <= xMax * 1.2);
+        xScaleConfig = {
+          type: 'logarithmic',
+          min: Math.max(0.1, xMin * 0.5),
+          max: Math.max(xMax * 1.2, 2),
+          title: {
+            display: true,
+            text: `${xLabel} (×ULN) [log₂ scale]`,
+            font: { size: 12, weight: 'bold' }
+          },
+          ticks: {
+            callback: (v, idx, ticks) => (idx === ticks.length - 1 ? '' : formatAxisTick(v)),
+            font: { size: 11 }
+          },
+          grid: { display: false }
+        };
+      } else if (logScale === 'log10') {
+        xScaleConfig = {
+          type: 'logarithmic',
+          min: Math.max(0.1, xMin * 0.5),
+          max: Math.max(xMax * 1.2, 2),
+          title: {
+            display: true,
+            text: `${xLabel} (×ULN) [log₁₀ scale]`,
+            font: { size: 12, weight: 'bold' }
+          },
+          ticks: {
+            callback: (v, idx, ticks) => (idx === ticks.length - 1 ? '' : formatAxisTick(v)),
+            font: { size: 11 }
+          },
+          grid: { display: false }
+        };
+      } else {
+        xScaleConfig = {
+          type: 'linear',
+          min: 0,
+          max: Math.ceil(xMax),
+          title: {
+            display: true,
+            text: `${xLabel} (×ULN)`,
+            font: { size: 12, weight: 'bold' }
+          },
+          ticks: {
+            stepSize: 1,
+            callback: (v, idx, ticks) => (idx === ticks.length - 1 ? '' : formatAxisTick(v)),
+            font: { size: 11 }
+          },
+          grid: { display: false }
+        };
+      }
+
+      // Destroy existing chart
+      if (state.charts[canvasId]) {
+        state.charts[canvasId].destroy();
+      }
+
+      const ctx = document.getElementById(canvasId).getContext('2d');
+
+      // Group data by ARM for different point styles
+      const datasets = [];
+      const armGroups = {};
+      data.forEach(d => {
+        if (!armGroups[d.ARM]) armGroups[d.ARM] = [];
+        armGroups[d.ARM].push(d);
+      });
+
+      Object.entries(armGroups).forEach(([arm, points]) => {
+        const armIndex = state.armList.indexOf(arm);
+        const shapeName = getShapeName(armIndex >= 0 ? armIndex : 0);
+        
+        datasets.push({
+          label: arm,
+          data: points.map(d => ({
+            x: d.X,
+            y: d.Y,
+            subject: d.Subject,
+            folder: d.Folder,
+            arm: d.ARM,
+            dose: d.DoseLevel,
+            alp: d.ALP,
+            alpColor: getALPColor(d.ALP),
+            shapeName: shapeName
+          })),
+          // Same size for all shapes - no variation
+          pointRadius: (ctx) => {
+            return isHighlightedSubject(ctx.raw?.subject) ? 12 : 8;
+          },
+          pointHoverRadius: (ctx) => {
+            return isHighlightedSubject(ctx.raw?.subject) ? 14 : 12;
+          },
+          // Use custom shape images with color baked in
+          pointStyle: (ctx) => {
+            const d = ctx.raw;
+            if (!d) return 'circle';
+            const size = isHighlightedSubject(d.subject) ? 24 : 16;
+            return getShapeImage(d.shapeName, d.alpColor, size);
+          },
+          // These won't be used since color is in the image, but keep for fallback
+          backgroundColor: points.map(d => getALPColor(d.ALP)),
+          borderColor: 'transparent',
+          borderWidth: 0
+        });
+      });
+
+      state.charts[canvasId] = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              top: 30,
+              right: 50
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const p = context.raw;
+                  return [
+                    `Subject: ${p.subject}`,
+                    `ARM: ${p.arm}`,
+                    `${xLabel}: ${p.x.toFixed(2)}×ULN`,
+                    `${yLabel}: ${p.y.toFixed(2)}×ULN`,
+                    `ALP: ${p.alp ? p.alp.toFixed(2) + '×ULN' : 'N/A'}`,
+                    `Visit: ${p.folder}`,
+                    `Dose: ${p.dose || 'N/A'}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: xScaleConfig,
+            y: {
+              type: 'linear',
+              min: 0,
+              max: Math.ceil(yMax) + 1,
+              title: {
+                display: true,
+                text: `${yLabel} (×ULN)`,
+                font: { size: 12, weight: 'bold' }
+              },
+              ticks: {
+                stepSize: 1,
+                callback: (v, idx, ticks) => (idx === ticks.length - 1 ? '' : formatAxisTick(v)),
+                font: { size: 11 }
+              },
+              grid: { display: false }
+            }
+          }
+        },
+        plugins: [{
+          id: 'diliReferenceLinesPlugin',
+          beforeDraw: (chart) => {
+            const ctx = chart.ctx;
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+            const chartArea = chart.chartArea;
+
+            ctx.save();
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1;
+
+            // Vertical lines: x = 1 (green), x = 2 (orange), x = 3 (red)
+            const vLines = [
+              { val: 1, color: 'darkgreen' },
+              { val: 2, color: 'orange' },
+              { val: 3, color: 'red' }
+            ];
+
+            vLines.forEach(line => {
+              if (line.val >= xAxis.min && line.val <= xAxis.max) {
+                const x = xAxis.getPixelForValue(line.val);
+                ctx.beginPath();
+                ctx.strokeStyle = line.color;
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom);
+                ctx.stroke();
+              }
+            });
+
+            // Horizontal lines: y = 1 (green), y = 2 (red)
+            const hLines = [
+              { val: 1, color: 'darkgreen' },
+              { val: 2, color: 'red' }
+            ];
+
+            hLines.forEach(line => {
+              if (line.val <= yAxis.max) {
+                const y = yAxis.getPixelForValue(line.val);
+                ctx.beginPath();
+                ctx.strokeStyle = line.color;
+                ctx.moveTo(chartArea.left, y);
+                ctx.lineTo(chartArea.right, y);
+                ctx.stroke();
+              }
+            });
+
+            // Draw border
+            ctx.setLineDash([]);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(chartArea.left, chartArea.top,
+                          chartArea.right - chartArea.left,
+                          chartArea.bottom - chartArea.top);
+
+            ctx.restore();
+          },
+          afterDatasetsDraw: (chart) => {
+            if (!showLabels) return;
+
+            const ctx = chart.ctx;
+
+            ctx.save();
+            ctx.font = '9px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#333';
+
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+              const meta = chart.getDatasetMeta(datasetIndex);
+              meta.data.forEach((point, index) => {
+                const dataPoint = dataset.data[index];
+                let label = dataPoint.subject;
+                if (showFolder && dataPoint.folder) {
+                  label += ` (${dataPoint.folder})`;
+                }
+                ctx.fillText(label, point.x + 10, point.y - 5);
+              });
+            });
+
+            ctx.restore();
+          }
+        }]
+      });
+    }
+
+    function renderAllCharts() {
+      renderChart('plot1Canvas', state.plotData.plot1, 'ALT', 'BILI', 'BILI Reference vs ALT');
+      renderChart('plot2Canvas', state.plotData.plot2, 'ALT', 'BILI', 'ALT Reference');
+      renderChart('plot3Canvas', state.plotData.plot3, 'AST', 'BILI', 'AST Reference');
+      renderChart('plot4Canvas', state.plotData.plot4, 'AST', 'BILI', 'BILI Reference vs AST');
+    }
+
+    function applyPatientSearch() {
+      const input = document.getElementById('patientSearch');
+      if (!input) return;
+      state.highlightSubject = normalizeSubjectId(input.value);
+      updateSubjectSuggestions();
+      renderAllCharts();
+    }
+
+    function clearPatientSearch() {
+      const input = document.getElementById('patientSearch');
+      if (input) input.value = '';
+      state.highlightSubject = '';
+      updateSubjectSuggestions();
+      renderAllCharts();
+    }
+
+    function updateSubjectSuggestions() {
+      const list = document.getElementById('patientSuggestions');
+      if (!list) return;
+      const subjects = new Set();
+      Object.values(state.plotData).forEach(plot => {
+        plot.forEach(point => {
+          if (point.Subject) subjects.add(normalizeSubjectId(point.Subject));
+        });
+      });
+      list.innerHTML = Array.from(subjects).sort().map(id => `<option value="${id}"></option>`).join('');
+    }
+
+    // ========================================================================
+    // UI Updates
+    // ========================================================================
+    function updateARMFilter() {
+      const select = document.getElementById('armFilter');
+      select.innerHTML = '<option value="all">All Treatment Groups</option>' +
+        state.armList.map(arm => `<option value="${arm}">${arm}</option>`).join('');
+    }
+
+    function updateDoseFilter() {
+      const select = document.getElementById('doseFilter');
+      select.innerHTML = '<option value="all">All Dose Levels</option>' +
+        state.uniqueDoseLevels.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    function getShapeSVG(shapeName) {
+      const cx = 6, cy = 6, r = 5;
+      switch (shapeName) {
+        case 'circle':
+          return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'triangleUp':
+          return `<polygon points="${cx},${cy-r} ${cx+r},${cy+r*0.8} ${cx-r},${cy+r*0.8}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'triangleDown':
+          return `<polygon points="${cx},${cy+r} ${cx+r},${cy-r*0.8} ${cx-r},${cy-r*0.8}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'triangleRight':
+          return `<polygon points="${cx+r},${cy} ${cx-r*0.8},${cy-r} ${cx-r*0.8},${cy+r}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'triangleLeft':
+          return `<polygon points="${cx-r},${cy} ${cx+r*0.8},${cy-r} ${cx+r*0.8},${cy+r}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'square':
+          return `<rect x="${cx-r*0.75}" y="${cy-r*0.75}" width="${r*1.5}" height="${r*1.5}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'diamond':
+          return `<polygon points="${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        case 'pentagon': {
+          const pts = [];
+          for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+          }
+          return `<polygon points="${pts.join(' ')}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        }
+        case 'hexagon': {
+          const pts = [];
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * 2 * Math.PI / 6) - Math.PI / 2;
+            pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+          }
+          return `<polygon points="${pts.join(' ')}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        }
+        case 'octagon': {
+          const pts = [];
+          for (let i = 0; i < 8; i++) {
+            const angle = (i * 2 * Math.PI / 8) - Math.PI / 2;
+            pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+          }
+          return `<polygon points="${pts.join(' ')}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+        }
+        default:
+          return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#999" stroke="black" stroke-width="0.5"/>`;
+      }
+    }
+
+    function updateShapeLegend() {
+      const container = document.getElementById('shapeItems');
+      container.innerHTML = state.armList.map((arm, index) => {
+        const shapeName = getShapeName(index);
+        const svg = getShapeSVG(shapeName);
+        return `
+          <div class="shape-legend-item">
+            <span class="shape-sample"><svg viewBox="0 0 12 12">${svg}</svg></span>
+            <span>${arm}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ========================================================================
+    // Initialization
+    // ========================================================================
+    async function init() {
+      try {
+        // Load all required data files - try multiple file names
+        let labData = null;
+        const labFiles = ['lab.CSV', 'lab.csv', 'LAB.CSV', 'lblc.CSV'];
+        for (const filename of labFiles) {
+          try {
+            labData = await loadCSV(`../../data/${filename}`);
+            console.log(`Loaded ${labData.length} rows from ${filename}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+
+        let lblhData = null;
+        const lblhFiles = ['lblh.CSV', 'lblh.csv', 'LBLH.CSV'];
+        for (const filename of lblhFiles) {
+          try {
+            lblhData = await loadCSV(`../../data/${filename}`);
+            console.log(`Loaded ${lblhData.length} rows from ${filename}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+
+        if (!labData || labData.length === 0) {
+          throw new Error('lab.CSV not found or empty');
+        }
+        if (!lblhData || lblhData.length === 0) {
+          throw new Error('lblh.CSV not found or empty');
+        }
+
+        state.labData = labData;
+        state.lblhData = lblhData;
+
+        // Try to load optional files
+        const dmFiles = ['dm.CSV', 'dm.csv', 'DM.CSV'];
+        for (const filename of dmFiles) {
+          try {
+            state.dmData = await loadCSV(`../../data/${filename}`);
+            console.log(`Loaded ${state.dmData.length} rows from ${filename}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+
+        const dsenFiles = ['dsen.CSV', 'dsen.csv', 'DSEN.CSV'];
+        for (const filename of dsenFiles) {
+          try {
+            state.dsenData = await loadCSV(`../../data/${filename}`);
+            console.log(`Loaded ${state.dsenData.length} rows from ${filename}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+
+        // Process data
+        processData();
+
+        // Update UI
+        updateARMFilter();
+        updateDoseFilter();
+        updateShapeLegend();
+        updateSubjectSuggestions();
+
+        // Render charts
+        renderAllCharts();
+
+        // Event listeners
+        document.getElementById('logScale').addEventListener('change', renderAllCharts);
+        document.getElementById('armFilter').addEventListener('change', renderAllCharts);
+        document.getElementById('doseFilter').addEventListener('change', renderAllCharts);
+        document.getElementById('showLabels').addEventListener('change', renderAllCharts);
+        document.getElementById('patientSearchBtn').addEventListener('click', applyPatientSearch);
+        document.getElementById('patientClearBtn').addEventListener('click', clearPatientSearch);
+        document.getElementById('patientSearch').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            applyPatientSearch();
+          }
+        });
+        document.getElementById('showHardcoded').addEventListener('change', () => {
+          processData();
+          updateARMFilter();
+          updateDoseFilter();
+          updateShapeLegend();
+          updateSubjectSuggestions();
+          renderAllCharts();
+        });
+
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('DILI');
+        }
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + error.message;
+        log('ERROR: ' + error.message);
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    function exportTableToCSV(containerId) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      var table = container.querySelector('table');
+      if (!table) return;
+      var rows = [];
+      table.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+        });
+        rows.push(row.join(','));
+      });
+      var csv = rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (containerId === 'riskTableContainer' ? 'DILI_HysLaw' : 'DILI_Missing_ULN') + '_' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

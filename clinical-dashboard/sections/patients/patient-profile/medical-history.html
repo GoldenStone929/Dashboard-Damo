@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Medical History</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../../assets/js/block-export.js"></script>
+  <style>
+    .profile-header { margin-bottom: 8px; }
+    .patient-title { font-size: 28px; font-weight: 700; color: #2C3E50; margin: 0; }
+    .patient-subtitle { font-size: 20px; font-style: italic; color: #7F8C8D; margin: 4px 0 24px 0; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector label { font-weight: 500; color: var(--text-secondary); }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
+    .metric-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-top: 3px solid #3498db;
+    }
+    
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #3498db;
+      margin-bottom: 4px;
+    }
+    
+    .metric-label {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    /* Card Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 1200px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+    
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .card.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #3498db;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      color: #2C3E50;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    
+    /* Table Styles */
+    .mh-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    
+    .mh-table th {
+      background: #34495E;
+      color: white;
+      font-weight: 600;
+      padding: 10px 12px;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+    
+    .mh-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+    
+    .mh-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    .mh-table tr:hover {
+      background: #e8f4f8;
+    }
+    
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .status-ongoing {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-resolved {
+      background: #e2e3e5;
+      color: #383d41;
+    }
+    
+    /* SOC Badge */
+    .soc-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #e8f4f8;
+      color: #2C3E50;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Chart */
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+    
+    .chart-container.timeline {
+      height: 400px;
+    }
+    
+    /* Timeline Styles */
+    .timeline-container {
+      position: relative;
+      padding: 20px 0;
+    }
+    
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+    
+    .timeline-label {
+      width: 180px;
+      flex-shrink: 0;
+      padding-right: 15px;
+      text-align: right;
+      font-weight: 500;
+      color: #2C3E50;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .timeline-bar-container {
+      flex: 1;
+      height: 24px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .timeline-bar {
+      position: absolute;
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: white;
+      font-weight: 500;
+      min-width: 2px;
+    }
+    
+    .timeline-bar.ongoing {
+      background: linear-gradient(90deg, #27ae60, #2ecc71);
+    }
+    
+    .timeline-bar.resolved {
+      background: linear-gradient(90deg, #7f8c8d, #95a5a6);
+    }
+    
+    .timeline-axis {
+      display: flex;
+      justify-content: space-between;
+      padding-left: 195px;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: #7f8c8d;
+    }
+    
+    /* Duration Badge */
+    .duration-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .duration-short {
+      background: #d5f5e3;
+      color: #1e8449;
+    }
+    
+    .duration-medium {
+      background: #fdebd0;
+      color: #b9770e;
+    }
+    
+    .duration-long {
+      background: #fadbd8;
+      color: #922b21;
+    }
+    
+    .duration-ongoing {
+      background: #d4e6f1;
+      color: #1a5276;
+    }
+    
+    /* No Data */
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: #7F8C8D;
+      font-size: 16px;
+    }
+    
+    /* Export button */
+    .export-btn {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+      background: linear-gradient(135deg, #2980b9, #1f6dad);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab active">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  
+  <main class="page-content">
+    <div class="profile-header">
+      <h1 class="patient-title">Patient Medical History</h1>
+      <p class="patient-subtitle" id="patientSubtitle">Subject: Loading...</p>
+    </div>
+    
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    
+    <!-- Metrics -->
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="metric-value" id="metricTotal">-</div>
+        <div class="metric-label">Total MH Events</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metricOngoing">-</div>
+        <div class="metric-label">Ongoing</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metricResolved">-</div>
+        <div class="metric-label">Resolved</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metricSOCs">-</div>
+        <div class="metric-label">SOCs Affected</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metricAvgDuration">-</div>
+        <div class="metric-label">Avg Duration (days)</div>
+      </div>
+    </div>
+    
+    <!-- Dashboard -->
+    <div class="dashboard-grid">
+      
+      <!-- SOC Distribution Chart -->
+      <div class="card" id="cardSOCChart">
+        <div class="card-header">
+          <h3>📊 MH by System Organ Class</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardSOCChart', 'Patient_MH_SOC')">Export</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="socChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- SOC Summary Table -->
+      <div class="card" id="cardSOCSummary">
+        <div class="card-header">
+          <h3>📋 SOC Summary</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardSOCSummary', 'Patient_MH_SOC_Table')">Export</button>
+        </div>
+        <div class="table-container">
+          <table class="mh-table" id="socTable">
+            <thead>
+              <tr>
+                <th>System Organ Class</th>
+                <th>Events</th>
+                <th>Ongoing</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Timeline Chart -->
+      <div class="card full-width" id="cardTimeline">
+        <div class="card-header">
+          <h3>📅 Medical History Timeline</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardTimeline', 'Patient_MH_Timeline')">Export</button>
+        </div>
+        <div id="timelineContainer" class="timeline-container">
+          <div class="no-data">No timeline data available</div>
+        </div>
+      </div>
+      
+      <!-- Duration Analysis -->
+      <div class="card" id="cardDuration">
+        <div class="card-header">
+          <h3>⏱️ Duration Analysis</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardDuration', 'Patient_MH_Duration')">Export</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="durationChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Category Breakdown -->
+      <div class="card" id="cardCategory">
+        <div class="card-header">
+          <h3>📂 By Category</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardCategory', 'Patient_MH_Category')">Export</button>
+        </div>
+        <div class="table-container" style="max-height: 250px;">
+          <table class="mh-table" id="categoryTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Events</th>
+                <th>Ongoing</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Full MH Listing -->
+      <div class="card full-width" id="cardMHList">
+        <div class="card-header">
+          <h3>📝 Medical History Details</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardMHList', 'Patient_MH_Details')">Export</button>
+        </div>
+        <div class="table-container" style="max-height: 500px;">
+          <table class="mh-table" id="mhTable">
+            <thead>
+              <tr>
+                <th>Preferred Term</th>
+                <th>System Organ Class</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+  
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-medical-history', '../../../');
+    
+    // Initialize export dialog
+    if (typeof initBlockExportDialog === 'function') {
+      initBlockExportDialog();
+      setBlockExportPrefix('Patient_MH');
+    }
+    
+    // Global data
+    let mhData = [];
+    let dmData = [];
+    let currentSubject = null;
+    let socChart = null;
+    let durationChart = null;
+    
+    function parseSasDate(str) {
+      if (!str || str.trim() === '' || str === '.') return null;
+      const dateOnly = str.substring(0, 9);
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      const day = parseInt(dateOnly.substring(0, 2));
+      const mon = months[dateOnly.substring(2, 5).toUpperCase()];
+      const year = parseInt(dateOnly.substring(5, 9));
+      if (isNaN(day) || mon === undefined || isNaN(year)) return null;
+      return new Date(year, mon, day);
+    }
+    
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    async function loadCSV(path) {
+      return new Promise(resolve => {
+        Papa.parse(path, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: r => resolve(r.data),
+          error: () => resolve([])
+        });
+      });
+    }
+    
+    async function loadAllData() {
+      const basePath = '../../../data/';
+      [mhData, dmData] = await Promise.all([
+        loadCSV(basePath + 'mh.CSV'),
+        loadCSV(basePath + 'dm.csv')
+      ]);
+      
+      populateSubjects();
+    }
+    
+    function populateSubjects() {
+      // Get subjects from dm.csv (dosed patients)
+      const subjects = [...new Set(dmData.map(r => r.Subject || r.SUBJID || r.USUBJID))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      
+      // Check URL for pre-selected subject
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      
+      if (currentSubject && subjects.includes(currentSubject)) {
+        select.value = currentSubject;
+      } else {
+        currentSubject = subjects[0];
+      }
+      
+      select.addEventListener('change', e => {
+        currentSubject = e.target.value;
+        history.replaceState(null, '', `?id=${currentSubject}`);
+        renderDashboard();
+      });
+      
+      renderDashboard();
+    }
+    
+    function getPatientMH(subjectId) {
+      const today = new Date();
+      return mhData.filter(row => {
+        const rowSubject = row.Subject || row.SUBJID || row.USUBJID;
+        const hasMH = row.MHYN_STD === 'Y' || row.MHYN_STD === 'Yes' || row.MHYN_STD === 'YES';
+        return rowSubject === subjectId && hasMH;
+      }).map(row => {
+        const startDate = parseSasDate(row.MHSTDAT_INT);
+        const endDate = parseSasDate(row.MHENDAT_INT);
+        const isOngoing = row.MHONGO_STD === 'Y' || row.MHONGO_STD === 'Yes' || row.MHONGO_STD === 'YES';
+        
+        // Calculate duration in days
+        let durationDays = null;
+        if (startDate) {
+          const end = isOngoing ? today : (endDate || today);
+          durationDays = Math.round((end - startDate) / (1000 * 60 * 60 * 24));
+        }
+        
+        return {
+          term: row.MHTERM || 'Unknown',
+          pt: row.MHTERM_pt || row.MHTERM || 'Unknown',
+          soc: row.MHTERM_soc || 'Unknown',
+          category: row.MHCAT_STD || row.MHCAT || 'Unknown',
+          hlgt: row.MHTERM_hlgt || '',
+          hlt: row.MHTERM_hlt || '',
+          startDate,
+          endDate,
+          isOngoing,
+          durationDays,
+          grade: row.MHTOXGR_STD || ''
+        };
+      });
+    }
+    
+    function renderDashboard() {
+      const subj = currentSubject;
+      document.getElementById('patientSubtitle').textContent = `Subject: ${subj}`;
+      
+      const records = getPatientMH(subj);
+      
+      // Calculate metrics
+      const totalEvents = records.length;
+      const ongoingCount = records.filter(r => r.isOngoing).length;
+      const resolvedCount = totalEvents - ongoingCount;
+      const uniqueSOCs = new Set(records.map(r => r.soc)).size;
+      
+      // Calculate average duration (excluding ongoing)
+      const resolvedWithDuration = records.filter(r => !r.isOngoing && r.durationDays !== null);
+      const avgDuration = resolvedWithDuration.length > 0 
+        ? Math.round(resolvedWithDuration.reduce((sum, r) => sum + r.durationDays, 0) / resolvedWithDuration.length)
+        : '-';
+      
+      // Update metrics
+      document.getElementById('metricTotal').textContent = totalEvents;
+      document.getElementById('metricOngoing').textContent = ongoingCount;
+      document.getElementById('metricResolved').textContent = resolvedCount;
+      document.getElementById('metricSOCs').textContent = uniqueSOCs;
+      document.getElementById('metricAvgDuration').textContent = avgDuration;
+      
+      if (totalEvents === 0) {
+        document.getElementById('socTable').querySelector('tbody').innerHTML = 
+          '<tr><td colspan="3" style="text-align: center; color: #95a5a6;">No medical history recorded</td></tr>';
+        document.getElementById('mhTable').querySelector('tbody').innerHTML = 
+          '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">No medical history recorded</td></tr>';
+        document.getElementById('categoryTable').querySelector('tbody').innerHTML = 
+          '<tr><td colspan="3" style="text-align: center; color: #95a5a6;">No data</td></tr>';
+        document.getElementById('timelineContainer').innerHTML = 
+          '<div class="no-data">No medical history recorded</div>';
+        if (socChart) { socChart.destroy(); socChart = null; }
+        if (durationChart) { durationChart.destroy(); durationChart = null; }
+        return;
+      }
+      
+      // Render components
+      renderSOCChart(records);
+      renderSOCTable(records);
+      renderTimeline(records);
+      renderDurationChart(records);
+      renderCategoryTable(records);
+      renderMHTable(records);
+    }
+    
+    function renderSOCChart(records) {
+      // Count by SOC
+      const socCounts = {};
+      records.forEach(r => {
+        socCounts[r.soc] = (socCounts[r.soc] || 0) + 1;
+      });
+      
+      const sorted = Object.entries(socCounts)
+        .map(([soc, count]) => ({ soc, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+      
+      if (socChart) socChart.destroy();
+      
+      const colors = [
+        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+        '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+      ];
+      
+      const ctx = document.getElementById('socChart').getContext('2d');
+      socChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sorted.map(s => s.soc.length > 25 ? s.soc.substring(0, 22) + '...' : s.soc),
+          datasets: [{
+            label: 'Events',
+            data: sorted.map(s => s.count),
+            backgroundColor: colors.slice(0, sorted.length),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: ctx => sorted[ctx[0].dataIndex].soc,
+                label: ctx => `Events: ${ctx.raw}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              title: { display: true, text: 'Number of Events', font: { weight: 'bold' } },
+              ticks: { stepSize: 1 }
+            },
+            y: {
+              ticks: { font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderSOCTable(records) {
+      const tbody = document.querySelector('#socTable tbody');
+      
+      // Count by SOC
+      const socStats = {};
+      records.forEach(r => {
+        if (!socStats[r.soc]) {
+          socStats[r.soc] = { events: 0, ongoing: 0 };
+        }
+        socStats[r.soc].events++;
+        if (r.isOngoing) socStats[r.soc].ongoing++;
+      });
+      
+      const sorted = Object.entries(socStats)
+        .map(([soc, stats]) => ({ soc, ...stats }))
+        .sort((a, b) => b.events - a.events);
+      
+      let html = '';
+      sorted.forEach(row => {
+        html += `
+          <tr>
+            <td title="${row.soc}">${row.soc.length > 35 ? row.soc.substring(0, 32) + '...' : row.soc}</td>
+            <td style="text-align: center;">${row.events}</td>
+            <td style="text-align: center;">${row.ongoing}</td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="3" style="text-align: center; color: #95a5a6;">No data</td></tr>';
+    }
+    
+    function renderTimeline(records) {
+      const container = document.getElementById('timelineContainer');
+      
+      // Filter records with start dates
+      const withDates = records.filter(r => r.startDate).sort((a, b) => a.startDate - b.startDate);
+      
+      if (withDates.length === 0) {
+        container.innerHTML = '<div class="no-data">No timeline data available (missing start dates)</div>';
+        return;
+      }
+      
+      // Calculate date range
+      const today = new Date();
+      const minDate = new Date(Math.min(...withDates.map(r => r.startDate)));
+      const maxDate = new Date(Math.max(...withDates.map(r => r.endDate || (r.isOngoing ? today : r.startDate))));
+      const totalDays = Math.max(1, (maxDate - minDate) / (1000 * 60 * 60 * 24));
+      
+      let html = '';
+      withDates.forEach(row => {
+        const startOffset = ((row.startDate - minDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+        const endDate = row.isOngoing ? today : (row.endDate || row.startDate);
+        const duration = Math.max(1, (endDate - row.startDate) / (1000 * 60 * 60 * 24));
+        const width = Math.max(2, (duration / totalDays) * 100);
+        const barClass = row.isOngoing ? 'ongoing' : 'resolved';
+        const label = row.pt.length > 22 ? row.pt.substring(0, 19) + '...' : row.pt;
+        
+        html += `
+          <div class="timeline-item">
+            <div class="timeline-label" title="${row.pt}">${label}</div>
+            <div class="timeline-bar-container">
+              <div class="timeline-bar ${barClass}" style="left: ${startOffset}%; width: ${width}%;" 
+                   title="${row.pt}\n${formatDate(row.startDate)} - ${row.isOngoing ? 'Ongoing' : formatDate(row.endDate)}">
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      // Add axis labels
+      html += `
+        <div class="timeline-axis">
+          <span>${formatDate(minDate)}</span>
+          <span>${formatDate(maxDate)}</span>
+        </div>
+      `;
+      
+      container.innerHTML = html;
+    }
+    
+    function renderDurationChart(records) {
+      // Categorize by duration
+      const categories = {
+        '< 30 days': 0,
+        '30-90 days': 0,
+        '90-365 days': 0,
+        '> 1 year': 0,
+        'Ongoing': 0
+      };
+      
+      records.forEach(r => {
+        if (r.isOngoing) {
+          categories['Ongoing']++;
+        } else if (r.durationDays !== null) {
+          if (r.durationDays < 30) categories['< 30 days']++;
+          else if (r.durationDays < 90) categories['30-90 days']++;
+          else if (r.durationDays < 365) categories['90-365 days']++;
+          else categories['> 1 year']++;
+        }
+      });
+      
+      if (durationChart) durationChart.destroy();
+      
+      const ctx = document.getElementById('durationChart').getContext('2d');
+      durationChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(categories),
+          datasets: [{
+            data: Object.values(categories),
+            backgroundColor: ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#3498db'],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { font: { size: 11 }, padding: 15 }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.raw} events`
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderCategoryTable(records) {
+      const tbody = document.querySelector('#categoryTable tbody');
+      
+      // Count by category
+      const catStats = {};
+      records.forEach(r => {
+        if (!catStats[r.category]) {
+          catStats[r.category] = { events: 0, ongoing: 0 };
+        }
+        catStats[r.category].events++;
+        if (r.isOngoing) catStats[r.category].ongoing++;
+      });
+      
+      const sorted = Object.entries(catStats)
+        .map(([cat, stats]) => ({ category: cat, ...stats }))
+        .sort((a, b) => b.events - a.events);
+      
+      let html = '';
+      sorted.forEach(row => {
+        html += `
+          <tr>
+            <td style="font-weight: 500;">${row.category}</td>
+            <td style="text-align: center;">${row.events}</td>
+            <td style="text-align: center;">${row.ongoing}</td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="3" style="text-align: center; color: #95a5a6;">No data</td></tr>';
+    }
+    
+    function getDurationBadge(days, isOngoing) {
+      if (isOngoing) return '<span class="duration-badge duration-ongoing">Ongoing</span>';
+      if (days === null) return '-';
+      if (days < 30) return `<span class="duration-badge duration-short">${days}d</span>`;
+      if (days < 365) return `<span class="duration-badge duration-medium">${days}d</span>`;
+      return `<span class="duration-badge duration-long">${days}d</span>`;
+    }
+    
+    function renderMHTable(records) {
+      const tbody = document.querySelector('#mhTable tbody');
+      
+      // Sort by start date (most recent first), then by PT
+      const sorted = [...records].sort((a, b) => {
+        if (a.startDate && b.startDate) return b.startDate - a.startDate;
+        if (a.startDate) return -1;
+        if (b.startDate) return 1;
+        return a.pt.localeCompare(b.pt);
+      });
+      
+      let html = '';
+      sorted.forEach(row => {
+        const statusClass = row.isOngoing ? 'status-ongoing' : 'status-resolved';
+        const statusText = row.isOngoing ? 'Ongoing' : 'Resolved';
+        
+        html += `
+          <tr>
+            <td style="font-weight: 500;">${row.pt}</td>
+            <td><span class="soc-badge" title="${row.soc}">${row.soc.length > 25 ? row.soc.substring(0, 22) + '...' : row.soc}</span></td>
+            <td>${formatDate(row.startDate)}</td>
+            <td>${formatDate(row.endDate)}</td>
+            <td>${getDurationBadge(row.durationDays, row.isOngoing)}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+          </tr>
+        `;
+      });
+      
+      tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; color: #95a5a6;">No data</td></tr>';
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', loadAllData);
+  </script>
+</body>
+</html>

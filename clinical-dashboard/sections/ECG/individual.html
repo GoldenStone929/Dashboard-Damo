@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task 3: ECG Individual Profiles</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    .ecg-page { max-width: 1800px; margin: 0 auto; padding: 20px; }
+    .page-title { font-size: 28px; font-weight: bold; color: #2C3E50; margin-bottom: 5px; }
+    .page-subtitle { font-size: 14px; color: #7F8C8D; margin-bottom: 20px; }
+
+    .controls-bar {
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+      background: #f8f9fa; border: 1px solid #dee2e6;
+      border-radius: 8px; padding: 12px 20px; margin-bottom: 20px;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    .control-group label { font-size: 12px; font-weight: 600; color: #7F8C8D; text-transform: uppercase; letter-spacing: 0.5px; }
+    .control-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 13px; min-width: 220px; background: white; }
+    .control-check { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .control-check input { width: 16px; height: 16px; cursor: pointer; }
+    .control-check label { font-size: 13px; color: #34495E; cursor: pointer; }
+
+    .individual-nav { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+    .nav-btn { padding: 6px 14px; background: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .nav-btn:hover { background: #d5dbdb; }
+    .patient-counter { font-size: 13px; color: #7F8C8D; }
+
+    .chart-box { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .chart-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+    .chart-box-title { font-size: 16px; font-weight: bold; color: #2C3E50; text-align: center; flex: 1; }
+    .chart-wrap { position: relative; width: 100%; height: 650px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-box { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-box .val { font-size: 24px; font-weight: bold; color: #2C3E50; }
+    .stat-box .lbl { font-size: 11px; color: #7F8C8D; margin-top: 3px; }
+
+    .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
+    .detail-table th { background: #34495E; color: white; padding: 8px 10px; text-align: left; }
+    .detail-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+    .detail-table tr:nth-child(even) { background: #f8f9fa; }
+    .detail-table tr:hover { background: #e8f4f8; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; color: white; }
+    .badge-normal { background: #27ae60; }
+    .badge-borderline { background: #e67e22; }
+    .badge-prolonged { background: #c0392b; }
+
+    .info-box { background: #e8f4f8; border: 1px solid #90caf9; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; }
+    .info-box h4 { margin: 0 0 8px 0; color: #1565c0; font-size: 14px; }
+    .info-box ul { margin: 0; padding-left: 20px; font-size: 13px; color: #34495E; }
+    .info-box li { margin-bottom: 4px; }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    .spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { margin-top: 15px; font-size: 16px; color: #34495E; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='index.html'">Overview Plot</button>
+    <button class="local-tab" onclick="location.href='listing.html'">Patient Listing</button>
+    <button class="local-tab active">Individual Profiles</button>
+  </nav>
+
+  <main class="page-content">
+    <div class="ecg-page">
+
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading ECG data...</div>
+      </div>
+
+      <h1 class="page-title">Task 3: ECG Individual Profiles</h1>
+      <p class="page-subtitle">Per-patient view — all individual datapoints with shadow band showing trend</p>
+
+      <div class="info-box">
+        <h4>How to Read</h4>
+        <ul>
+          <li><strong>Dots</strong> = individual readings (each visit may have 1–3 readings)</li>
+          <li><strong>Blue shaded band</strong> = range (min to max) across visits, showing the trend</li>
+          <li><strong>Dashed line</strong> = average per visit</li>
+          <li>X-axis shows ALL visits from the study; empty positions = patient did not have that visit</li>
+          <li>Use <strong>&larr; / &rarr;</strong> arrow keys or buttons to navigate between patients</li>
+        </ul>
+      </div>
+
+      <!-- Patient Selector -->
+      <div class="controls-bar">
+        <div class="control-group">
+          <label>Select Patient</label>
+          <select id="patientSelect"></select>
+        </div>
+        <div class="individual-nav">
+          <button class="nav-btn" id="prevPatient">&larr; Previous</button>
+          <button class="nav-btn" id="nextPatient">Next &rarr;</button>
+          <span class="patient-counter" id="patientCounter"></span>
+        </div>
+        <div class="control-group">
+          <label>Metric</label>
+          <select id="metricSelect">
+            <option value="qtcf_value">QTcF Absolute Value (ms)</option>
+            <option value="qtcf_change">QTcF Change from Baseline (ms)</option>
+            <option value="pr">PR Interval (ms)</option>
+            <option value="qrs">QRS Duration (ms)</option>
+            <option value="hr">Heart Rate (bpm)</option>
+          </select>
+        </div>
+        <div class="control-check">
+          <input type="checkbox" id="showRefLines" checked>
+          <label for="showRefLines">Show Reference Lines</label>
+        </div>
+      </div>
+
+      <div class="stats-row" id="individualStats"></div>
+
+      <!-- Chart -->
+      <div id="ecgIndividualExportBlock" class="chart-box">
+        <div class="chart-box-header">
+          <div class="chart-box-title" id="individualChartTitle">QTcF Individual Readings with Trend Band</div>
+          <button class="export-btn" onclick="showBlockExportDialog('ecgIndividualExportBlock', 'QTcF_Individual_Profile')">Export</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="individualChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Detail Table -->
+      <div class="chart-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+          <h4 style="margin: 0; color: #34495E;">All Individual Readings for Selected Patient</h4>
+          <button type="button" class="export-csv-btn" onclick="exportIndividualDetailCSV()" style="padding:6px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Export CSV</button>
+        </div>
+        <div>
+          <table class="detail-table" id="individualDetailTable">
+            <thead>
+              <tr>
+                <th>Visit</th>
+                <th>Collection DateTime</th>
+                <th>QTcF Value (ms)</th>
+                <th>QTcF Baseline (ms)</th>
+                <th>QTcF Change (ms)</th>
+                <th>PR Interval (ms)</th>
+                <th>QRS Duration (ms)</th>
+                <th>Heart Rate (bpm)</th>
+                <th>Status (QTcF)</th>
+                <th>Status (PR)</th>
+                <th>Status (QRS)</th>
+                <th>Status (HR)</th>
+              </tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script src="ecg-data.js"></script>
+  <script>
+    if (typeof renderNav === 'function') renderNav('ecg', 'ecg-individual', '../../');
+
+    // ================================================================
+    // Patient Navigation
+    // ================================================================
+    function initPatientNav() {
+      var sel = document.getElementById('patientSelect');
+      sel.innerHTML = STATE.patients.map(function(p) {
+        return '<option value="' + p + '">' + p + '</option>';
+      }).join('');
+
+      // Read ?id= from URL (e.g. linked from patient profile pages)
+      var params = new URLSearchParams(window.location.search);
+      var urlId = params.get('id');
+      if (urlId && STATE.patients.indexOf(urlId) >= 0) {
+        sel.value = urlId;
+      }
+
+      sel.addEventListener('change', function() {
+        history.replaceState(null, '', '?id=' + sel.value);
+        renderIndividual();
+      });
+
+      document.getElementById('prevPatient').addEventListener('click', function() {
+        var idx = STATE.patients.indexOf(sel.value);
+        if (idx > 0) { sel.value = STATE.patients[idx - 1]; sel.dispatchEvent(new Event('change')); }
+      });
+      document.getElementById('nextPatient').addEventListener('click', function() {
+        var idx = STATE.patients.indexOf(sel.value);
+        if (idx < STATE.patients.length - 1) { sel.value = STATE.patients[idx + 1]; sel.dispatchEvent(new Event('change')); }
+      });
+    }
+
+    // ================================================================
+    // Individual Chart Rendering
+    // ================================================================
+    function renderIndividual() {
+      var pid = document.getElementById('patientSelect').value;
+      if (!pid || !STATE.byPatient[pid]) return;
+
+      var metricId = document.getElementById('metricSelect').value;
+      var metricConfig = ECG_METRICS[metricId];
+      var metricKey = metricConfig.key;
+      var metricLabel = metricConfig.label;
+
+      var pidIdx = STATE.patients.indexOf(pid);
+      document.getElementById('patientCounter').textContent =
+        'Patient ' + (pidIdx + 1) + ' of ' + STATE.patients.length;
+      document.getElementById('individualChartTitle').textContent =
+        metricLabel + ' — Patient ' + pid;
+
+      var patientData = STATE.byPatient[pid];
+
+      // Only visits this patient actually has, sorted by earliest datetime
+      var patientVisitNames = Object.keys(patientData);
+      // Build datetime map for this patient's visits
+      var pvDateMap = {};
+      patientVisitNames.forEach(function(v) {
+        var readings = patientData[v].readings;
+        readings.forEach(function(r) {
+          if (r.datetime && (!pvDateMap[v] || r.datetime < pvDateMap[v])) {
+            pvDateMap[v] = r.datetime;
+          }
+        });
+      });
+      // Sort: by datetime, with END OF TREATMENT / SAFETY FOLLOW UP at end
+      function isEndVisit(v) {
+        return /^END OF TREATMENT/i.test(v) || /^SAFETY FOLLOW/i.test(v);
+      }
+      patientVisitNames.sort(function(a, b) {
+        var aEnd = isEndVisit(a), bEnd = isEndVisit(b);
+        if (aEnd && !bEnd) return 1;
+        if (!aEnd && bEnd) return -1;
+        var da = pvDateMap[a], db = pvDateMap[b];
+        if (da && db) return da - db;
+        if (da) return -1;
+        if (db) return 1;
+        return a.localeCompare(b);
+      });
+
+      var allVisits = patientVisitNames;
+
+      // Arrays for this patient's visits only (no nulls/gaps)
+      var maxVals = [], minVals = [], avgVals = [];
+      var totalReadings = 0;
+
+      allVisits.forEach(function(v) {
+        var vd = patientData[v];
+        var mx = vd.max[metricKey], mn = vd.min[metricKey], av = vd.avg[metricKey];
+        maxVals.push(isFinite(mx) ? mx : null);
+        minVals.push(isFinite(mn) ? mn : null);
+        avgVals.push(isFinite(av) ? av : null);
+        totalReadings += vd.readings.length;
+      });
+
+      // Stats
+      var patientVisitCount = allVisits.length;
+      var validAvgs = avgVals.filter(function(v) { return v !== null; });
+      var maxAvg = validAvgs.length ? Math.max.apply(null, validAvgs) : NaN;
+      var minAvg = validAvgs.length ? Math.min.apply(null, validAvgs) : NaN;
+
+      document.getElementById('individualStats').innerHTML =
+        '<div class="stat-box"><div class="val">' + patientVisitCount + '</div><div class="lbl">Visits</div></div>' +
+        '<div class="stat-box"><div class="val">' + totalReadings + '</div><div class="lbl">Total Readings</div></div>' +
+        '<div class="stat-box"><div class="val">' + (isFinite(maxAvg) ? maxAvg.toFixed(1) : '-') + '</div><div class="lbl">Max Avg</div></div>' +
+        '<div class="stat-box"><div class="val">' + (isFinite(minAvg) ? minAvg.toFixed(1) : '-') + '</div><div class="lbl">Min Avg</div></div>';
+
+      // Build Chart
+      if (STATE.charts.individual) STATE.charts.individual.destroy();
+      var ctx = document.getElementById('individualChart').getContext('2d');
+
+      // Build datasets
+      var avgLineArr = avgVals.slice();
+
+      // Individual readings — one array per reading layer (up to 3 per visit)
+      var maxReadingsPerVisit = 0;
+      allVisits.forEach(function(v) {
+        var count = patientData[v].readings.filter(function(r) { return isFinite(r[metricKey]); }).length;
+        if (count > maxReadingsPerVisit) maxReadingsPerVisit = count;
+      });
+
+      // Create one dataset per reading slot (e.g., Reading 1, Reading 2, Reading 3)
+      var readingDatasets = [];
+      for (var slot = 0; slot < maxReadingsPerVisit; slot++) {
+        var slotData = allVisits.map(function(v) {
+          var validReadings = patientData[v].readings.filter(function(r) { return isFinite(r[metricKey]); });
+          return slot < validReadings.length ? validReadings[slot][metricKey] : null;
+        });
+        readingDatasets.push({
+          label: slot === 0 ? 'Individual Readings' : 'Reading ' + (slot + 1),
+          data: slotData,
+          type: 'line',
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(52, 73, 94, 0.75)',
+          pointRadius: 6, pointHoverRadius: 8,
+          pointStyle: 'circle',
+          showLine: false,
+          order: 1
+        });
+      }
+
+      var datasets = [
+        {
+          label: 'Average', data: avgLineArr, type: 'line',
+          borderColor: 'rgba(52, 152, 219, 0.6)', borderWidth: 2, borderDash: [6, 3],
+          pointRadius: 0, fill: false, order: 2, spanGaps: false
+        }
+      ].concat(readingDatasets);
+
+      // Custom plugin: shadow band
+      // Uses category scale — getPixelForValue with label index
+      var shadowPlugin = {
+        id: 'shadowBand',
+        beforeDatasetsDraw: function(chart) {
+          var c = chart.ctx, xs = chart.scales.x, ys = chart.scales.y;
+          var area = chart.chartArea;
+          if (!area) return;
+
+          c.save();
+          c.fillStyle = 'rgba(52, 152, 219, 0.12)';
+          c.strokeStyle = 'rgba(52, 152, 219, 0.25)';
+          c.lineWidth = 1;
+
+          // For category scale, pixel position is obtained via index
+          function xPixel(idx) {
+            return xs.getPixelForValue(allVisits[idx]);
+          }
+
+          // Find contiguous segments with data
+          var segments = [], seg = [];
+          for (var i = 0; i < allVisits.length; i++) {
+            if (maxVals[i] !== null && minVals[i] !== null) seg.push(i);
+            else { if (seg.length >= 1) segments.push(seg.slice()); seg = []; }
+          }
+          if (seg.length >= 1) segments.push(seg);
+
+          segments.forEach(function(s) {
+            if (s.length < 2) {
+              // Single visit with range: draw small diamond
+              var si = s[0];
+              if (maxVals[si] !== minVals[si]) {
+                var cx = xPixel(si);
+                var yt = ys.getPixelForValue(maxVals[si]);
+                var yb = ys.getPixelForValue(minVals[si]);
+                c.beginPath();
+                c.moveTo(cx - 10, (yt + yb) / 2);
+                c.lineTo(cx, yt); c.lineTo(cx + 10, (yt + yb) / 2); c.lineTo(cx, yb);
+                c.closePath(); c.fill();
+              }
+              return;
+            }
+            // Draw filled polygon: upper L→R then lower R→L
+            c.beginPath();
+            for (var j = 0; j < s.length; j++) {
+              var x = xPixel(s[j]), y = ys.getPixelForValue(maxVals[s[j]]);
+              if (j === 0) c.moveTo(x, y); else c.lineTo(x, y);
+            }
+            for (var j = s.length - 1; j >= 0; j--) {
+              c.lineTo(xPixel(s[j]), ys.getPixelForValue(minVals[s[j]]));
+            }
+            c.closePath(); c.fill(); c.stroke();
+          });
+          c.restore();
+        }
+      };
+
+      STATE.charts.individual = new Chart(ctx, {
+        type: 'line',
+        data: { labels: allVisits, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: { filter: function(item) {
+                return item.text === 'Average' || item.text === 'Individual Readings';
+              }}
+            },
+            tooltip: {
+              callbacks: {
+                title: function(items) { return items[0] ? items[0].label : ''; },
+                label: function(item) {
+                  if (item.raw === null || item.raw === undefined) return null;
+                  var val = typeof item.raw === 'object' ? item.raw.y : item.raw;
+                  if (!isFinite(val)) return null;
+                  return item.dataset.label + ': ' + val.toFixed(1) + ' ' + metricConfig.unit;
+                }
+              },
+              filter: function(item) {
+                var val = typeof item.raw === 'object' ? item.raw.y : item.raw;
+                return val !== null && val !== undefined && isFinite(val);
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'category',
+              ticks: {
+                maxRotation: 90, minRotation: 45, font: { size: 10 }, autoSkip: false
+              },
+              grid: { display: false }
+            },
+            y: {
+              grace: '10%',
+              title: { display: true, text: metricLabel, font: { size: 12, weight: 'bold' } },
+              grid: { color: '#f0f0f0' }
+            }
+          }
+        },
+        plugins: [shadowPlugin, getRefLinesPlugin('indivRef')]
+      });
+
+      // Detail table
+      renderDetailTable(pid, allVisits);
+    }
+
+    // ================================================================
+    // Detail Table
+    // ================================================================
+    function renderDetailTable(pid, visitOrder) {
+      var patientData = STATE.byPatient[pid];
+      if (!patientData) return;
+      var html = '';
+      visitOrder.forEach(function(v) {
+        patientData[v].readings.forEach(function(r) {
+          var dt = r.datetime
+            ? r.datetime.toLocaleDateString() + ' ' + r.datetime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '-';
+          var valStr = isFinite(r.value) ? r.value.toFixed(1) : '-';
+          var bslStr = isFinite(r.baseline) ? r.baseline.toFixed(1) : '-';
+          var chgStr = isFinite(r.change) ? r.change.toFixed(1) : '-';
+          var prStr  = isFinite(r.pr) ? r.pr.toFixed(1) : '-';
+          var qrsStr = isFinite(r.qrs) ? r.qrs.toFixed(1) : '-';
+          var hrStr  = isFinite(r.hr) ? r.hr.toFixed(1) : '-';
+
+          var qtcfBadge = '';
+          if (isFinite(r.value)) {
+            var qtcfCls = ECG_METRICS.qtcf_value.classify(r.value);
+            qtcfBadge = qtcfCls === 'prolonged' ? '<span class="badge badge-prolonged">Prolonged</span>'
+              : qtcfCls === 'borderline' ? '<span class="badge badge-borderline">Borderline</span>'
+              : '<span class="badge badge-normal">Normal</span>';
+          }
+          var prBadge = '';
+          if (isFinite(r.pr)) {
+            prBadge = ECG_METRICS.pr.classify(r.pr) === 'prolonged'
+              ? '<span class="badge badge-prolonged">&ge;200ms</span>'
+              : '<span class="badge badge-normal">Normal</span>';
+          }
+          var qrsBadge = '';
+          if (isFinite(r.qrs)) {
+            qrsBadge = ECG_METRICS.qrs.classify(r.qrs) === 'prolonged'
+              ? '<span class="badge badge-prolonged">&ge;120ms</span>'
+              : '<span class="badge badge-normal">Normal</span>';
+          }
+          var hrBadge = '';
+          if (isFinite(r.hr)) {
+            var hrCls = ECG_METRICS.hr.classify(r.hr);
+            hrBadge = hrCls === 'prolonged'
+              ? (r.hr < 50 ? '<span class="badge badge-prolonged">&lt;50</span>' : '<span class="badge badge-prolonged">&gt;100</span>')
+              : '<span class="badge badge-normal">Normal</span>';
+          }
+
+          html += '<tr><td><strong>' + v + '</strong></td><td>' + dt + '</td>' +
+            '<td>' + valStr + '</td><td>' + bslStr + '</td><td>' + chgStr + '</td>' +
+            '<td>' + prStr + '</td><td>' + qrsStr + '</td><td>' + hrStr + '</td>' +
+            '<td>' + qtcfBadge + '</td><td>' + prBadge + '</td>' +
+            '<td>' + qrsBadge + '</td><td>' + hrBadge + '</td></tr>';
+        });
+      });
+      document.getElementById('detailBody').innerHTML = html;
+    }
+
+    // ================================================================
+    // Events
+    // ================================================================
+    document.getElementById('metricSelect').addEventListener('change', renderIndividual);
+    document.getElementById('showRefLines').addEventListener('change', renderIndividual);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft') document.getElementById('prevPatient').click();
+      if (e.key === 'ArrowRight') document.getElementById('nextPatient').click();
+    });
+
+    // ================================================================
+    // Init
+    // ================================================================
+    function exportIndividualDetailCSV() {
+      var table = document.getElementById('individualDetailTable');
+      if (!table) return;
+      var rows = [];
+      table.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+        });
+        rows.push(row.join(','));
+      });
+      var csv = rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'ECG_Individual_Readings_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        await initECGData();
+        initPatientNav();
+        renderIndividual();
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('ECG_Individual');
+        }
+      } catch (err) {
+        console.error(err);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + err.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

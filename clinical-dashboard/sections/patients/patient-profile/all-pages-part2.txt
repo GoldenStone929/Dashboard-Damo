@@ -1,0 +1,884 @@
+================================================================================
+FILE: cm-relative.html
+对应 R Section 5: CM Relative Timeline (plot_cm_rel, -30 days to ongoing)
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - CM Relative</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .chart-container { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; min-height: 400px; overflow-x: auto; }
+    .dual-axis { display: flex; flex-direction: column; }
+    .axis-row { display: flex; font-size: 10px; color: #666; padding-left: 250px; min-width: 800px; position: relative; height: 20px; }
+    .axis-row.top { border-bottom: 1px solid #999; margin-bottom: 4px; }
+    .axis-row.bottom { border-top: 1px solid #999; margin-top: 8px; }
+    .cm-row { display: flex; align-items: center; min-height: 38px; border-bottom: 1px solid #f0f0f0; }
+    .cm-label { width: 250px; min-width: 250px; font-size: 11px; padding-right: 10px; text-align: right; line-height: 1.3; }
+    .cm-bar-area { flex: 1; position: relative; height: 24px; min-width: 550px; }
+    .cm-segment { position: absolute; height: 6px; top: 9px; border-radius: 3px; }
+    .cm-point { position: absolute; width: 8px; height: 8px; top: 8px; transform: translateX(-4px); }
+    .cm-date-label { position: absolute; font-size: 8px; color: #666; top: -10px; }
+    .legend-container { display: flex; gap: 30px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .legend-color { width: 24px; height: 6px; border-radius: 3px; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    <h1>Concomitant Medications - 30 Days Prior to C1D1</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'+location.search">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'+location.search">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+      <button class="local-tab active">CM Relative</button>
+      <button class="local-tab" onclick="location.href='cm-listing.html'+location.search">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+      <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+      <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+      <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+    </nav>
+    <div class="card">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="legend-container">
+        <div class="legend-item"><span class="legend-color" style="background: black;"></span> Complete</div>
+        <div class="legend-item"><span class="legend-color" style="background: red;"></span> Started Only (Ongoing)</div>
+      </div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-cm', '../../../');
+    let cmData = [], visData = [];
+    let currentSubject = null;
+    const PRE_DAY = -30; // R: Pre_day <- -30
+    
+    function parseCmDate(str) {
+      if (!str) return null;
+      const dateOnly = str.substring(0, 9);
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      const day = parseInt(dateOnly.substring(0,2));
+      const mon = months[dateOnly.substring(2,5).toUpperCase()];
+      const year = parseInt(dateOnly.substring(5,9));
+      if (isNaN(day) || mon === undefined || isNaN(year)) return null;
+      return new Date(year, mon, day);
+    }
+    
+    async function loadData() {
+      const [cm, vis] = await Promise.all([
+        new Promise(res => Papa.parse('../../../data/cm.csv', { download: true, header: true, skipEmptyLines: true, complete: r => res(r.data), error: () => res([]) })),
+        new Promise(res => Papa.parse('../../../data/vis.csv', { download: true, header: true, skipEmptyLines: true, complete: r => res(r.data), error: () => res([]) }))
+      ]);
+      cmData = cm; visData = vis;
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(cmData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; history.replaceState(null, '', `?id=${currentSubject}`); renderChart(); });
+      renderChart();
+    }
+    
+    function renderChart() {
+      const container = document.getElementById('chartContainer');
+      const subj = currentSubject;
+      
+      const visSubj = visData.filter(r => r.Subject === subj);
+      const c1d1Row = visSubj.find(r => r.Folder === 'C1D1');
+      if (!c1d1Row) { container.innerHTML = '<div class="no-data">No C1D1 visit data</div>'; return; }
+      const c1d1Date = parseCmDate(c1d1Row.VISDAT);
+      
+      // Get visit axis labels
+      const visits = visSubj.map(r => ({
+        folder: r.Folder === 'DSET' ? 'EOT' : r.Folder,
+        day: Math.round((parseCmDate(r.VISDAT) - c1d1Date) / (1000*60*60*24))
+      })).filter(v => !isNaN(v.day)).sort((a, b) => a.day - b.day);
+      
+      // R: filter(CM_StudyDay_Start >= -30)
+      let data = cmData.filter(r => r.Subject === subj).map(r => {
+        const startDate = parseCmDate(r.CMSTDAT_INT);
+        const endDate = parseCmDate(r.CMENDAT_INT);
+        const startDay = startDate ? Math.round((startDate - c1d1Date) / (1000*60*60*24)) : null;
+        const endDay = endDate ? Math.round((endDate - c1d1Date) / (1000*60*60*24)) : null;
+        const medication = [r.CMTRT, r.CMDSTXT, r.CMDOSU_STD, r.CMROUTE_STD, r.CMDOSFRQ_STD].filter(Boolean).join(' - ');
+        return { ...r, startDate, endDate, startDay, endDay, medication, status: endDate ? 'Complete' : 'Started Only' };
+      }).filter(r => r.startDay !== null && r.startDay >= PRE_DAY);
+      
+      if (!data.length) { container.innerHTML = '<div class="no-data">No concomitant medications data (≥ -30 days)</div>'; return; }
+      
+      // R: ongoing <- max(c(d$CM_StudyDay_Start, d$CM_StudyDay_End), na.rm = TRUE) + 14
+      const maxDay = Math.max(...data.map(r => r.endDay !== null ? r.endDay : r.startDay));
+      const ongoingDay = maxDay + 14;
+      const range = ongoingDay - PRE_DAY;
+      
+      data = data.map(r => ({ ...r, endDay: r.endDay === null ? ongoingDay : r.endDay }));
+      
+      const axisBreaks = [PRE_DAY, ...visits.map(v => v.day), ongoingDay];
+      const axisLabelsTop = ['Pre', ...visits.map(v => v.day), 'Ongoing'];
+      const axisLabelsBot = ['Pre', ...visits.map(v => v.folder), 'Ongoing'];
+      
+      let html = '<div class="dual-axis">';
+      
+      // Top axis
+      html += '<div class="axis-row top">';
+      axisBreaks.forEach((b, i) => {
+        const pct = ((b - PRE_DAY) / range) * 100;
+        html += `<span style="position:absolute;left:${pct}%;transform:translateX(-50%);">${axisLabelsTop[i]}</span>`;
+      });
+      html += '</div>';
+      
+      // Data rows
+      for (const cm of data) {
+        const leftPct = ((cm.startDay - PRE_DAY) / range) * 100;
+        const widthPct = ((cm.endDay - cm.startDay) / range) * 100;
+        const color = cm.status === 'Complete' ? 'black' : 'red';
+        const dateLabel = cm.startDate ? cm.startDate.toISOString().split('T')[0].replace(/-/g, '.') : '';
+        
+        html += `<div class="cm-row"><div class="cm-label" title="${cm.medication}">${cm.medication}</div><div class="cm-bar-area">`;
+        html += `<div class="cm-segment" style="left:${leftPct}%;width:${widthPct}%;background:${color};"></div>`;
+        html += `<div class="cm-point" style="left:${leftPct}%;background:${color};"></div>`;
+        if (cm.status === 'Complete') {
+          html += `<div class="cm-point" style="left:${leftPct + widthPct}%;background:${color};"></div>`;
+        } else {
+          html += `<span style="position:absolute;left:calc(${leftPct + widthPct}% - 5px);top:5px;font-size:14px;color:red;">→</span>`;
+        }
+        html += `<div class="cm-date-label" style="left:${leftPct}%;">${dateLabel}</div>`;
+        html += '</div></div>';
+      }
+      
+      // Bottom axis
+      html += '<div class="axis-row bottom">';
+      axisBreaks.forEach((b, i) => {
+        const pct = ((b - PRE_DAY) / range) * 100;
+        html += `<span style="position:absolute;left:${pct}%;transform:translateX(-50%);">${axisLabelsBot[i]}</span>`;
+      });
+      html += '</div></div>';
+      
+      container.innerHTML = html;
+    }
+    
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>
+
+
+================================================================================
+FILE: cm-listing.html
+对应 R Section 5.5: CM Data Listing (15 rows per page)
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - CM Listing</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    /* R Section 5.5 table style: bg_params = list(fill = rep(c("#FFFFFF", "#FFF8F0")...), col = "#E8D5C4"), colhead = list(bg_params = list(fill = "#8B6F47")) */
+    .cm-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .cm-table th { background: #8B6F47; color: white; font-weight: bold; padding: 8px 5px; text-align: left; font-size: 11px; }
+    .cm-table td { padding: 6px 5px; color: #34495E; border: 1px solid #E8D5C4; vertical-align: top; }
+    .cm-table tr:nth-child(odd) td { background: #FFFFFF; }
+    .cm-table tr:nth-child(even) td { background: #FFF8F0; }
+    .pagination { display: flex; gap: 8px; margin-top: 20px; justify-content: center; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; }
+    .pagination button.active { background: #8B6F47; color: white; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    <h1 id="pageTitle">Concomitant Medications Data Listing</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'+location.search">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'+location.search">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+      <button class="local-tab" onclick="location.href='cm-relative.html'+location.search">CM Relative</button>
+      <button class="local-tab active">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+      <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+      <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+      <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+    </nav>
+    <div class="card">
+      <div id="tableContainer"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-cm', '../../../');
+    let cmData = [];
+    let currentSubject = null, currentPage = 1;
+    const ROWS_PER_PAGE = 15; // R: rows_per_page <- 15L
+    
+    function shortDate(str) { return (!str || str.trim() === '') ? '' : str.trim().substring(0, 9); }
+    function parseCmDate(str) {
+      if (!str) return null;
+      const dateOnly = str.substring(0, 9);
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      const day = parseInt(dateOnly.substring(0,2)), mon = months[dateOnly.substring(2,5).toUpperCase()], year = parseInt(dateOnly.substring(5,9));
+      if (isNaN(day) || mon === undefined || isNaN(year)) return null;
+      return new Date(year, mon, day);
+    }
+    
+    async function loadData() {
+      return new Promise(res => Papa.parse('../../../data/cm.csv', { download: true, header: true, skipEmptyLines: true, complete: r => { cmData = r.data; res(); }, error: () => res() }));
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(cmData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; currentPage = 1; history.replaceState(null, '', `?id=${currentSubject}`); renderTable(); });
+      renderTable();
+    }
+    
+    function renderTable() {
+      const container = document.getElementById('tableContainer');
+      const subj = currentSubject;
+      
+      // R transformation: matching tbl structure
+      let data = cmData.filter(r => r.Subject === subj).map(r => {
+        const startDate = parseCmDate(r.CMSTDAT_INT);
+        const endDate = parseCmDate(r.CMENDAT_INT);
+        const studyDays = (startDate && endDate) ? Math.round((endDate - startDate) / (1000*60*60*24)) : '';
+        return {
+          medication: r.CMTRT || '',
+          category: r.CMCAT || '',
+          reason: r.CMREAS || '',
+          dose: r.CMDSTXT || '',
+          unit: r.CMDOSU_STD || r.CMDOSU || '',
+          frequency: r.CMDOSFRQ_STD || r.CMDOSFRQ || '',
+          route: r.CMROUTE_STD || r.CMROUTE || '',
+          startDate: shortDate(r.CMSTDAT_INT),
+          endDate: shortDate(r.CMENDAT_INT),
+          ongoing: r.CMONGO || '',
+          studyDays: studyDays,
+          aeRelated: r.CMAENO_STD || r.CMAENO || '',
+          _sortDate: startDate
+        };
+      }).sort((a, b) => (a._sortDate || 0) - (b._sortDate || 0));
+      
+      if (!data.length) { container.innerHTML = '<div class="no-data">No concomitant medications data</div>'; document.getElementById('pagination').innerHTML = ''; return; }
+      
+      const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
+      const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+      const pageData = data.slice(startIdx, startIdx + ROWS_PER_PAGE);
+      
+      document.getElementById('pageTitle').textContent = `Concomitant Medications Data Listing${totalPages > 1 ? ` (Page ${currentPage}/${totalPages})` : ''}`;
+      
+      // R column widths: c(0.12, 0.08, 0.10, 0.06, 0.05, 0.08, 0.06, 0.09, 0.09, 0.07, 0.08, 0.10)
+      let html = `<table class="cm-table"><thead><tr>
+        <th style="width:12%">Medication</th><th style="width:8%">Category</th><th style="width:10%">Reason</th>
+        <th style="width:6%">Dose</th><th style="width:5%">Unit</th><th style="width:8%">Frequency</th>
+        <th style="width:6%">Route</th><th style="width:9%">Start Date</th><th style="width:9%">End Date</th>
+        <th style="width:7%">Ongoing</th><th style="width:8%">Study Days</th><th style="width:10%">AE Related</th>
+      </tr></thead><tbody>`;
+      for (const row of pageData) {
+        html += `<tr><td>${row.medication}</td><td>${row.category}</td><td>${row.reason}</td><td>${row.dose}</td><td>${row.unit}</td><td>${row.frequency}</td><td>${row.route}</td><td>${row.startDate}</td><td>${row.endDate}</td><td>${row.ongoing}</td><td>${row.studyDays}</td><td>${row.aeRelated}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      
+      let pagHtml = '';
+      if (totalPages > 1) {
+        pagHtml += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Prev</button>`;
+        for (let p = 1; p <= totalPages; p++) pagHtml += `<button class="${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        pagHtml += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next →</button>`;
+      }
+      document.getElementById('pagination').innerHTML = pagHtml;
+    }
+    
+    function goToPage(page) { currentPage = page; renderTable(); }
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>
+
+
+================================================================================
+FILE: vitals.html
+对应 R Section 6: Vital Signs (plot_vs - BP, HR, Respiration) 
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Vital Signs</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+    .chart-card h4 { margin: 0 0 16px 0; font-size: 16px; color: #1e293b; }
+    .chart-wrapper { height: 280px; position: relative; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+    @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    <h1>Vital Signs</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'+location.search">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'+location.search">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+      <button class="local-tab" onclick="location.href='cm-relative.html'+location.search">CM Relative</button>
+      <button class="local-tab" onclick="location.href='cm-listing.html'+location.search">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+      <button class="local-tab active">Vitals</button>
+      <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+      <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+    </nav>
+    <div class="card">
+      <div id="chartsContainer" class="charts-grid"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-vitals', '../../../');
+    let vsData = [];
+    let currentSubject = null;
+    let charts = {};
+    
+    // R: meas_lbl <- c(DIABP_VSORRES = "Diastolic Blood Pressure", HR_VSORRES = "Heart Rate", ...)
+    const measurements = {
+      SYSBP_VSORRES: { label: 'Systolic Blood Pressure', unit: 'SYSBP_VSORRESU' },
+      DIABP_VSORRES: { label: 'Diastolic Blood Pressure', unit: 'DIABP_VSORRESU' },
+      HR_VSORRES: { label: 'Heart Rate', unit: 'HR_VSORRESU' },
+      RESP_VSORRES: { label: 'Respiration Rate', unit: 'RESP_VSORRESU' }
+    };
+    
+    function parseSasDateTime(str) {
+      if (!str) return null;
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      const match = str.match(/^(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) return new Date(parseInt(match[3]), months[match[2].toUpperCase()], parseInt(match[1]));
+      return null;
+    }
+    
+    async function loadData() {
+      return new Promise(res => Papa.parse('../../../data/vs.csv', { download: true, header: true, skipEmptyLines: true, complete: r => { vsData = r.data; res(); }, error: () => res() }));
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(vsData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; history.replaceState(null, '', `?id=${currentSubject}`); renderCharts(); });
+      renderCharts();
+    }
+    
+    function renderCharts() {
+      const container = document.getElementById('chartsContainer');
+      const subj = currentSubject;
+      Object.values(charts).forEach(c => c.destroy());
+      charts = {};
+      
+      // R: d$EOT <- ifelse(d$Folder == "DSET", "EOT", d$Folder)
+      let data = vsData.filter(r => r.Subject === subj).map(r => ({
+        ...r,
+        parsedDate: parseSasDateTime(r.VSDAT_INT),
+        visit: r.Folder === 'DSET' ? 'EOT' : r.Folder
+      })).filter(r => r.parsedDate).sort((a, b) => a.parsedDate - b.parsedDate);
+      
+      if (!data.length) { container.innerHTML = '<div class="no-data">No vital signs data</div>'; return; }
+      
+      const visits = [...new Set(data.map(r => r.visit))];
+      
+      let html = '';
+      for (const [key, config] of Object.entries(measurements)) {
+        html += `<div class="chart-card"><h4>${config.label}</h4><div class="chart-wrapper"><canvas id="chart_${key}"></canvas></div></div>`;
+      }
+      container.innerHTML = html;
+      
+      for (const [key, config] of Object.entries(measurements)) {
+        const values = visits.map(v => { const row = data.find(r => r.visit === v); return row ? parseFloat(row[key]) : null; });
+        const unit = data[0][config.unit] || 'Unknown';
+        
+        // R plot style: geom_line + geom_point(shape = 21, fill = "red", size = 3) + geom_text
+        const ctx = document.getElementById(`chart_${key}`).getContext('2d');
+        charts[key] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: visits,
+            datasets: [{
+              label: config.label,
+              data: values,
+              borderColor: '#333',
+              backgroundColor: 'red',
+              pointBackgroundColor: 'red',
+              pointBorderColor: '#333',
+              pointRadius: 6,
+              pointStyle: 'circle',
+              tension: 0,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} ${unit}` } }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Visit' }, ticks: { maxRotation: 45 } },
+              y: { title: { display: true, text: `Measurement (${unit})` }, beginAtZero: false }
+            }
+          }
+        });
+      }
+    }
+    
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>
+
+
+================================================================================
+FILE: ecg-qtcf.html
+对应 R Section 7: QTcF Interval (Change from Baseline + Absolute Value)
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - ECG / QTcF</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <style>
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .charts-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+    .chart-card h4 { margin: 0 0 16px 0; font-size: 18px; color: #1e293b; text-align: center; }
+    .chart-wrapper { height: 350px; position: relative; }
+    .threshold-legend { display: flex; gap: 24px; justify-content: center; margin-top: 12px; font-size: 13px; }
+    .threshold-legend span { display: flex; align-items: center; gap: 6px; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    <h1>ECG / QTcF Interval</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'+location.search">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'+location.search">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+      <button class="local-tab" onclick="location.href='cm-relative.html'+location.search">CM Relative</button>
+      <button class="local-tab" onclick="location.href='cm-listing.html'+location.search">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+      <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+      <button class="local-tab active">ECG/QTcF</button>
+      <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+    </nav>
+    <div class="card">
+      <div id="chartsContainer" class="charts-grid"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-ecg', '../../../');
+    let ecgData = [];
+    let currentSubject = null;
+    let charts = {};
+    
+    function parseDateTime(str) {
+      if (!str) return null;
+      // Multiple format support matching R parse_cdt
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+      if (match) return new Date(parseInt(match[3]), parseInt(match[1])-1, parseInt(match[2]), parseInt(match[4]), parseInt(match[5]));
+      match = str.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+      if (match) return new Date(parseInt(match[1]), parseInt(match[2])-1, parseInt(match[3]), parseInt(match[4]), parseInt(match[5]));
+      match = str.match(/^(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) return new Date(parseInt(match[3]), months[match[2].toUpperCase()], parseInt(match[1]));
+      return null;
+    }
+    
+    async function loadData() {
+      return new Promise(res => Papa.parse('../../../data/Export_ECG_new.csv', { download: true, header: true, skipEmptyLines: true, complete: r => { ecgData = r.data; res(); }, error: () => res() }));
+    }
+    
+    function populateSubjects() {
+      const cols = Object.keys(ecgData[0] || {});
+      const subjectCol = cols.find(k => ['Patient Key', 'Patient.Key', 'Subject', 'USUBJID'].includes(k));
+      if (!subjectCol || !ecgData.length) { document.getElementById('chartsContainer').innerHTML = '<div class="no-data">No ECG data</div>'; return; }
+      
+      const subjects = [...new Set(ecgData.map(r => r[subjectCol]))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; history.replaceState(null, '', `?id=${currentSubject}`); renderCharts(); });
+      renderCharts();
+    }
+    
+    function renderCharts() {
+      const container = document.getElementById('chartsContainer');
+      const subj = currentSubject;
+      Object.values(charts).forEach(c => c.destroy());
+      charts = {};
+      
+      const cols = Object.keys(ecgData[0] || {});
+      const subjectCol = cols.find(k => ['Patient Key', 'Patient.Key', 'Subject', 'USUBJID'].includes(k));
+      const visitCol = cols.find(k => ['Visit Name', 'Visit.Name', 'Visit'].includes(k));
+      const dtCol = cols.find(k => k.includes('DateTime') || k.includes('Date'));
+      const changeCol = cols.find(k => k.includes('Change') || k.includes('Delta'));
+      const valueCol = cols.find(k => k === 'QTcF' || k.includes('QTcF Value') || k.includes('QTcF'));
+      
+      let data = ecgData.filter(r => r[subjectCol] === subj).map(r => ({
+        visit: (r[visitCol] || '').trim().replace(/ \/\s*$/, ''),
+        dateTime: parseDateTime(r[dtCol]),
+        change: parseFloat(r[changeCol]),
+        value: parseFloat(r[valueCol])
+      })).filter(r => r.dateTime).sort((a, b) => a.dateTime - b.dateTime);
+      
+      if (!data.length) { container.innerHTML = '<div class="no-data">No ECG data for this subject</div>'; return; }
+      
+      // Group by visit, calculate mean (matching R summarise logic)
+      const visitMap = {};
+      for (const d of data) {
+        if (!visitMap[d.visit]) visitMap[d.visit] = { changes: [], values: [] };
+        if (!isNaN(d.change)) visitMap[d.visit].changes.push(d.change);
+        if (!isNaN(d.value)) visitMap[d.visit].values.push(d.value);
+      }
+      const visits = Object.keys(visitMap);
+      const changeData = visits.map(v => { const arr = visitMap[v].changes; return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : null; });
+      const valueData = visits.map(v => { const arr = visitMap[v].values; return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : null; });
+      
+      container.innerHTML = `
+        <div class="chart-card">
+          <h4>QTcF Change from Baseline</h4>
+          <div class="chart-wrapper"><canvas id="chartChange"></canvas></div>
+          <div class="threshold-legend">
+            <span><span style="width:20px;height:2px;background:orange;display:inline-block;"></span> Borderline (30 ms)</span>
+            <span><span style="width:20px;height:2px;background:red;display:inline-block;"></span> Prolonged (60 ms)</span>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h4>QTcF Absolute Value</h4>
+          <div class="chart-wrapper"><canvas id="chartValue"></canvas></div>
+          <div class="threshold-legend">
+            <span><span style="width:20px;height:2px;background:orange;display:inline-block;"></span> Borderline (450 ms)</span>
+            <span><span style="width:20px;height:2px;background:red;display:inline-block;"></span> Prolonged (480 ms)</span>
+          </div>
+        </div>
+      `;
+      
+      // Chart 1: QTcF Change - R: geom_hline(yintercept = 30, colour = "orange") + geom_hline(yintercept = 60, colour = "red")
+      const minChange = Math.min(...changeData.filter(v => v !== null));
+      const yMinChange = Math.floor(minChange / 10) * 10;
+      charts.change = new Chart(document.getElementById('chartChange').getContext('2d'), {
+        type: 'line',
+        data: { labels: visits, datasets: [{ label: 'Delta QTcF', data: changeData, borderColor: '#3b82f6', backgroundColor: '#3b82f6', pointRadius: 5, tension: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            annotation: {
+              annotations: {
+                line30: { type: 'line', yMin: 30, yMax: 30, borderColor: 'orange', borderWidth: 2, borderDash: [5, 5] },
+                line60: { type: 'line', yMin: 60, yMax: 60, borderColor: 'red', borderWidth: 2, borderDash: [5, 5] }
+              }
+            }
+          },
+          scales: { x: { ticks: { maxRotation: 45 } }, y: { title: { display: true, text: 'Delta QTcF (msec)' }, min: yMinChange, max: 70 } }
+        }
+      });
+      
+      // Chart 2: QTcF Value - R: geom_hline(yintercept = 450) + geom_hline(yintercept = 480)
+      const minValue = Math.min(...valueData.filter(v => v !== null));
+      const yMinValue = Math.floor(minValue / 10) * 10;
+      charts.value = new Chart(document.getElementById('chartValue').getContext('2d'), {
+        type: 'line',
+        data: { labels: visits, datasets: [{ label: 'QTcF', data: valueData, borderColor: '#3b82f6', backgroundColor: '#3b82f6', pointRadius: 5, tension: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            annotation: {
+              annotations: {
+                line450: { type: 'line', yMin: 450, yMax: 450, borderColor: 'orange', borderWidth: 2, borderDash: [5, 5] },
+                line480: { type: 'line', yMin: 480, yMax: 480, borderColor: 'red', borderWidth: 2, borderDash: [5, 5] }
+              }
+            }
+          },
+          scales: { x: { ticks: { maxRotation: 45 } }, y: { title: { display: true, text: 'QTcF (msec)' }, min: yMinValue, max: 500 } }
+        }
+      });
+    }
+    
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>
+
+
+================================================================================
+FILE: labs.html
+对应 R Section 8: Laboratory Results (plot_lab - by analyte with reference range)
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - Labs</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <style>
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 6px; }
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .filter-bar { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; }
+    .filter-bar label { font-weight: 500; color: var(--text-secondary); }
+    .filter-bar select { padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 6px; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .chart-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #1e293b; }
+    .chart-card h4 .form-name { font-style: italic; color: #64748b; font-weight: normal; }
+    .chart-wrapper { height: 220px; position: relative; }
+    .ref-range-note { font-size: 11px; color: #64748b; text-align: center; margin-top: 8px; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+    @media (max-width: 1200px) { .charts-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <a href="../patient-list.html" class="back-link">← Back to Patient List</a>
+    <h1>Laboratory Results</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <nav class="local-tabs">
+      <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+      <button class="local-tab" onclick="location.href='ae-timeline.html'+location.search">AE Timeline</button>
+      <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+      <button class="local-tab" onclick="location.href='ae-listing.html'+location.search">AE Listing</button>
+      <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+      <button class="local-tab" onclick="location.href='cm-relative.html'+location.search">CM Relative</button>
+      <button class="local-tab" onclick="location.href='cm-listing.html'+location.search">CM Listing</button>
+      <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+      <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+      <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+      <button class="local-tab active">Labs</button>
+    </nav>
+    <div class="card">
+      <div class="filter-bar">
+        <label>Panel:</label>
+        <select id="panelFilter"><option value="">All Panels</option></select>
+      </div>
+      <div id="chartsContainer" class="charts-grid"></div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-labs', '../../../');
+    let labData = [];
+    let currentSubject = null;
+    let charts = {};
+    
+    function parseSasDateTime(str) {
+      if (!str) return null;
+      const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      const match = str.match(/^(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) return new Date(parseInt(match[3]), months[match[2].toUpperCase()], parseInt(match[1]));
+      return null;
+    }
+    
+    async function loadData() {
+      return new Promise(res => Papa.parse('../../../data/lab.csv', { download: true, header: true, skipEmptyLines: true, complete: r => { labData = r.data; res(); }, error: () => res() }));
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(labData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { currentSubject = e.target.value; history.replaceState(null, '', `?id=${currentSubject}`); updatePanelFilter(); renderCharts(); });
+      updatePanelFilter();
+      document.getElementById('panelFilter').addEventListener('change', renderCharts);
+      renderCharts();
+    }
+    
+    function updatePanelFilter() {
+      const data = labData.filter(r => r.Subject === currentSubject);
+      const panels = [...new Set(data.map(r => r.FormName || 'Unknown'))].filter(Boolean).sort();
+      document.getElementById('panelFilter').innerHTML = '<option value="">All Panels</option>' + panels.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+    
+    function renderCharts() {
+      const container = document.getElementById('chartsContainer');
+      const subj = currentSubject;
+      const panelFilter = document.getElementById('panelFilter').value;
+      Object.values(charts).forEach(c => c.destroy());
+      charts = {};
+      
+      // R: d$Folder <- ifelse(d$Folder == "DSET", "End of treatment", d$Folder)
+      let data = labData.filter(r => r.Subject === subj).map(r => ({
+        ...r,
+        parsedDate: parseSasDateTime(r.RecordDate),
+        folder: r.Folder === 'DSET' ? 'End of treatment' : r.Folder,
+        formName: r.FormName || 'Unknown',
+        numericValue: parseFloat(r.NumericValue),
+        labLow: parseFloat(r.LabLow),
+        labHigh: parseFloat(r.LabHigh)
+      })).filter(r => r.parsedDate && !isNaN(r.numericValue));
+      
+      if (panelFilter) data = data.filter(r => r.formName === panelFilter);
+      if (!data.length) { container.innerHTML = '<div class="no-data">No laboratory data</div>'; return; }
+      
+      // Group by FormName + AnalyteName (matching R split logic)
+      const groups = {};
+      for (const d of data) {
+        const key = `${d.formName}|||${d.AnalyteName}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(d);
+      }
+      
+      // Sort each group and handle duplicate visits (R: FolderX = ifelse(dup > 1, paste0(Folder, " ", dup), Folder))
+      for (const key of Object.keys(groups)) {
+        groups[key].sort((a, b) => a.parsedDate - b.parsedDate);
+        const visitCounts = {};
+        for (const d of groups[key]) {
+          visitCounts[d.folder] = (visitCounts[d.folder] || 0) + 1;
+          d.folderX = visitCounts[d.folder] > 1 ? `${d.folder} ${visitCounts[d.folder]}` : d.folder;
+        }
+      }
+      
+      const groupKeys = Object.keys(groups).slice(0, 8); // Limit for performance
+      let html = '';
+      for (const key of groupKeys) {
+        const [formName, analyteName] = key.split('|||');
+        const chartId = `chart_${key.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        // R: fmt_name <- function(a) { p <- strsplit(a, "; ")[[1]]; if (length(p) == 2) paste(p[1], toupper(p[2]), sep = "; ") else a }
+        let displayName = analyteName;
+        if (analyteName && analyteName.includes('; ')) {
+          const parts = analyteName.split('; ');
+          displayName = `${parts[0]}; ${parts[1].toUpperCase()}`;
+        }
+        html += `<div class="chart-card"><h4><strong>${displayName}</strong> <span class="form-name">${formName}</span></h4><div class="chart-wrapper"><canvas id="${chartId}"></canvas></div><div class="ref-range-note" id="note_${chartId}"></div></div>`;
+      }
+      container.innerHTML = html;
+      
+      for (const key of groupKeys) {
+        const gData = groups[key];
+        const chartId = `chart_${key.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const labels = gData.map(d => d.folderX);
+        const values = gData.map(d => d.numericValue);
+        const unit = gData[0].LabUnits || 'Unknown';
+        const labLow = gData.find(d => !isNaN(d.labLow))?.labLow;
+        const labHigh = gData.find(d => !isNaN(d.labHigh))?.labHigh;
+        
+        const annotations = {};
+        // R: geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = lab_low, ymax = lab_high), fill = "lightblue", alpha = 0.3)
+        if (!isNaN(labLow) && !isNaN(labHigh)) {
+          annotations.refRange = { type: 'box', yMin: labLow, yMax: labHigh, backgroundColor: 'rgba(173, 216, 230, 0.3)', borderWidth: 0 };
+          document.getElementById(`note_${chartId}`).textContent = `Reference range: ${labLow} - ${labHigh} ${unit}`;
+        }
+        
+        // R style: geom_line + geom_point(color = "red", size = 3) + geom_text(label = round(NumericValue, 2))
+        charts[chartId] = new Chart(document.getElementById(chartId).getContext('2d'), {
+          type: 'line',
+          data: { labels, datasets: [{ data: values, borderColor: '#666', backgroundColor: 'red', pointBackgroundColor: 'red', pointRadius: 5, tension: 0, fill: false }] },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, annotation: { annotations } },
+            scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } }, y: { title: { display: true, text: `Unit (${unit})`, font: { size: 11 } }, beginAtZero: false } }
+          }
+        });
+      }
+      
+      if (Object.keys(groups).length > 8) {
+        container.innerHTML += `<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #64748b;">Showing first 8 analytes. Use Panel filter for specific tests.</div>`;
+      }
+    }
+    
+    loadData().then(populateSubjects);
+  </script>
+</body>
+</html>

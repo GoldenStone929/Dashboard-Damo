@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - CM Timeline</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .chart-container { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; min-height: 400px; max-height: 600px; overflow-x: auto; overflow-y: auto; }
+    .cm-row { display: flex; align-items: center; min-height: 38px; border-bottom: 1px solid #f0f0f0; }
+    .cm-label { width: 280px; min-width: 280px; font-size: 11px; padding: 4px 8px; text-align: right; line-height: 1.3; word-wrap: break-word; border: 1px solid #ddd; background: #f9f9f9; border-radius: 3px; margin-right: 8px; }
+    .cm-bar-area { flex: 1; position: relative; height: 24px; min-width: 500px; }
+    .cm-segment { position: absolute; height: 6px; top: 9px; border-radius: 3px; }
+    .cm-point { position: absolute; width: 8px; height: 8px; top: 8px; transform: translateX(-4px); }
+    .cm-date-label { position: absolute; font-size: 9px; color: #666; top: -10px; }
+    .x-axis { position: relative; height: 25px; margin-left: 288px; min-width: 500px; border-top: 1px solid #333; margin-top: 8px; }
+    .x-tick { position: absolute; transform: translateX(-50%); font-size: 10px; color: #333; top: 4px; }
+    .x-tick::before { content: ''; position: absolute; left: 50%; top: -8px; width: 1px; height: 8px; background: #333; }
+    .legend-container { display: flex; gap: 30px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .legend-color { width: 24px; height: 6px; border-radius: 3px; }
+    .pagination { display: flex; gap: 8px; margin-top: 20px; justify-content: center; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; }
+    .pagination button.active { background: #2C3E50; color: white; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+    /* CM Listing table styles */
+    .cm-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 30px; }
+    .cm-table th { background: #8B6F47; color: white; font-weight: bold; padding: 8px 5px; text-align: left; font-size: 11px; }
+    .cm-table td { padding: 6px 5px; color: #34495E; border: 1px solid #E8D5C4; vertical-align: top; }
+    .cm-table tr:nth-child(odd) td { background: #FFFFFF; }
+    .cm-table tr:nth-child(even) td { background: #FFF8F0; }
+    .table-container { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab active">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content">
+    <h1>Concomitant Medications Timeline</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+      <div class="card">
+        <div class="chart-container" id="chartContainer"></div>
+        <div class="pagination" id="pagination"></div>
+        <div class="legend-container">
+          <div class="legend-item"><span class="legend-color" style="background: black;"></span> Complete</div>
+          <div class="legend-item"><span class="legend-color" style="background: red;"></span> Start Only (Ongoing)</div>
+        </div>
+        <div class="table-container">
+          <h2 style="margin-top: 30px; margin-bottom: 16px; font-size: 18px;">Concomitant Medications Data Listing</h2>
+          <div id="tableContainer"></div>
+          <div class="pagination" id="tablePagination"></div>
+        </div>
+      </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-cm-timeline', '../../../');
+    let cmData = [];
+    let currentSubject = null, currentPage = 1, currentTablePage = 1;
+    const ROWS_PER_PAGE = 16;
+    const TABLE_ROWS_PER_PAGE = 15;
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_MAP = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+    
+    // Parse "01JAN2024:00:00:00.000" format
+    function parseCmDate(str) {
+      if (!str) return null;
+      // Extract first 9 chars: "01JAN2024"
+      const dateOnly = str.substring(0, 9);
+      const day = parseInt(dateOnly.substring(0, 2));
+      const mon = MONTH_MAP[dateOnly.substring(2, 5).toUpperCase()];
+      const year = parseInt(dateOnly.substring(5, 9));
+      if (isNaN(day) || mon === undefined || isNaN(year)) return null;
+      return new Date(year, mon, day);
+    }
+    
+    function formatYearMonth(date) {
+      if (!date) return '';
+      return MONTHS[date.getMonth()] + ' ' + date.getFullYear();
+    }
+    
+    async function loadData() {
+      cmData = await new Promise(res => Papa.parse('../../../data/cm.csv', { 
+        download: true, header: true, skipEmptyLines: true, 
+        complete: r => res(r.data), error: () => res([]) 
+      }));
+    }
+    
+    function populateSubjects() {
+      const subjects = [...new Set(cmData.map(r => r.Subject))].filter(Boolean).sort();
+      const select = document.getElementById('subjectSelect');
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+       select.addEventListener('change', e => { 
+         currentSubject = e.target.value; 
+         currentPage = 1; 
+         currentTablePage = 1;
+         history.replaceState(null, '', `?id=${currentSubject}`); 
+         renderChart();
+         renderTable();
+       });
+       renderChart();
+       renderTable();
+    }
+    
+    function renderChart() {
+      const container = document.getElementById('chartContainer');
+      const subj = currentSubject;
+      
+      // Parse and filter data
+      let data = cmData.filter(r => r.Subject === subj).map(r => {
+        const startDate = parseCmDate(r.CMSTDAT_INT);
+        const endDate = parseCmDate(r.CMENDAT_INT);
+        const medication = [r.CMTRT, r.CMDSTXT, r.CMDOSU_STD || r.CMDOSU, r.CMROUTE_STD || r.CMROUTE, r.CMDOSFRQ_STD || r.CMDOSFRQ].filter(Boolean).join(' - ');
+        return { ...r, startDate, endDate, medication, status: endDate ? 'Complete' : 'Start Only' };
+      }).filter(r => r.startDate !== null);
+      
+      if (!data.length) { 
+        container.innerHTML = '<div class="no-data">No concomitant medications data</div>'; 
+        document.getElementById('pagination').innerHTML = ''; 
+        return; 
+      }
+      
+      // Sort by start date
+      data.sort((a, b) => a.startDate - b.startDate);
+      
+      const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
+      const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+      const pageData = data.slice(startIdx, startIdx + ROWS_PER_PAGE);
+      
+      // Calculate date range for this page
+      const allDates = [];
+      pageData.forEach(r => {
+        allDates.push(r.startDate);
+        if (r.endDate) allDates.push(r.endDate);
+      });
+      const minDate = new Date(Math.min(...allDates));
+      const maxDate = new Date(Math.max(...allDates));
+      
+      // Add buffer: 1 month before and after
+      const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+      const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 2, 1); // +2 for ongoing buffer
+      
+      const totalMs = endMonth - startMonth;
+      
+      // Generate month breaks for x-axis
+      const monthBreaks = [];
+      let current = new Date(startMonth);
+      while (current <= endMonth) {
+        monthBreaks.push(new Date(current));
+        current.setMonth(current.getMonth() + 1);
+      }
+      
+      // Limit to ~8 labels for readability
+      let step = 1;
+      if (monthBreaks.length > 10) step = Math.ceil(monthBreaks.length / 8);
+      
+      let html = '';
+      for (const cm of pageData) {
+        const leftPct = ((cm.startDate - startMonth) / totalMs) * 100;
+        const endDate = cm.endDate || endMonth;
+        const widthPct = ((endDate - cm.startDate) / totalMs) * 100;
+        const color = cm.status === 'Complete' ? 'black' : 'red';
+        const dateLabel = cm.startDate.toISOString().split('T')[0].replace(/-/g, '.');
+        
+        html += `<div class="cm-row"><div class="cm-label" title="${cm.medication}">${cm.medication}</div><div class="cm-bar-area">`;
+         if (cm.status === 'Complete') {
+           html += `<div class="cm-segment" style="left:${leftPct}%;width:${Math.max(0.5, widthPct)}%;background:${color};"></div>`;
+           html += `<div class="cm-point" style="left:${leftPct}%;background:${color};"></div>`;
+           html += `<div class="cm-point" style="left:${leftPct + widthPct}%;background:${color};"></div>`;
+         } else {
+           // For ongoing: extend the segment with a rounded end
+           const extendedWidth = widthPct + 2; // Add extra width for rounded end
+           html += `<div class="cm-segment" style="left:${leftPct}%;width:${Math.max(0.5, extendedWidth)}%;background:${color};border-radius:3px 8px 8px 3px;"></div>`;
+           html += `<div class="cm-point" style="left:${leftPct}%;background:${color};"></div>`;
+         }
+        html += `<div class="cm-date-label" style="left:${leftPct}%;">${dateLabel}</div>`;
+        html += '</div></div>';
+      }
+      
+      // X-axis with year/month labels
+      html += '<div class="x-axis">';
+      for (let i = 0; i < monthBreaks.length; i += step) {
+        const d = monthBreaks[i];
+        const pct = ((d - startMonth) / totalMs) * 100;
+        html += `<span class="x-tick" style="left:${pct}%;">${formatYearMonth(d)}</span>`;
+      }
+      html += '</div>';
+      
+      container.innerHTML = html;
+      
+      // Pagination
+      let pagHtml = '';
+      if (totalPages > 1) {
+        pagHtml += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Prev</button>`;
+        for (let p = 1; p <= totalPages; p++) pagHtml += `<button class="${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        pagHtml += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next →</button>`;
+      }
+      document.getElementById('pagination').innerHTML = pagHtml;
+    }
+    
+     function goToPage(page) { currentPage = page; renderChart(); }
+     
+     function shortDate(str) { return (!str || str.trim() === '') ? '' : str.trim().substring(0, 9); }
+     
+     function renderTable() {
+       const container = document.getElementById('tableContainer');
+       const subj = currentSubject;
+       
+       if (!cmData || cmData.length === 0) {
+         container.innerHTML = '<div class="no-data">No data available</div>';
+         document.getElementById('tablePagination').innerHTML = '';
+         return;
+       }
+       
+       // R transformation: matching tbl structure
+       let data = cmData.filter(r => r.Subject === subj).map(r => {
+         const startDate = parseCmDate(r.CMSTDAT_INT);
+         const endDate = parseCmDate(r.CMENDAT_INT);
+         const studyDays = (startDate && endDate) ? Math.round((endDate - startDate) / (1000*60*60*24)) : '';
+         return {
+           medication: r.CMTRT || '',
+           category: r.CMCAT || '',
+           reason: r.CMREAS || '',
+           dose: r.CMDSTXT || '',
+           unit: r.CMDOSU_STD || r.CMDOSU || '',
+           frequency: r.CMDOSFRQ_STD || r.CMDOSFRQ || '',
+           route: r.CMROUTE_STD || r.CMROUTE || '',
+           startDate: shortDate(r.CMSTDAT_INT),
+           endDate: shortDate(r.CMENDAT_INT),
+           ongoing: r.CMONGO || '',
+           studyDays: studyDays,
+           aeRelated: r.CMAENO_STD || r.CMAENO || '',
+           _sortDate: startDate
+         };
+       }).sort((a, b) => (a._sortDate || 0) - (b._sortDate || 0));
+       
+       if (!data.length) { 
+         container.innerHTML = '<div class="no-data">No concomitant medications data</div>'; 
+         document.getElementById('tablePagination').innerHTML = ''; 
+         return; 
+       }
+       
+       const totalPages = Math.ceil(data.length / TABLE_ROWS_PER_PAGE);
+       const startIdx = (currentTablePage - 1) * TABLE_ROWS_PER_PAGE;
+       const pageData = data.slice(startIdx, startIdx + TABLE_ROWS_PER_PAGE);
+       
+       // R column widths: c(0.12, 0.08, 0.10, 0.06, 0.05, 0.08, 0.06, 0.09, 0.09, 0.07, 0.08, 0.10)
+       let html = `<table class="cm-table"><thead><tr>
+         <th style="width:12%">Medication</th><th style="width:8%">Category</th><th style="width:10%">Reason</th>
+         <th style="width:6%">Dose</th><th style="width:5%">Unit</th><th style="width:8%">Frequency</th>
+         <th style="width:6%">Route</th><th style="width:9%">Start Date</th><th style="width:9%">End Date</th>
+         <th style="width:7%">Ongoing</th><th style="width:8%">Study Days</th><th style="width:10%">AE Related</th>
+       </tr></thead><tbody>`;
+       for (const row of pageData) {
+         html += `<tr><td>${row.medication}</td><td>${row.category}</td><td>${row.reason}</td><td>${row.dose}</td><td>${row.unit}</td><td>${row.frequency}</td><td>${row.route}</td><td>${row.startDate}</td><td>${row.endDate}</td><td>${row.ongoing}</td><td>${row.studyDays}</td><td>${row.aeRelated}</td></tr>`;
+       }
+       html += '</tbody></table>';
+       container.innerHTML = html;
+       
+       let pagHtml = '';
+       if (totalPages > 1) {
+         pagHtml += `<button ${currentTablePage === 1 ? 'disabled' : ''} onclick="goToTablePage(${currentTablePage - 1})">← Prev</button>`;
+         for (let p = 1; p <= totalPages; p++) pagHtml += `<button class="${p === currentTablePage ? 'active' : ''}" onclick="goToTablePage(${p})">${p}</button>`;
+         pagHtml += `<button ${currentTablePage === totalPages ? 'disabled' : ''} onclick="goToTablePage(${currentTablePage + 1})">Next →</button>`;
+       }
+       document.getElementById('tablePagination').innerHTML = pagHtml;
+     }
+     
+     function goToTablePage(page) { 
+       currentTablePage = page; 
+       renderTable(); 
+     }
+     
+     loadData().then(() => {
+       populateSubjects();
+       renderTable();
+     });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+CTCAE v5.0 Unit Test Results
+================================
+Timestamp: 2026-04-02T03:04:25.630Z
+Total checks: 144
+Passed: 144
+Failed: 0
+
+Failures:
+- None
+
+Console logs captured during execution:
+- None

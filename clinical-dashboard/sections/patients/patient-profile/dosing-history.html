@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dosing History - Daily Dose Tracking</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../../assets/js/block-export.js"></script>
+  <style>
+    /* ========================================================================
+       Page Layout
+       ======================================================================== */
+    .dosing-container {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 20px;
+    }
+
+    /* ========================================================================
+       Local Navigation Tabs - Using base.css styles
+       ======================================================================== */
+
+    /* ========================================================================
+       Controls Panel
+       ======================================================================== */
+    .controls-panel {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: #2C3E50;
+      font-size: 13px;
+    }
+
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 200px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      font-size: 13px;
+      color: #34495E;
+    }
+
+    /* ========================================================================
+       Summary Cards
+       ======================================================================== */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .summary-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .summary-card.total-days::before { background: #3498db; }
+    .summary-card.dosed-days::before { background: #27ae60; }
+    .summary-card.missed-days::before { background: #e74c3c; }
+    .summary-card.total-dose::before { background: #9b59b6; }
+    .summary-card.avg-dose::before { background: #f39c12; }
+    .summary-card.max-dose::before { background: #1abc9c; }
+
+    .summary-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+
+    .summary-card.dosed-days .summary-value { color: #27ae60; }
+    .summary-card.missed-days .summary-value { color: #e74c3c; }
+    .summary-card.total-dose .summary-value { color: #9b59b6; }
+
+    .summary-label {
+      font-size: 12px;
+      color: #7F8C8D;
+      margin-top: 5px;
+    }
+
+    .summary-unit {
+      font-size: 14px;
+      color: #999;
+    }
+
+    /* ========================================================================
+       Info Panel
+       ======================================================================== */
+    .info-panel {
+      background: #e8f4fd;
+      border: 1px solid #bee5eb;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+
+    .info-panel h4 {
+      margin: 0 0 10px 0;
+      color: #0c5460;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .info-item {
+      display: flex;
+      gap: 8px;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #0c5460;
+    }
+
+    .info-value {
+      color: #34495E;
+    }
+
+    /* ========================================================================
+       Debug Panel
+       ======================================================================== */
+    .debug-panel {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .debug-panel h4 {
+      margin: 0 0 10px 0;
+      color: #856404;
+    }
+
+    /* ========================================================================
+       Chart Section
+       ======================================================================== */
+    .chart-section {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chart-wrapper {
+      height: 400px;
+      position: relative;
+    }
+
+    .chart-legend {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 14px;
+      border-radius: 3px;
+    }
+
+    .legend-color.scheduled { background: #3498db; }
+    .legend-color.adjusted { background: #f39c12; }
+    .legend-color.missed { background: #e74c3c; }
+
+    /* ========================================================================
+       Frequency Reference
+       ======================================================================== */
+    .frequency-ref {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+
+    .frequency-ref h4 {
+      margin: 0 0 10px 0;
+      color: #2C3E50;
+      font-size: 14px;
+    }
+
+    .freq-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .freq-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .freq-code {
+      background: #2C3E50;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    .freq-desc {
+      color: #666;
+    }
+
+    /* ========================================================================
+       Dosing Table
+       ======================================================================== */
+    .table-section {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .table-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .dosing-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .dosing-table th {
+      background: #2C3E50;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    .dosing-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .dosing-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .dosing-table tr.missed-row {
+      background: #fff5f5;
+    }
+
+    .dosing-table tr.missed-row:hover {
+      background: #ffe8e8;
+    }
+
+    .dosing-table tr.adjusted-row {
+      background: #fff8e6;
+    }
+
+    .dose-bar {
+      height: 20px;
+      background: #3498db;
+      border-radius: 3px;
+      min-width: 2px;
+    }
+
+    .dose-bar.missed {
+      background: #e74c3c;
+    }
+
+    .dose-bar.adjusted {
+      background: #f39c12;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-badge.scheduled {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-badge.adjusted {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-badge.missed {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* ========================================================================
+       Missed Doses Panel
+       ======================================================================== */
+    .missed-panel {
+      background: #fff5f5;
+      border: 1px solid #f5c6cb;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+
+    .missed-panel h4 {
+      margin: 0 0 10px 0;
+      color: #721c24;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .missed-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .missed-range {
+      background: white;
+      border: 1px solid #f5c6cb;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .missed-range .days {
+      font-weight: 600;
+      color: #721c24;
+    }
+
+    .missed-range .dates {
+      color: #666;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    /* ========================================================================
+       Adjusted Doses Panel
+       ======================================================================== */
+    .adjusted-panel {
+      background: #fff8e6;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+    }
+
+    .adjusted-panel h4 {
+      margin: 0 0 10px 0;
+      color: #856404;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .adjusted-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .adjusted-range {
+      background: white;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .adjusted-range .days {
+      font-weight: 600;
+      color: #856404;
+    }
+
+    .adjusted-range .dates {
+      color: #666;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    .adjusted-range .dose-info {
+      color: #856404;
+      font-size: 11px;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    /* ========================================================================
+       No Data Message
+       ======================================================================== */
+    .no-data-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: #7F8C8D;
+      font-size: 18px;
+    }
+
+    .no-data-message .icon {
+      font-size: 64px;
+      margin-bottom: 15px;
+    }
+
+    /* ========================================================================
+       Loading Overlay
+       ======================================================================== */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #2C3E50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #2C3E50;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab active">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content">
+    <div class="dosing-container">
+      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+        <h1 class="page-title" style="margin: 0;">Patient Dosing History</h1>
+        <button id="filterButton" style="padding: 8px 16px; border: 1px solid #e74c3c; background: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 13px; color: white; transition: all 0.2s; font-weight: 600;">
+          Show Patients with Missed/Adjusted Doses Only
+        </button>
+      </div>
+      <p class="page-subtitle">Daily dose tracking: Scheduled (ECSD) → Adjusted (ECAD) → Missed (ECMD)</p>
+
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Select Patient</label>
+          <select id="patientSelect">
+            <option value="">-- Select Patient --</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showMissedBars" checked>
+          <label for="showMissedBars">Highlight Missed Doses (Red)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showAdjustedBars" checked>
+          <label for="showAdjustedBars">Highlight Adjusted Doses (Orange)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showValues">
+          <label for="showValues">Show Dose Values on Bars</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showDebug">
+          <label for="showDebug">Show Debug Info</label>
+        </div>
+      </div>
+
+      <!-- Debug Panel (hidden by default) -->
+      <div class="debug-panel" id="debugPanel" style="display: none;">
+        <h4>🔧 Debug Information</h4>
+        <div id="debugContent"></div>
+      </div>
+
+      <!-- Content Container -->
+      <div id="contentContainer">
+        <div class="no-data-message" id="noDataMessage">
+          <div class="icon">💊</div>
+          <div>Please select a patient to view dosing history</div>
+        </div>
+      </div>
+
+      <!-- Patient Content (Hidden by default) -->
+      <div id="patientContent" style="display: none;">
+        <!-- Patient Info -->
+        <div class="info-panel">
+          <h4>📋 Patient Dosing Summary</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Patient ID:</span>
+              <span class="info-value" id="infoPatientId">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Day 0 (First Date):</span>
+              <span class="info-value" id="infoFirstDate">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Last Date:</span>
+              <span class="info-value" id="infoLastDate">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Dose Unit:</span>
+              <span class="info-value" id="infoDoseUnit">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card total-days">
+            <div class="summary-value" id="statTotalDays">0</div>
+            <div class="summary-label">Total Study Days</div>
+          </div>
+          <div class="summary-card dosed-days">
+            <div class="summary-value" id="statDosedDays">0</div>
+            <div class="summary-label">Days with Dosing</div>
+          </div>
+          <div class="summary-card missed-days">
+            <div class="summary-value" id="statMissedDays">0</div>
+            <div class="summary-label">Missed Dose Days</div>
+          </div>
+          <div class="summary-card total-dose">
+            <div class="summary-value" id="statTotalDose">0</div>
+            <div class="summary-label">Total Cumulative Dose</div>
+          </div>
+          <div class="summary-card avg-dose">
+            <div class="summary-value" id="statAvgDose">0</div>
+            <div class="summary-label">Avg Daily Dose</div>
+          </div>
+          <div class="summary-card max-dose">
+            <div class="summary-value" id="statMaxDose">0</div>
+            <div class="summary-label">Max Daily Dose</div>
+          </div>
+        </div>
+
+        <!-- Adjusted Doses Panel -->
+        <div class="adjusted-panel" id="adjustedPanel" style="display: none;">
+          <h4>📝 Adjusted Dose Periods (from ECAD)</h4>
+          <div class="adjusted-list" id="adjustedList"></div>
+        </div>
+
+        <!-- Missed Doses Panel -->
+        <div class="missed-panel" id="missedPanel" style="display: none;">
+          <h4>⚠️ Missed Dose Periods (from ECMD)</h4>
+          <div class="missed-list" id="missedList"></div>
+        </div>
+
+        <!-- Daily Dose Chart -->
+        <div id="dosingHistoryChartExportBlock" class="chart-section" style="position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="section-title">
+              <span>📊</span>
+              Daily Total Dose by Study Day
+            </div>
+            <button class="export-btn" onclick="showBlockExportDialog('dosingHistoryChartExportBlock', 'Dosing_History_Chart')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="doseChart"></canvas>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <div class="legend-color scheduled"></div>
+              <span>Scheduled (ECSD)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color adjusted"></div>
+              <span>Adjusted (ECAD)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color missed"></div>
+              <span>Missed (ECMD)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dosing Details Table -->
+        <div class="table-section">
+          <div class="section-title" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span>📝</span>
+            <span>Daily Dosing Details</span>
+            <button id="filterTableButton" style="padding: 6px 14px; border: 1px solid #000; background: white; border-radius: 4px; cursor: pointer; font-size: 12px; color: #e74c3c; transition: all 0.2s; font-weight: 600;">
+              Show Adjusted/Missed Days Only
+            </button>
+            <button type="button" class="export-csv-btn" onclick="exportDosingTableCSV()" style="padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Export CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="dosing-table" id="dosingTable">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Study Day</th>
+                  <th style="width: 120px;">Date</th>
+                  <th style="width: 100px;">Dose/Admin</th>
+                  <th style="width: 80px;">Frequency</th>
+                  <th style="width: 100px;">Daily Total</th>
+                  <th style="width: 100px;">Source</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="doseTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading Dosing Data...</div>
+  </div>
+
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('patients', 'pp-dosing-history', '../../../');
+    }
+  </script>
+  <script>
+    // ========================================================================
+    // Dosing History - ECSD → ECAD → ECMD Logic
+    // ========================================================================
+
+    // ========================================================================
+    // Constants
+    // ========================================================================
+    const FREQUENCY_MULTIPLIER = {
+      'ONCE': 1,
+      'QD': 1,
+      'BID': 2,
+      'TID': 3,
+      'QID': 4
+    };
+
+    // ========================================================================
+    // State
+    // ========================================================================
+    const state = {
+      ecsdData: [],  // Scheduled dosing (base)
+      ecadData: [],  // Actual adjusted dosing (overrides ECSD)
+      ecmdData: [],  // Missed doses (dose = 0)
+      patients: [],
+      currentPatient: null,
+      dailyDoses: [],
+      missedRanges: [],
+      chart: null,
+      doseUnit: 'mg',
+      debugLog: []
+    };
+
+    // ========================================================================
+    // Debug Helper
+    // ========================================================================
+    function debug(msg) {
+      state.debugLog.push(msg);
+      console.log(msg);
+    }
+
+    function showDebug() {
+      const panel = document.getElementById('debugPanel');
+      const content = document.getElementById('debugContent');
+      const show = document.getElementById('showDebug').checked;
+      panel.style.display = show ? 'block' : 'none';
+      if (show) {
+        content.textContent = state.debugLog.join('\n');
+      }
+    }
+
+    // ========================================================================
+    // CSV Loading
+    // ========================================================================
+    function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    // ========================================================================
+    // Date Parsing
+    // ========================================================================
+    function parseDate(dateStr) {
+      if (!dateStr) return null;
+      const str = String(dateStr).trim();
+      
+      // Format: 18DEC2024:00:00:00.000 or 18DEC2024
+      const match = str.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const months = { 
+          JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+          JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 
+        };
+        const month = months[monthStr];
+        if (month !== undefined) {
+          return new Date(year, month, day);
+        }
+      }
+      return null;
+    }
+
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function dateToKey(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function daysBetween(date1, date2) {
+      const oneDay = 24 * 60 * 60 * 1000;
+      return Math.round((date2 - date1) / oneDay);
+    }
+
+    // ========================================================================
+    // Data Extraction Helpers
+    // ========================================================================
+    function getSubject(row) {
+      return String(row.Subject || row.SUBJECT || row.SUBJID || row.subject || '').trim();
+    }
+
+    function getStartDate(row) {
+      const cols = ['ECSTDAT_INT', 'ECSTDAT', 'ECDAT_INT', 'ECDAT', 'StartDate', 'Start_Date'];
+      for (const col of cols) {
+        if (row[col]) {
+          const d = parseDate(row[col]);
+          if (d) return d;
+        }
+      }
+      return null;
+    }
+
+    function getEndDate(row) {
+      const cols = ['ECENDAT_INT', 'ECENDAT', 'EndDate', 'End_Date'];
+      for (const col of cols) {
+        if (row[col]) {
+          const d = parseDate(row[col]);
+          if (d) return d;
+        }
+      }
+      return null;
+    }
+
+    function extractDose(row) {
+      // Try ECDSTXT first
+      const doseText = row.ECDSTXT || row.ECDOSE || row.Dose || row.dose || '';
+      if (doseText) {
+        const match = String(doseText).match(/^([\d.]+)/);
+        if (match) return parseFloat(match[1]);
+      }
+      return 0;
+    }
+
+    function extractUnit(row) {
+      if (row.ECDOSU) return String(row.ECDOSU).trim();
+      if (row.ECDOSU_STD) return String(row.ECDOSU_STD).trim();
+      
+      const doseText = row.ECDSTXT || '';
+      const match = String(doseText).match(/[\d.]+\s*(\w+)/);
+      if (match) return match[1];
+      
+      return 'mg';
+    }
+
+    function getFrequency(row) {
+      const freq = String(row.ECDOSFRQ_STD || row.ECDOSFRQ || row.Frequency || 'QD').trim().toUpperCase();
+      return freq;
+    }
+
+    function getFrequencyMultiplier(freq) {
+      return FREQUENCY_MULTIPLIER[freq] || 1;
+    }
+
+    // ========================================================================
+    // Main Processing Logic
+    // ========================================================================
+    function processPatientData(patientId) {
+      state.debugLog = [];
+      debug(`\n========== Processing Patient: ${patientId} ==========`);
+
+      // Get patient data from each source
+      const ecsdRows = state.ecsdData.filter(r => getSubject(r) === patientId);
+      const ecadRows = state.ecadData.filter(r => getSubject(r) === patientId);
+      const ecmdRows = state.ecmdData.filter(r => getSubject(r) === patientId);
+
+      debug(`ECSD rows: ${ecsdRows.length}`);
+      debug(`ECAD rows: ${ecadRows.length}`);
+      debug(`ECMD rows: ${ecmdRows.length}`);
+
+      if (ecsdRows.length === 0 && ecadRows.length === 0) {
+        debug('No dosing data found');
+        return { dailyDoses: [], missedRanges: [], doseUnit: 'mg' };
+      }
+
+      // Extract dose unit
+      if (ecsdRows.length > 0) {
+        state.doseUnit = extractUnit(ecsdRows[0]);
+      } else if (ecadRows.length > 0) {
+        state.doseUnit = extractUnit(ecadRows[0]);
+      }
+      debug(`Dose unit: ${state.doseUnit}`);
+
+      // ======== Step 1: Parse ECSD (Scheduled) ========
+      const scheduledRanges = [];
+      ecsdRows.forEach((row, i) => {
+        const start = getStartDate(row);
+        const end = getEndDate(row) || start;
+        if (start) {
+          const dose = extractDose(row);
+          const freq = getFrequency(row);
+          const mult = getFrequencyMultiplier(freq);
+          scheduledRanges.push({
+            startDate: start,
+            endDate: end,
+            dosePerAdmin: dose,
+            frequency: freq,
+            dailyTotal: dose * mult
+          });
+          if (i < 3) {
+            debug(`ECSD[${i}]: ${formatDate(start)} to ${formatDate(end)}, dose=${dose}, freq=${freq}, daily=${dose * mult}`);
+          }
+        }
+      });
+      debug(`Parsed ${scheduledRanges.length} scheduled ranges`);
+
+      // ======== Step 2: Parse ECAD (Adjusted) ========
+      const adjustedRanges = [];
+      ecadRows.forEach((row, i) => {
+        const start = getStartDate(row);
+        const end = getEndDate(row) || start;
+        if (start) {
+          const dose = extractDose(row);
+          const freq = getFrequency(row);
+          const mult = getFrequencyMultiplier(freq);
+          
+          // Extract adjustment reason
+          let reason = String(row.ECADJ_STD || row.ECADJ || '').trim();
+          if (reason.toUpperCase() === 'OTHER' && row.ECADJOTH) {
+            reason = String(row.ECADJOTH).trim();
+          }
+          
+          adjustedRanges.push({
+            startDate: start,
+            endDate: end,
+            dosePerAdmin: dose,
+            frequency: freq,
+            multiplier: mult,
+            dailyTotal: dose * mult,
+            reason: reason || '-'
+          });
+          if (i < 3) {
+            debug(`ECAD[${i}]: ${formatDate(start)} to ${formatDate(end)}, dose=${dose}, freq=${freq}, daily=${dose * mult}, reason=${reason}`);
+          }
+        }
+      });
+      debug(`Parsed ${adjustedRanges.length} adjusted ranges`);
+      
+      // Store adjusted ranges for rendering
+      state.adjustedRanges = adjustedRanges;
+
+      // ======== Step 3: Parse ECMD (Missed) ========
+      const missedRanges = [];
+      ecmdRows.forEach((row, i) => {
+        const start = getStartDate(row);
+        const end = getEndDate(row) || start;
+        if (start) {
+          // Extract missed dose reason
+          let reason = String(row.ECREASOC_STD || row.ECREASOC || '').trim();
+          if (reason.toUpperCase() === 'OTHER' && row.ECOCOTH) {
+            reason = String(row.ECOCOTH).trim();
+          }
+          
+          missedRanges.push({
+            startDate: start,
+            endDate: end,
+            reason: reason || '-'
+          });
+          if (i < 3) {
+            debug(`ECMD[${i}]: ${formatDate(start)} to ${formatDate(end)}, reason=${reason}`);
+          }
+        }
+      });
+      state.missedRanges = missedRanges;
+      debug(`Parsed ${missedRanges.length} missed ranges`);
+
+      // ======== Step 4: Find Day 0 and Last Date ========
+      const allDates = [];
+      [...scheduledRanges, ...adjustedRanges].forEach(r => {
+        allDates.push(r.startDate);
+        if (r.endDate) allDates.push(r.endDate);
+      });
+      missedRanges.forEach(r => {
+        if (r.startDate) allDates.push(r.startDate);
+        if (r.endDate) allDates.push(r.endDate);
+      });
+
+      if (allDates.length === 0) {
+        return { dailyDoses: [], missedRanges: [], doseUnit: state.doseUnit };
+      }
+
+      const day0 = new Date(Math.min(...allDates));
+      const lastDate = new Date(Math.max(...allDates));
+      const totalDays = daysBetween(day0, lastDate) + 1;
+
+      debug(`Day 0: ${formatDate(day0)}`);
+      debug(`Last Date: ${formatDate(lastDate)}`);
+      debug(`Total Days: ${totalDays}`);
+
+      // ======== Step 5: Build Daily Map ========
+      const dailyMap = {};
+
+      // Initialize all days with empty values
+      for (let i = 0; i < totalDays; i++) {
+        const date = new Date(day0);
+        date.setDate(date.getDate() + i);
+        const key = dateToKey(date);
+        dailyMap[key] = {
+          studyDay: i,
+          date: new Date(date),
+          dosePerAdmin: 0,
+          frequency: '-',
+          dailyTotal: 0,
+          source: 'none',
+          reason: '-'
+        };
+      }
+
+      // ======== Step 6: Fill with ECSD (Scheduled) ========
+      scheduledRanges.forEach(range => {
+        let current = new Date(range.startDate);
+        while (current <= range.endDate) {
+          const key = dateToKey(current);
+          if (dailyMap[key]) {
+            dailyMap[key].dosePerAdmin = range.dosePerAdmin;
+            dailyMap[key].frequency = range.frequency;
+            dailyMap[key].dailyTotal = range.dailyTotal;
+            dailyMap[key].source = 'scheduled';
+            dailyMap[key].reason = '-';
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      });
+
+      // ======== Step 7: Override with ECAD (Adjusted) ========
+      adjustedRanges.forEach(range => {
+        let current = new Date(range.startDate);
+        while (current <= range.endDate) {
+          const key = dateToKey(current);
+          if (dailyMap[key]) {
+            dailyMap[key].dosePerAdmin = range.dosePerAdmin;
+            dailyMap[key].frequency = range.frequency;
+            dailyMap[key].dailyTotal = range.dailyTotal;
+            dailyMap[key].source = 'adjusted';
+            dailyMap[key].reason = range.reason || '-';
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      });
+
+      // ======== Step 8: Override with ECMD (Missed = 0) ========
+      missedRanges.forEach(range => {
+        let current = new Date(range.startDate);
+        const endDate = range.endDate || range.startDate;
+        while (current <= endDate) {
+          const key = dateToKey(current);
+          if (dailyMap[key]) {
+            dailyMap[key].dosePerAdmin = 0;
+            dailyMap[key].frequency = 'MISSED';
+            dailyMap[key].dailyTotal = 0;
+            dailyMap[key].source = 'missed';
+            dailyMap[key].reason = range.reason || '-';
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      });
+
+      // Convert to array
+      const dailyDoses = Object.values(dailyMap).sort((a, b) => a.studyDay - b.studyDay);
+
+      // Debug summary
+      const scheduled = dailyDoses.filter(d => d.source === 'scheduled').length;
+      const adjusted = dailyDoses.filter(d => d.source === 'adjusted').length;
+      const missed = dailyDoses.filter(d => d.source === 'missed').length;
+      const none = dailyDoses.filter(d => d.source === 'none').length;
+      debug(`\nDaily breakdown: scheduled=${scheduled}, adjusted=${adjusted}, missed=${missed}, none=${none}`);
+
+      state.dailyDoses = dailyDoses;
+
+      return {
+        dailyDoses,
+        missedRanges,
+        adjustedRanges,
+        doseUnit: state.doseUnit,
+        day0,
+        lastDate
+      };
+    }
+
+    // ========================================================================
+    // UI Rendering
+    // ========================================================================
+
+    function updateSummaryCards(data) {
+      const { dailyDoses, doseUnit } = data;
+
+      const totalDays = dailyDoses.length;
+      const dosedDays = dailyDoses.filter(d => d.dailyTotal > 0).length;
+      const missedDays = dailyDoses.filter(d => d.source === 'missed').length;
+      const totalDose = dailyDoses.reduce((sum, d) => sum + d.dailyTotal, 0);
+      const avgDose = dosedDays > 0 ? totalDose / dosedDays : 0;
+      const maxDose = Math.max(...dailyDoses.map(d => d.dailyTotal), 0);
+
+      document.getElementById('statTotalDays').textContent = totalDays;
+      document.getElementById('statDosedDays').textContent = dosedDays;
+      document.getElementById('statMissedDays').textContent = missedDays;
+      document.getElementById('statTotalDose').innerHTML = `${totalDose.toFixed(0)} <span class="summary-unit">${doseUnit}</span>`;
+      document.getElementById('statAvgDose').innerHTML = `${avgDose.toFixed(1)} <span class="summary-unit">${doseUnit}</span>`;
+      document.getElementById('statMaxDose').innerHTML = `${maxDose.toFixed(0)} <span class="summary-unit">${doseUnit}</span>`;
+    }
+
+    function renderAdjustedPanel(adjustedRanges, day0, doseUnit) {
+      const panel = document.getElementById('adjustedPanel');
+      const list = document.getElementById('adjustedList');
+
+      if (!adjustedRanges || adjustedRanges.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+      list.innerHTML = adjustedRanges.map(range => {
+        const startDay = daysBetween(day0, range.startDate);
+        const endDay = range.endDate ? daysBetween(day0, range.endDate) : startDay;
+        const numDays = endDay - startDay + 1;
+        const dailyTotal = range.dosePerAdmin * (range.multiplier || 1);
+
+        return `
+          <div class="adjusted-range">
+            <div class="days">Day ${startDay}${endDay !== startDay ? ` - Day ${endDay}` : ''} (${numDays} day${numDays > 1 ? 's' : ''})</div>
+            <div class="dates">${formatDate(range.startDate)}${range.endDate && range.endDate.getTime() !== range.startDate.getTime() ? ` to ${formatDate(range.endDate)}` : ''}</div>
+            <div class="dose-info">${range.dosePerAdmin} ${doseUnit} × ${range.frequency} = ${dailyTotal} ${doseUnit}/day</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMissedPanel(missedRanges, day0) {
+      const panel = document.getElementById('missedPanel');
+      const list = document.getElementById('missedList');
+
+      if (missedRanges.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+      list.innerHTML = missedRanges.map(range => {
+        const startDay = daysBetween(day0, range.startDate);
+        const endDay = range.endDate ? daysBetween(day0, range.endDate) : startDay;
+        const numDays = endDay - startDay + 1;
+
+        return `
+          <div class="missed-range">
+            <div class="days">Day ${startDay}${endDay !== startDay ? ` - Day ${endDay}` : ''} (${numDays} day${numDays > 1 ? 's' : ''})</div>
+            <div class="dates">${formatDate(range.startDate)}${range.endDate && range.endDate.getTime() !== range.startDate.getTime() ? ` to ${formatDate(range.endDate)}` : ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderChart(dailyDoses, doseUnit) {
+      const showMissedBars = document.getElementById('showMissedBars').checked;
+      const showAdjustedBars = document.getElementById('showAdjustedBars').checked;
+      const showValues = document.getElementById('showValues').checked;
+
+      if (state.chart) {
+        state.chart.destroy();
+      }
+
+      const ctx = document.getElementById('doseChart').getContext('2d');
+
+      // Prepare data - X axis from 0 to max day, one bar per day, no gaps
+      const labels = dailyDoses.map(d => d.studyDay);
+      const values = dailyDoses.map(d => d.dailyTotal);
+      
+      // Color based on source
+      const colors = dailyDoses.map(d => {
+        if (d.source === 'missed' && showMissedBars) return '#e74c3c';
+        if (d.source === 'adjusted' && showAdjustedBars) return '#f39c12';
+        if (d.dailyTotal === 0) return '#e0e0e0';
+        return '#3498db';
+      });
+
+      state.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `Daily Dose (${doseUnit})`,
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 0,
+            borderSkipped: false,
+            barPercentage: 1.0,      // No gap between bars
+            categoryPercentage: 1.0  // No gap between categories
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: { top: 20, right: 20, bottom: 10, left: 10 }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (ctx) => `Day ${ctx[0].label}`,
+                label: (ctx) => {
+                  const day = dailyDoses[ctx.dataIndex];
+                  if (day.source === 'missed') return 'Missed Dose (0)';
+                  return `${ctx.parsed.y} ${doseUnit}`;
+                },
+                afterLabel: (ctx) => {
+                  const day = dailyDoses[ctx.dataIndex];
+                  return [
+                    `Frequency: ${day.frequency}`,
+                    `Source: ${day.source.toUpperCase()}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: 0,
+              max: dailyDoses.length - 1,
+              title: {
+                display: true,
+                text: 'Study Day (Day 0 = First Date)',
+                font: { size: 12, weight: 'bold' }
+              },
+              ticks: {
+                stepSize: Math.ceil(dailyDoses.length / 20),
+                font: { size: 10 }
+              },
+              grid: { display: false }
+            },
+            y: {
+              title: {
+                display: true,
+                text: `Daily Total Dose (${doseUnit})`,
+                font: { size: 12, weight: 'bold' }
+              },
+              beginAtZero: true,
+              grid: { color: '#f0f0f0' }
+            }
+          }
+        },
+        plugins: showValues ? [{
+          id: 'valueLabels',
+          afterDatasetsDraw: (chart) => {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+
+            ctx.save();
+            ctx.font = '9px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#333';
+
+            meta.data.forEach((bar, index) => {
+              const value = dailyDoses[index].dailyTotal;
+              if (value > 0) {
+                ctx.fillText(value.toFixed(0), bar.x, bar.y - 5);
+              }
+            });
+
+            ctx.restore();
+          }
+        }] : []
+      });
+    }
+
+    function renderTable(dailyDoses, doseUnit, filterAdjustedMissed = false) {
+      const tbody = document.getElementById('doseTableBody');
+
+      // Filter if needed
+      let displayDoses = dailyDoses;
+      if (filterAdjustedMissed) {
+        displayDoses = dailyDoses.filter(day => day.source === 'adjusted' || day.source === 'missed');
+      }
+
+      tbody.innerHTML = displayDoses.map(day => {
+        let rowClass = '';
+        let badgeClass = day.source;
+        
+        if (day.source === 'missed') {
+          rowClass = 'missed-row';
+        } else if (day.source === 'adjusted') {
+          rowClass = 'adjusted-row';
+        }
+
+        const sourceLabel = {
+          'scheduled': 'ECSD (Scheduled)',
+          'adjusted': 'ECAD (Adjusted)',
+          'missed': 'ECMD (Missed)',
+          'none': '-'
+        }[day.source] || day.source;
+
+        return `
+          <tr class="${rowClass}">
+            <td><strong>Day ${day.studyDay}</strong></td>
+            <td>${formatDate(day.date)}</td>
+            <td>${day.source === 'missed' ? '-' : (day.dosePerAdmin > 0 ? `${day.dosePerAdmin} ${doseUnit}` : '-')}</td>
+            <td>${day.frequency}</td>
+            <td><strong>${day.dailyTotal.toFixed(1)} ${doseUnit}</strong></td>
+            <td>
+              <span class="status-badge ${badgeClass}">
+                ${sourceLabel}
+              </span>
+            </td>
+            <td>${day.reason || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderPatientData() {
+      const patientId = state.currentPatient;
+
+      if (!patientId) {
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('patientContent').style.display = 'none';
+        return;
+      }
+
+      const data = processPatientData(patientId);
+      showDebug();
+
+      if (data.dailyDoses.length === 0) {
+        document.getElementById('noDataMessage').innerHTML = `
+          <div class="icon">⚠️</div>
+          <div>No dosing data found for patient ${patientId}</div>
+          <div style="font-size: 14px; margin-top: 10px;">Check console for debug info</div>
+        `;
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('patientContent').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('noDataMessage').style.display = 'none';
+      document.getElementById('patientContent').style.display = 'block';
+
+      document.getElementById('infoPatientId').textContent = patientId;
+      document.getElementById('infoFirstDate').textContent = formatDate(data.day0);
+      document.getElementById('infoLastDate').textContent = formatDate(data.lastDate);
+      document.getElementById('infoDoseUnit').textContent = data.doseUnit;
+
+        updateSummaryCards(data);
+        renderAdjustedPanel(data.adjustedRanges || [], data.day0, data.doseUnit);
+        renderMissedPanel(data.missedRanges, data.day0);
+        renderChart(data.dailyDoses, data.doseUnit);
+        renderTable(data.dailyDoses, data.doseUnit, state.filterTableAdjustedMissed);
+    }
+
+    // ========================================================================
+    // Initialization
+    // ========================================================================
+
+    function populatePatientSelect(filterMissedAdjusted = false) {
+      const allPatients = new Set();
+      
+      state.ecsdData.forEach(row => {
+        const subject = getSubject(row);
+        if (subject) allPatients.add(subject);
+      });
+      
+      state.ecadData.forEach(row => {
+        const subject = getSubject(row);
+        if (subject) allPatients.add(subject);
+      });
+
+      let patientsToShow = Array.from(allPatients);
+
+      // Filter: only show patients with missed or adjusted doses
+      if (filterMissedAdjusted) {
+        const patientsWithMissed = new Set();
+        const patientsWithAdjusted = new Set();
+
+        // Patients with missed doses (ECMD)
+        state.ecmdData.forEach(row => {
+          const subject = getSubject(row);
+          if (subject) patientsWithMissed.add(subject);
+        });
+
+        // Patients with adjusted doses (ECAD)
+        state.ecadData.forEach(row => {
+          const subject = getSubject(row);
+          if (subject) patientsWithAdjusted.add(subject);
+        });
+
+        // Combine: patients with either missed or adjusted doses
+        const filteredPatients = new Set([...patientsWithMissed, ...patientsWithAdjusted]);
+        patientsToShow = patientsToShow.filter(p => filteredPatients.has(p));
+      }
+
+      state.patients = patientsToShow.sort();
+      
+      const select = document.getElementById('patientSelect');
+      select.innerHTML = '<option value="">-- Select Patient --</option>' +
+        state.patients.map(p => `<option value="${p}">${p}</option>`).join('');
+
+      debug(`Found ${state.patients.length} patients${filterMissedAdjusted ? ' (with missed/adjusted doses)' : ''}`);
+    }
+
+    async function tryLoadCSV(filenames, basePath) {
+      for (const filename of filenames) {
+        try {
+          const data = await loadCSV(`${basePath}${filename}`);
+          if (data && data.length > 0) {
+            console.log(`✓ Loaded ${filename}: ${data.length} rows`);
+            console.log(`  Columns: ${Object.keys(data[0]).join(', ')}`);
+            return data;
+          }
+        } catch (e) {
+          console.log(`✗ ${filename}: ${e.message}`);
+        }
+      }
+      return [];
+    }
+
+    async function init() {
+      try {
+        const basePath = '../../../data/';
+
+        // Load ECSD (Scheduled dosing)
+        state.ecsdData = await tryLoadCSV(
+          ['ecsd.csv', 'ecsd.CSV', 'ECSD.csv', 'ECSD.CSV'],
+          basePath
+        );
+
+        // Load ECAD (Actual/Adjusted dosing)
+        state.ecadData = await tryLoadCSV(
+          ['ecad.csv', 'ecad.CSV', 'ECAD.csv', 'ECAD.CSV'],
+          basePath
+        );
+
+        // Load ECMD (Missed dosing)
+        state.ecmdData = await tryLoadCSV(
+          ['ecmd.csv', 'ecmd.CSV', 'ECMD.csv', 'ECMD.CSV'],
+          basePath
+        );
+
+        console.log('\n=== Data Summary ===');
+        console.log(`ECSD: ${state.ecsdData.length} rows`);
+        console.log(`ECAD: ${state.ecadData.length} rows`);
+        console.log(`ECMD: ${state.ecmdData.length} rows`);
+
+        if (state.ecsdData.length > 0) {
+          console.log('ECSD sample:', state.ecsdData[0]);
+        }
+        if (state.ecadData.length > 0) {
+          console.log('ECAD sample:', state.ecadData[0]);
+        }
+        if (state.ecmdData.length > 0) {
+          console.log('ECMD sample:', state.ecmdData[0]);
+        }
+
+        populatePatientSelect();
+
+        // Event listeners
+        document.getElementById('patientSelect').addEventListener('change', (e) => {
+          state.currentPatient = e.target.value || null;
+          // Update URL to preserve patient selection when navigating
+          if (state.currentPatient) {
+            history.replaceState(null, '', `?id=${state.currentPatient}`);
+          }
+          renderPatientData();
+        });
+
+        let filterActive = false;
+        document.getElementById('filterButton').addEventListener('click', () => {
+          filterActive = !filterActive;
+          populatePatientSelect(filterActive);
+          
+          const button = document.getElementById('filterButton');
+          if (filterActive) {
+            button.textContent = 'Show All Patients';
+            button.style.background = '#2C3E50';
+            button.style.borderColor = '#2C3E50';
+            button.style.color = 'white';
+          } else {
+            button.textContent = 'Show Patients with Missed/Adjusted Doses Only';
+            button.style.background = '#e74c3c';
+            button.style.borderColor = '#e74c3c';
+            button.style.color = 'white';
+          }
+
+          // Reset selection if current patient is not in filtered list
+          if (state.currentPatient && !state.patients.includes(state.currentPatient)) {
+            state.currentPatient = null;
+            document.getElementById('patientSelect').value = '';
+            document.getElementById('noDataMessage').style.display = 'flex';
+            document.getElementById('patientContent').style.display = 'none';
+          }
+          
+          // Auto-select first patient if available (especially when filtering)
+          if (state.patients.length > 0) {
+            const first = state.patients[0];
+            document.getElementById('patientSelect').value = first;
+            state.currentPatient = first;
+            renderPatientData();
+          } else if (filterActive) {
+            // No patients with missed/adjusted doses
+            document.getElementById('noDataMessage').innerHTML = `
+              <div class="icon">ℹ️</div>
+              <div>No patients found with missed or adjusted doses</div>
+            `;
+            document.getElementById('noDataMessage').style.display = 'flex';
+            document.getElementById('patientContent').style.display = 'none';
+          }
+        });
+
+        document.getElementById('showMissedBars').addEventListener('change', renderPatientData);
+        document.getElementById('showAdjustedBars').addEventListener('change', renderPatientData);
+        document.getElementById('showValues').addEventListener('change', renderPatientData);
+        document.getElementById('showDebug').addEventListener('change', showDebug);
+
+        // Table filter button - only show adjusted/missed days
+        document.getElementById('filterTableButton').addEventListener('click', () => {
+          state.filterTableAdjustedMissed = !state.filterTableAdjustedMissed;
+          const button = document.getElementById('filterTableButton');
+          
+          if (state.filterTableAdjustedMissed) {
+            button.textContent = 'Show All Days';
+            button.style.background = '#e74c3c';
+            button.style.borderColor = '#000';
+            button.style.color = 'white';
+          } else {
+            button.textContent = 'Show Adjusted/Missed Days Only';
+            button.style.background = 'white';
+            button.style.borderColor = '#000';
+            button.style.color = '#e74c3c';
+          }
+          
+          // Re-render table with filter
+          if (state.currentPatient && state.dailyDoses.length > 0) {
+            renderTable(state.dailyDoses, state.doseUnit, state.filterTableAdjustedMissed);
+          }
+        });
+
+        // Check URL params or auto-select first patient
+        const urlParams = new URLSearchParams(window.location.search);
+        // Support both 'id' and 'patient' for backward compatibility
+        const patientParam = urlParams.get('id') || urlParams.get('patient');
+
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('Patient_Dosing_History');
+        }
+
+        if (patientParam && state.patients.includes(patientParam)) {
+          document.getElementById('patientSelect').value = patientParam;
+          state.currentPatient = patientParam;
+          renderPatientData();
+        } else if (state.patients.length > 0) {
+          const first = state.patients[0];
+          document.getElementById('patientSelect').value = first;
+          state.currentPatient = first;
+          renderPatientData();
+        }
+
+      } catch (error) {
+        console.error('Init error:', error);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + error.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    function exportDosingTableCSV() {
+      var table = document.getElementById('dosingTable');
+      if (!table) return;
+      var rows = [];
+      table.querySelectorAll('tr').forEach(function(tr) {
+        var row = [];
+        tr.querySelectorAll('th, td').forEach(function(cell) {
+          row.push('"' + (cell.textContent || '').replace(/"/g, '""') + '"');
+        });
+        rows.push(row.join(','));
+      });
+      var csv = rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'Dosing_History_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

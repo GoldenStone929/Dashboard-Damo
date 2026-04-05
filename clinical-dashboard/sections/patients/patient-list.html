@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient List - Clinical Trial Dashboard</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .filter-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .filter-select {
+      padding: 10px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      min-width: 180px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .filter-select:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+    
+    .site-group {
+      margin-bottom: 32px;
+    }
+    
+    .site-header {
+      color: white;
+      padding: 16px 20px;
+      border-radius: 10px 10px 0 0;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    /* Site background colors - different for each site */
+    .site-group:nth-child(1) .site-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .site-group:nth-child(1) .patient-table tbody tr { background: #f8fafc; }
+    .site-group:nth-child(1) .patient-table tbody tr:hover { background: #f1f5f9; }
+    
+    .site-group:nth-child(2) .site-header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+    .site-group:nth-child(2) .patient-table tbody tr { background: #eff6ff; }
+    .site-group:nth-child(2) .patient-table tbody tr:hover { background: #dbeafe; }
+    
+    .site-group:nth-child(3) .site-header { background: linear-gradient(135deg, #065f46 0%, #10b981 100%); }
+    .site-group:nth-child(3) .patient-table tbody tr { background: #f0fdf4; }
+    .site-group:nth-child(3) .patient-table tbody tr:hover { background: #dcfce7; }
+    
+    .site-group:nth-child(4) .site-header { background: linear-gradient(135deg, #7c2d12 0%, #f59e0b 100%); }
+    .site-group:nth-child(4) .patient-table tbody tr { background: #fffbeb; }
+    .site-group:nth-child(4) .patient-table tbody tr:hover { background: #fef3c7; }
+    
+    .site-group:nth-child(5) .site-header { background: linear-gradient(135deg, #7e22ce 0%, #a855f7 100%); }
+    .site-group:nth-child(5) .patient-table tbody tr { background: #faf5ff; }
+    .site-group:nth-child(5) .patient-table tbody tr:hover { background: #f3e8ff; }
+    
+    .site-group:nth-child(6) .site-header { background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%); }
+    .site-group:nth-child(6) .patient-table tbody tr { background: #fff1f2; }
+    .site-group:nth-child(6) .patient-table tbody tr:hover { background: #ffe4e6; }
+    
+    .site-group:nth-child(7) .site-header { background: linear-gradient(135deg, #0c4a6e 0%, #06b6d4 100%); }
+    .site-group:nth-child(7) .patient-table tbody tr { background: #f0fdfa; }
+    .site-group:nth-child(7) .patient-table tbody tr:hover { background: #ccfbf1; }
+    
+    .site-group:nth-child(8) .site-header { background: linear-gradient(135deg, #78350f 0%, #fbbf24 100%); }
+    .site-group:nth-child(8) .patient-table tbody tr { background: #fffbeb; }
+    .site-group:nth-child(8) .patient-table tbody tr:hover { background: #fef3c7; }
+    
+    /* Default for more than 8 sites */
+    .site-group:nth-child(n+9) .site-header { background: linear-gradient(135deg, #475569 0%, #64748b 100%); }
+    .site-group:nth-child(n+9) .patient-table tbody tr { background: #f8fafc; }
+    .site-group:nth-child(n+9) .patient-table tbody tr:hover { background: #f1f5f9; }
+    
+    .site-header .site-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .patient-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .patient-table th,
+    .patient-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .patient-table th {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #f8fafc;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .patient-table td {
+      font-size: 14px;
+      color: #1e293b;
+    }
+    
+    .patient-table tbody tr {
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    
+    .patient-table tbody tr:hover {
+      transform: translateX(2px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .patient-link {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #0369a1;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .patient-link:hover {
+      background: #0284c7;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .patient-link:active {
+      transform: translateY(0);
+    }
+    
+    .dose-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 80px;
+    }
+    
+    /* Dose level colors */
+    .dose-1 { background: #dbeafe; color: #1e40af; border: 2px solid #93c5fd; }
+    .dose-2 { background: #d1fae5; color: #065f46; border: 2px solid #6ee7b7; }
+    .dose-3 { background: #fef3c7; color: #92400e; border: 2px solid #fcd34d; }
+    .dose-4 { background: #fce7f3; color: #9f1239; border: 2px solid #f9a8d4; }
+    .dose-5 { background: #e9d5ff; color: #6b21a8; border: 2px solid #c084fc; }
+    .dose-unknown { background: #f1f5f9; color: #475569; border: 2px solid #cbd5e1; }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-ongoing { background: #dbeafe; color: #1d4ed8; }
+    .status-completed { background: #d1fae5; color: #059669; }
+    .status-discontinued { background: #fee2e2; color: #dc2626; }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+      font-size: 16px;
+    }
+    
+    .error {
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      border-left: 4px solid #dc2626;
+    }
+    
+    .no-data {
+      text-align: center;
+      padding: 60px;
+      color: #94a3b8;
+      font-size: 16px;
+    }
+    
+    .patient-container {
+      display: grid;
+      gap: 24px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">Patient List</h1>
+      <p class="page-subtitle">Click a patient row to view detailed profile</p>
+    </div>
+    
+    <div class="card">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label">Site</label>
+          <select id="siteFilter" class="filter-select">
+            <option value="">All Sites</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Dose Level</label>
+          <select id="doseFilter" class="filter-select">
+            <option value="">All Dose Levels</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Status</label>
+          <select id="statusFilter" class="filter-select">
+            <option value="">All Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="discontinued">Discontinued</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="loading" class="loading">Loading patient data...</div>
+      <div id="error" class="error" style="display: none;"></div>
+      <div id="patientContainer" class="patient-container" style="display: none;"></div>
+    </div>
+  </main>
+  
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'patient-list', '../../');
+    
+    let allPatients = [];
+    let dmData = [];
+    let filteredPatients = [];
+    
+    // Extract dose level from arm string (e.g., "Cohort 1" -> 1, "10mg" -> extract number)
+    function getDoseLevel(arm) {
+      if (!arm || arm.trim() === '') return null;
+      const armStr = arm.toString().toUpperCase();
+      
+      // Try to extract cohort number (Cohort 1, Cohort 2, etc.)
+      const cohortMatch = armStr.match(/COHORT\s*(\d+)/i);
+      if (cohortMatch) return parseInt(cohortMatch[1]);
+      
+      // Try to extract dose number from patterns like "10mg", "25mg", etc.
+      const doseMatch = armStr.match(/(\d+)\s*MG/i);
+      if (doseMatch) {
+        const dose = parseInt(doseMatch[1]);
+        // Map common doses to cohort levels
+        if (dose <= 10) return 1;
+        if (dose <= 25) return 2;
+        if (dose <= 50) return 3;
+        if (dose <= 100) return 4;
+        return 5;
+      }
+      
+      // Try to extract any number
+      const numMatch = armStr.match(/(\d+)/);
+      if (numMatch) return parseInt(numMatch[1]);
+      
+      return null;
+    }
+    
+    function getDoseClass(doseLevel) {
+      if (!doseLevel) return 'dose-unknown';
+      return `dose-${Math.min(doseLevel, 5)}`;
+    }
+    
+    function getDoseLabel(arm, doseLevel) {
+      if (!arm || arm.trim() === '') return 'Unknown';
+      if (doseLevel) return `Cohort ${doseLevel}`;
+      return arm.toString();
+    }
+    
+    // Function to convert SAS7BDAT to CSV using a conversion API or script
+    async function convertSas7bdatToCsv() {
+      try {
+        // Try to call a conversion endpoint (if you have a server-side API)
+        const response = await fetch('../../api/convert-sas?file=dm.sas7bdat', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            console.log('SAS7BDAT converted successfully');
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn('Conversion API not available:', err);
+      }
+      
+      // If API is not available, show instructions
+      console.warn('Automatic conversion not available. Please run the conversion script manually.');
+      showConversionInstructions();
+      return false;
+    }
+    
+    function showConversionInstructions() {
+      const errorDiv = document.getElementById('error');
+      errorDiv.style.display = 'block';
+      errorDiv.innerHTML = `
+        <strong>DM.CSV not found.</strong> To convert dm.sas7bdat to CSV, please run the conversion script:
+        <br><br>
+        <code style="background: #f1f5f9; padding: 8px; border-radius: 4px; display: block; margin: 8px 0;">
+          python convert_sas_to_csv.py
+        </code>
+        <br>
+        Or use the provided Node.js script:
+        <br>
+        <code style="background: #f1f5f9; padding: 8px; border-radius: 4px; display: block; margin: 8px 0;">
+          node convert_sas_to_csv.js
+        </code>
+        <br>
+        <small>Note: Patient list will still load, but dose information will be unavailable.</small>
+      `;
+    }
+    
+    // Load DM data - try CSV first, then attempt conversion if needed
+    async function loadDmData() {
+      return new Promise(async (resolve) => {
+        // First, try to load dm.CSV
+        Papa.parse('../../data/dm.CSV', {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (result) => {
+            console.log('DM data loaded from CSV:', result.data.length, 'rows');
+            if (result.data.length > 0) console.log('DM columns:', Object.keys(result.data[0]));
+            resolve(result.data);
+          },
+          error: async (err) => {
+            console.warn('DM.CSV not found, attempting to convert from SAS7BDAT...');
+            
+            // Update loading message
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+              loadingEl.textContent = 'DM.CSV not found. Attempting to convert dm.sas7bdat...';
+            }
+            
+            // Try to convert
+            const converted = await convertSas7bdatToCsv();
+            
+            if (converted) {
+              // If conversion successful, try loading again
+              setTimeout(() => {
+                Papa.parse('../../data/dm.CSV', {
+                  download: true,
+                  header: true,
+                  skipEmptyLines: true,
+                  complete: (result) => {
+                    console.log('DM data loaded after conversion:', result.data.length, 'rows');
+                    resolve(result.data);
+                  },
+                  error: (err2) => {
+                    console.warn('Still unable to load DM.CSV after conversion');
+                    resolve([]);
+                  }
+                });
+              }, 1000);
+            } else {
+              // Conversion failed or not available
+              resolve([]);
+            }
+          }
+        });
+      });
+    }
+    
+    async function loadData() {
+      try {
+        // Load subject data
+        const subjPromise = new Promise((resolve, reject) => {
+          Papa.parse('../../data/subj.CSV', {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: (result) => {
+              console.log('Subject data loaded:', result.data.length, 'rows');
+              if (result.data.length > 0) console.log('Subject columns:', Object.keys(result.data[0]));
+              resolve(result.data);
+            },
+            error: (err) => {
+              console.error('Error loading subj.CSV:', err);
+              reject(err);
+            }
+          });
+        });
+        
+        // Try to load dm data (dose information)
+        const dmPromise = loadDmData();
+        
+        const [subjData, dm] = await Promise.all([subjPromise, dmPromise]);
+        dmData = dm;
+        
+        // Create a map of SUBJID to arm (dose) information
+        const doseMap = {};
+        if (dmData.length > 0) {
+          dmData.forEach(row => {
+            const subjid = row.SUBJID || row.Subject || '';
+            const arm = row.arm || row.ARM || row.Arm || '';
+            if (subjid && arm) {
+              doseMap[subjid] = arm;
+            }
+          });
+        }
+        
+        // Process subject data
+        allPatients = subjData.map(row => {
+          const subjid = row.SUBJID || row.Subject || '';
+          const site = row.Site || row.SiteNumber || '';
+          const siteNumber = row.StudyEnvSiteNumber || row.SiteNumber || '';
+          const arm = doseMap[subjid] || '';
+          const doseLevel = getDoseLevel(arm);
+          
+          return {
+            subjid: subjid,
+            site: site,
+            siteNumber: siteNumber,
+            arm: arm,
+            doseLevel: doseLevel,
+            subjectId: row.subjectId || '',
+            studySiteId: row.StudySiteId || ''
+          };
+        }).filter(p => p.subjid); // Filter out empty SUBJIDs
+        
+        console.log('Processed patients:', allPatients.length);
+        filteredPatients = [...allPatients];
+        
+        populateFilters();
+        renderPatients();
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = `Error loading data: ${error.message}. Please ensure subj.CSV exists. If you have dm.sas7bdat, please convert it to dm.CSV.`;
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    
+    function populateFilters() {
+      // Get unique sites
+      const sites = [...new Set(allPatients.map(p => p.site).filter(s => s))].sort();
+      const siteFilter = document.getElementById('siteFilter');
+      sites.forEach(site => {
+        const option = document.createElement('option');
+        option.value = site;
+        option.textContent = site;
+        siteFilter.appendChild(option);
+      });
+      
+      // Get unique dose levels
+      const doseLevels = [...new Set(allPatients.map(p => p.doseLevel).filter(d => d !== null))].sort((a, b) => a - b);
+      const doseFilter = document.getElementById('doseFilter');
+      doseLevels.forEach(level => {
+        const option = document.createElement('option');
+        option.value = level;
+        option.textContent = `Cohort ${level}`;
+        doseFilter.appendChild(option);
+      });
+    }
+    
+    function applyFilters() {
+      const siteFilter = document.getElementById('siteFilter').value;
+      const doseFilter = document.getElementById('doseFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      
+      filteredPatients = allPatients.filter(patient => {
+        if (siteFilter && patient.site !== siteFilter) return false;
+        if (doseFilter && patient.doseLevel !== parseInt(doseFilter)) return false;
+        // Status filter can be added later if status data is available
+        return true;
+      });
+      
+      renderPatients();
+    }
+    
+    function renderPatients() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('patientContainer').style.display = 'block';
+      
+      const container = document.getElementById('patientContainer');
+      container.innerHTML = '';
+      
+      if (filteredPatients.length === 0) {
+        container.innerHTML = '<div class="no-data">No patients found matching the selected filters.</div>';
+        return;
+      }
+      
+      // Group by site
+      const siteGroups = {};
+      filteredPatients.forEach(patient => {
+        const siteKey = patient.site || 'Unknown Site';
+        if (!siteGroups[siteKey]) {
+          siteGroups[siteKey] = [];
+        }
+        siteGroups[siteKey].push(patient);
+      });
+      
+      // Sort sites
+      const sortedSites = Object.keys(siteGroups).sort();
+      
+      sortedSites.forEach(site => {
+        const patients = siteGroups[site];
+        
+        const siteGroup = document.createElement('div');
+        siteGroup.className = 'site-group';
+        
+        const header = document.createElement('div');
+        header.className = 'site-header';
+        header.innerHTML = `
+          <span>${site}</span>
+          <span class="site-count">${patients.length} patient${patients.length !== 1 ? 's' : ''}</span>
+        `;
+        
+        const table = document.createElement('table');
+        table.className = 'patient-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Subject ID</th>
+              <th>Dose Level</th>
+              <th>Site Number</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${patients.map(patient => {
+              const doseLevel = patient.doseLevel;
+              const doseClass = getDoseClass(doseLevel);
+              const doseLabel = getDoseLabel(patient.arm, doseLevel);
+              
+              // Create button with link stored in onclick
+              const profileUrl = `patient-profile/summary.html?id=${encodeURIComponent(patient.subjid)}`;
+              
+              return `
+                <tr>
+                  <td>
+                    <button class="patient-link" onclick="window.location.href='${profileUrl}'" type="button">
+                      ${patient.subjid}
+                    </button>
+                  </td>
+                  <td>
+                    <span class="dose-badge ${doseClass}">${doseLabel}</span>
+                  </td>
+                  <td>${patient.siteNumber || ''}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        `;
+        
+        siteGroup.appendChild(header);
+        siteGroup.appendChild(table);
+        container.appendChild(siteGroup);
+      });
+    }
+    
+    // Event listeners
+    document.getElementById('siteFilter').addEventListener('change', applyFilters);
+    document.getElementById('doseFilter').addEventListener('change', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    
+    // Load data on page load
+    loadData();
+  </script>
+</body>
+</html>

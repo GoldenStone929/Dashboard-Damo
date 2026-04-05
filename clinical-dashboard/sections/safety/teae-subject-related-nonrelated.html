@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TEAE Analysis Charts - Subject Level (Related vs Non-related)</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .page-content { margin-top: 60px; padding: 20px; }
+    .teae-charts-container { max-width: 1400px; margin: 0 auto; }
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .page-subtitle { color: #64748b; font-size: 0.95rem; margin-bottom: 20px; }
+    .methodology-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 2px solid #93c5fd;
+      border-radius: 12px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+    .methodology-banner .banner-title {
+      font-weight: 700; color: #1e40af; font-size: 14px;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .methodology-banner .banner-text {
+      font-size: 13px; color: #1e3a5f; line-height: 1.6;
+    }
+    .methodology-banner .banner-text ul { margin: 6px 0 0 18px; padding: 0; }
+    .methodology-banner .banner-text li { margin-bottom: 3px; }
+    .methodology-banner .banner-text strong { color: #1e40af; }
+    .cumulative-toggle-panel {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+      border: 2px solid #fecaca; border-radius: 12px;
+      padding: 16px 24px; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+      width: 100%; box-sizing: border-box;
+    }
+    .toggle-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+    .toggle-switch input { display: none; }
+    .toggle-slider {
+      position: relative; width: 56px; height: 28px;
+      background: #cbd5e1; border-radius: 28px;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; width: 22px; height: 22px;
+      border-radius: 50%; background: white; top: 3px; left: 3px;
+      transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+      background: linear-gradient(135deg, #4F81BD 0%, #3d6a9f 100%);
+    }
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
+      transform: translateX(28px);
+    }
+    .toggle-label { font-size: 15px; font-weight: 600; color: #1e293b; letter-spacing: 0.3px; }
+    .toggle-switch:hover .toggle-slider {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(79, 129, 189, 0.1);
+    }
+    .controls-panel {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 2px solid #e2e8f0; border-radius: 12px;
+      padding: 24px; margin-bottom: 24px;
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      width: 100%; box-sizing: border-box;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 8px; }
+    .control-group label {
+      font-weight: 600; color: #475569; font-size: 13px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .control-group select {
+      padding: 10px 14px; border: 2px solid #cbd5e1; border-radius: 8px;
+      font-size: 14px; min-width: 160px; background: white;
+      color: #1e293b; transition: all 0.2s; font-weight: 500;
+    }
+    .control-group select:hover:not(:disabled),
+    .control-group select:focus:not(:disabled) {
+      border-color: #4F81BD; outline: none;
+      box-shadow: 0 0 0 3px rgba(79, 129, 189, 0.1);
+    }
+    .control-group select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+    .btn {
+      padding: 10px 20px; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 600;
+      transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .btn-primary { background: linear-gradient(135deg, #4F81BD 0%, #3d6a9f 100%); color: white; }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #3d6a9f 0%, #2d5077 100%);
+      transform: translateY(-1px); box-shadow: 0 4px 8px rgba(79, 129, 189, 0.3);
+    }
+    .export-btn {
+      background: #dc3545 !important; color: white !important;
+      border: none !important; padding: 10px 20px !important;
+      border-radius: 8px !important; cursor: pointer !important;
+      font-size: 14px !important; font-weight: 600 !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    }
+    .export-btn:hover { background: #c82333 !important; }
+    .chart-export-dialog {
+      display: none; position: fixed; z-index: 1000;
+      left: 50%; top: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3); min-width: 300px;
+    }
+    .chart-export-dialog.active { display: block; }
+    .chart-export-dialog h3 { margin-top: 0; margin-bottom: 15px; }
+    .chart-export-dialog .form-group { margin-bottom: 15px; }
+    .chart-export-dialog label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .chart-export-dialog input {
+      width: 100%; padding: 8px; border: 1px solid #ddd;
+      border-radius: 4px; box-sizing: border-box;
+    }
+    .chart-export-dialog .button-group {
+      display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;
+    }
+    .chart-export-dialog button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+    .chart-export-dialog .btn-primary { background: #4285f4; color: white; }
+    .chart-export-dialog .btn-secondary { background: #e0e0e0; color: #333; }
+    .chart-export-dialog-overlay {
+      display: none; position: fixed; z-index: 999;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+    .chart-export-dialog-overlay.active { display: block; }
+    .filter-info {
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      border: 2px solid #7dd3fc; border-radius: 10px;
+      padding: 14px 20px; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      box-shadow: 0 2px 6px rgba(14, 165, 233, 0.15);
+    }
+    .filter-info .label {
+      font-weight: 600; color: #0369a1; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .filter-info .value {
+      color: #1e293b; background: white; padding: 6px 12px;
+      border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600;
+    }
+    .summary-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .stat-card {
+      background: white; border-radius: 10px; padding: 12px;
+      text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .stat-value { font-size: 1.4rem; font-weight: 700; color: #1e293b; }
+    .stat-label { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+    .chart-nav {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 16px; align-items: center;
+    }
+    .chart-nav .spacer { margin-left: auto; }
+    .chart-nav-btn {
+      background: #e2e8f0; border: none; border-radius: 999px;
+      padding: 8px 16px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; color: #1e293b;
+    }
+    .chart-nav-btn.active { background: #4F81BD; color: white; }
+    .chart-section {
+      background: white; border-radius: 12px; padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;
+    }
+    .chart-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: #1e293b; }
+    .chart-subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 10px; }
+    .split-chart-titles {
+      display: grid;
+      grid-template-columns: 1fr var(--label-col-width, 140px) 1fr;
+      gap: 0; align-items: center; margin-bottom: 0;
+    }
+    .split-chart-title { text-align: center; font-size: 0.95rem; font-weight: 700; color: #1e293b; }
+    .chart-wrapper { position: relative; height: 400px; overflow: hidden; }
+    .split-chart {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--label-col-width, 140px) minmax(0, 1fr);
+      gap: 0; align-items: stretch; width: 100%; height: 100%; min-width: 0;
+    }
+    .chart-pane { position: relative; height: 100%; width: 100%; overflow: hidden; min-width: 0; }
+    .chart-pane.non-related {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0;
+    }
+    .chart-pane.related {
+      background: #fff5f5; border: 1px solid #fecaca; border-radius: 6px; padding: 0;
+    }
+    .chart-pane canvas { background: transparent; width: 100% !important; height: 100% !important; display: block; }
+    .chart-labels { position: relative; height: 100%; display: block; min-width: 0; }
+    .chart-label {
+      position: absolute; left: 0; right: 0; text-align: center;
+      font-size: 10px; color: #333; transform: translateY(-50%);
+      padding: 0; margin: 0; pointer-events: none;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .legend-panel {
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 8px; padding: 10px; margin-top: 10px;
+    }
+    .legend-title { font-weight: 700; color: #1e293b; margin-bottom: 8px; font-size: 0.85rem; }
+    .legend-items { display: flex; flex-wrap: wrap; gap: 8px; }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px; font-size: 0.75rem;
+      padding: 4px 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px;
+    }
+    .legend-color { width: 10px; height: 10px; border-radius: 50%; }
+    .details-table-container {
+      margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px;
+    }
+    .details-table-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+    }
+    .details-table-header .header-content { display: flex; align-items: center; gap: 8px; }
+    .details-table-header .hint-text { color: #64748b; font-size: 0.8rem; }
+    .details-table-placeholder {
+      background: #f8fafc; border: 1px dashed #cbd5e1;
+      border-radius: 8px; padding: 14px; text-align: center; color: #64748b;
+    }
+    .details-table-wrapper table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .details-table-wrapper th,
+    .details-table-wrapper td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+    .details-table-wrapper th { background: #f1f5f9; }
+    .count-badge {
+      display: inline-block; background: #e0f2fe; color: #0369a1;
+      padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    }
+    .conflict-badge {
+      display: inline-block; background: #fef3c7; color: #92400e;
+      padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    }
+    .close-btn {
+      background: #e74c3c; color: white; border: none;
+      padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    }
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999;
+    }
+    .loading-spinner {
+      width: 50px; height: 50px; border: 4px solid #e2e8f0;
+      border-top: 4px solid #4F81BD; border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-text { margin-top: 12px; font-size: 15px; color: #1e293b; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <div class="teae-charts-container">
+      <h1 class="page-title">TEAE Analysis Charts &mdash; Subject Level (Related vs Non-related)</h1>
+      <p class="page-subtitle">Shared Y-axis; left = Non-related, right = Related (POSSIBLY RELATED/RELATED) &mdash; One Count per Subject per AE Type</p>
+
+      <!-- Methodology Explanation -->
+      <div class="methodology-banner">
+        <div class="banner-title">Subject-Level Analysis Methodology</div>
+        <div class="banner-text">
+          Each subject (patient) is counted <strong>once</strong> per adverse event type (Preferred Term). When a subject experiences the same AE multiple times with different attribute values, the following conflict resolution rules apply:
+          <ul>
+            <li><strong>Seriousness:</strong> Worst case is shown (Y &gt; N)</li>
+            <li><strong>Toxicity Grade:</strong> Highest grade is shown (5 &gt; 4 &gt; 3 &gt; 2 &gt; 1)</li>
+            <li><strong>Relationship:</strong> Most related is shown (Related &gt; Possibly Related &gt; Unlikely Related &gt; Not Related)</li>
+            <li><strong>Outcome:</strong> Value from the most recent event (by start date) is shown</li>
+            <li><strong>Action Taken:</strong> Value from the most recent event (by start date) is shown</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cumulative-toggle-panel">
+        <label class="toggle-switch">
+          <input type="checkbox" id="cumulativeToggle" onchange="toggleCumulative()">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Show Cumulative View</span>
+        </label>
+      </div>
+
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Select Year</label>
+          <select id="yearSelect">
+            <option value="2024">2024</option>
+            <option value="2025" selected>2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Select Quarter</label>
+          <select id="quarterSelect">
+            <option value="Q1">Q1 (Jan - Mar)</option>
+            <option value="Q2">Q2 (Apr - Jun)</option>
+            <option value="Q3" selected>Q3 (Jul - Sep)</option>
+            <option value="Q4">Q4 (Oct - Dec)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+      </div>
+
+      <div class="filter-info" id="filterInfo">
+        <span class="label">Date Range:</span>
+        <span class="value" id="dateRangeDisplay">-</span>
+        <span class="label">Subject-AE Records:</span>
+        <span class="value" id="recordCount">0</span>
+      </div>
+
+      <div class="summary-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="statSubjects">0</div>
+          <div class="stat-label">Unique Subjects</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTerms">0</div>
+          <div class="stat-label">Unique Terms</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statRelated">0</div>
+          <div class="stat-label">Subjects w/ Related</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statNonRelated">0</div>
+          <div class="stat-label">Subjects w/ Non-related</div>
+        </div>
+      </div>
+
+      <div class="chart-nav">
+        <button class="chart-nav-btn active" onclick="showChart('seriousness')">By Seriousness</button>
+        <button class="chart-nav-btn" onclick="showChart('toxicity')">By Toxicity Grade</button>
+        <button class="chart-nav-btn" onclick="showChart('relationship')">By Relationship</button>
+        <button class="chart-nav-btn" onclick="showChart('outcome')">By Outcome</button>
+        <button class="chart-nav-btn" onclick="showChart('action')">By Action Taken</button>
+        <span class="spacer"></span>
+        <button class="export-btn" onclick="exportCurrentChartSection()">Export</button>
+      </div>
+
+      <div id="chartSeriousness" class="chart-section">
+        <div class="chart-title">All TEAEs by Seriousness (Subject Level)</div>
+        <div class="chart-subtitle">Worst-case seriousness per subject</div>
+        <div class="split-chart-titles">
+          <div class="split-chart-title">Non-related</div>
+          <div class="split-chart-title">Preferred Term</div>
+          <div class="split-chart-title">Related</div>
+        </div>
+        <div class="chart-wrapper">
+          <div class="split-chart">
+            <div class="chart-pane non-related"><canvas id="seriousnessChartLeft"></canvas></div>
+            <div class="chart-labels" id="seriousnessLabels"></div>
+            <div class="chart-pane related"><canvas id="seriousnessChartRight"></canvas></div>
+          </div>
+        </div>
+        <div class="legend-panel" id="legendSeriousness"></div>
+        <div class="details-table-container" id="detailsSeriousness">
+          <div class="details-table-header">
+            <div class="header-content">
+              <span class="header-title">Subject Details</span>
+              <span class="hint-text">(Click on any bar segment above)</span>
+            </div>
+            <button class="close-btn" onclick="closeDetailsTable('Seriousness')" style="display: none;">&#10005; Close</button>
+          </div>
+          <div class="details-table-wrapper" id="detailsTableSeriousness">
+            <div class="details-table-placeholder" id="placeholderSeriousness">
+              <div class="message">Click on any bar segment in the chart above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartToxicity" class="chart-section" style="display:none;">
+        <div class="chart-title">All TEAEs by Toxicity Grade (Subject Level)</div>
+        <div class="chart-subtitle">Highest toxicity grade per subject</div>
+        <div class="split-chart-titles">
+          <div class="split-chart-title">Non-related</div>
+          <div class="split-chart-title">Preferred Term</div>
+          <div class="split-chart-title">Related</div>
+        </div>
+        <div class="chart-wrapper">
+          <div class="split-chart">
+            <div class="chart-pane non-related"><canvas id="toxicityChartLeft"></canvas></div>
+            <div class="chart-labels" id="toxicityLabels"></div>
+            <div class="chart-pane related"><canvas id="toxicityChartRight"></canvas></div>
+          </div>
+        </div>
+        <div class="legend-panel" id="legendToxicity"></div>
+        <div class="details-table-container" id="detailsToxicity">
+          <div class="details-table-header">
+            <div class="header-content">
+              <span class="header-title">Subject Details</span>
+              <span class="hint-text">(Click on any bar segment above)</span>
+            </div>
+            <button class="close-btn" onclick="closeDetailsTable('Toxicity')" style="display: none;">&#10005; Close</button>
+          </div>
+          <div class="details-table-wrapper" id="detailsTableToxicity">
+            <div class="details-table-placeholder" id="placeholderToxicity">
+              <div class="message">Click on any bar segment in the chart above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartRelationship" class="chart-section" style="display:none;">
+        <div class="chart-title">All TEAEs by Relationship (Subject Level)</div>
+        <div class="chart-subtitle">Most related value per subject</div>
+        <div class="split-chart-titles">
+          <div class="split-chart-title">Non-related</div>
+          <div class="split-chart-title">Preferred Term</div>
+          <div class="split-chart-title">Related</div>
+        </div>
+        <div class="chart-wrapper">
+          <div class="split-chart">
+            <div class="chart-pane non-related"><canvas id="relationshipChartLeft"></canvas></div>
+            <div class="chart-labels" id="relationshipLabels"></div>
+            <div class="chart-pane related"><canvas id="relationshipChartRight"></canvas></div>
+          </div>
+        </div>
+        <div class="legend-panel" id="legendRelationship"></div>
+        <div class="details-table-container" id="detailsRelationship">
+          <div class="details-table-header">
+            <div class="header-content">
+              <span class="header-title">Subject Details</span>
+              <span class="hint-text">(Click on any bar segment above)</span>
+            </div>
+            <button class="close-btn" onclick="closeDetailsTable('Relationship')" style="display: none;">&#10005; Close</button>
+          </div>
+          <div class="details-table-wrapper" id="detailsTableRelationship">
+            <div class="details-table-placeholder" id="placeholderRelationship">
+              <div class="message">Click on any bar segment in the chart above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartOutcome" class="chart-section" style="display:none;">
+        <div class="chart-title">All TEAEs by Outcome (Subject Level)</div>
+        <div class="chart-subtitle">Outcome from most recent event per subject</div>
+        <div class="split-chart-titles">
+          <div class="split-chart-title">Non-related</div>
+          <div class="split-chart-title">Preferred Term</div>
+          <div class="split-chart-title">Related</div>
+        </div>
+        <div class="chart-wrapper">
+          <div class="split-chart">
+            <div class="chart-pane non-related"><canvas id="outcomeChartLeft"></canvas></div>
+            <div class="chart-labels" id="outcomeLabels"></div>
+            <div class="chart-pane related"><canvas id="outcomeChartRight"></canvas></div>
+          </div>
+        </div>
+        <div class="legend-panel" id="legendOutcome"></div>
+        <div class="details-table-container" id="detailsOutcome">
+          <div class="details-table-header">
+            <div class="header-content">
+              <span class="header-title">Subject Details</span>
+              <span class="hint-text">(Click on any bar segment above)</span>
+            </div>
+            <button class="close-btn" onclick="closeDetailsTable('Outcome')" style="display: none;">&#10005; Close</button>
+          </div>
+          <div class="details-table-wrapper" id="detailsTableOutcome">
+            <div class="details-table-placeholder" id="placeholderOutcome">
+              <div class="message">Click on any bar segment in the chart above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartAction" class="chart-section" style="display:none;">
+        <div class="chart-title">All TEAEs by Action Taken (Subject Level)</div>
+        <div class="chart-subtitle">Action from most recent event per subject</div>
+        <div class="split-chart-titles">
+          <div class="split-chart-title">Non-related</div>
+          <div class="split-chart-title">Preferred Term</div>
+          <div class="split-chart-title">Related</div>
+        </div>
+        <div class="chart-wrapper">
+          <div class="split-chart">
+            <div class="chart-pane non-related"><canvas id="actionChartLeft"></canvas></div>
+            <div class="chart-labels" id="actionLabels"></div>
+            <div class="chart-pane related"><canvas id="actionChartRight"></canvas></div>
+          </div>
+        </div>
+        <div class="legend-panel" id="legendAction"></div>
+        <div class="details-table-container" id="detailsAction">
+          <div class="details-table-header">
+            <div class="header-content">
+              <span class="header-title">Subject Details</span>
+              <span class="hint-text">(Click on any bar segment above)</span>
+            </div>
+            <button class="close-btn" onclick="closeDetailsTable('Action')" style="display: none;">&#10005; Close</button>
+          </div>
+          <div class="details-table-wrapper" id="detailsTableAction">
+            <div class="details-table-placeholder" id="placeholderAction">
+              <div class="message">Click on any bar segment in the chart above</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading TEAE Data...</div>
+  </div>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/js/chart-export.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('safety', 'teae-subject-related-nonrelated', '../../');
+    }
+  </script>
+  <script>
+    const RELATED_VALUES = ['POSSIBLY RELATED', 'RELATED'];
+
+    const COLOR_SCHEMES = {
+      seriousness: {
+        'Y': '#DC143C', 'N': '#228B22',
+        'YES': '#DC143C', 'NO': '#228B22',
+        'Yes': '#DC143C', 'No': '#228B22',
+        'UNKNOWN': '#808080'
+      },
+      toxicity: {
+        '1': '#228B22', '2': '#90EE90', '3': '#FFD700',
+        '4': '#FF8C00', '5': '#DC143C', 'Unknown': '#808080'
+      },
+      relationship: {
+        'RELATED': '#FF0000', 'POSSIBLY RELATED': '#FF6347',
+        'PROBABLY RELATED': '#FF4500', 'DEFINITELY RELATED': '#8B0000',
+        'UNLIKELY RELATED': '#4682B4', 'NOT RELATED': '#708090',
+        'UNKNOWN': '#C0C0C0'
+      },
+      outcome: {
+        'FATAL': '#4B0082', 'NOT RECOVERED/NOT RESOLVED': '#CD5C5C',
+        'RECOVERED/RESOLVED WITH SEQUELAE': '#DDA0DD', 'UNKNOWN': '#C0C0C0',
+        'RECOVERING/RESOLVING': '#87CEEB', 'RECOVERED/RESOLVED': '#6B8E23'
+      },
+      action: {
+        'DOSE NOT CHANGED': '#228B22', 'DOSE REDUCED': '#FFD700',
+        'DRUG INTERRUPTED': '#FF8C00', 'DRUG WITHDRAWN': '#DC143C',
+        'NOT APPLICABLE': '#808080', 'UNKNOWN': '#C0C0C0'
+      }
+    };
+
+    const SERIOUSNESS_PRIORITY = { 'Y': 2, 'N': 1, 'UNKNOWN': 0 };
+    const TOXICITY_PRIORITY = { '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'UNKNOWN': 0 };
+    const RELATIONSHIP_PRIORITY = {
+      // Treat DEFINITELY/PROBABLY as related in worst-case resolution
+      'DEFINITELY RELATED': 5,
+      'RELATED': 4,
+      'PROBABLY RELATED': 4,
+      'POSSIBLY RELATED': 3,
+      'UNLIKELY RELATED': 2,
+      'NOT RELATED': 1,
+      'UNKNOWN': 0
+    };
+
+    const state = {
+      aeData: [],
+      filteredData: [],
+      subjectData: [],
+      charts: {},
+      currentChart: 'seriousness',
+      showCumulative: false
+    };
+
+    function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true, header: true, skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    function parseDate(dateStr) {
+      if (!dateStr || dateStr.trim() === '') return null;
+      const str = String(dateStr).trim();
+      let match = str.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+      if (match) return parseDMY(match[1], match[2], match[3]);
+      match = str.match(/^(\d{1,2})([A-Za-z]{3})(\d{4}):/);
+      if (match) return parseDMY(match[1], match[2], match[3]);
+      match = str.match(/^(\d{1,2})([A-Za-z]{3})(\d{4})$/);
+      if (match) return parseDMY(match[1], match[2], match[3]);
+      match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+      if (/^\d{8}$/.test(str)) {
+        return new Date(parseInt(str.substring(0, 4)), parseInt(str.substring(4, 6)) - 1, parseInt(str.substring(6, 8)));
+      }
+      return null;
+    }
+
+    function parseDMY(day, monthStr, year) {
+      const months = { 'JAN':0,'FEB':1,'MAR':2,'APR':3,'MAY':4,'JUN':5,'JUL':6,'AUG':7,'SEP':8,'OCT':9,'NOV':10,'DEC':11 };
+      const month = months[monthStr.toUpperCase()];
+      if (month === undefined) return null;
+      return new Date(parseInt(year), month, parseInt(day));
+    }
+
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function getSubjectId(row) {
+      return row.SUBJID || row.Subject || row.SubjectID || row.USUBJID || '';
+    }
+
+    function normalizeSeriousness(val) {
+      if (!val || val.trim() === '' || val === 'NA' || val === 'Missing') return 'UNKNOWN';
+      const normalized = val.trim().toUpperCase();
+      if (normalized === 'Y' || normalized === 'YES') return 'Y';
+      if (normalized === 'N' || normalized === 'NO') return 'N';
+      return 'UNKNOWN';
+    }
+
+    function normalizeValue(val, defaultVal) {
+      if (!val || val.trim() === '' || val === 'NA' || val === 'Missing') return defaultVal;
+      const normalized = val.trim().toUpperCase();
+      if (defaultVal === 'UNKNOWN' && !isNaN(parseInt(normalized))) return normalized;
+      return normalized;
+    }
+
+    function normalizeRelationshipValue(val) {
+      const normalized = normalizeValue(val, 'UNKNOWN');
+      // Keep relationship buckets aligned with requested categories.
+      if (normalized === 'DEFINITELY RELATED' || normalized === 'PROBABLY RELATED') {
+        return 'RELATED';
+      }
+      return normalized;
+    }
+
+    function isRelatedAE(row) {
+      return RELATED_VALUES.includes(row.AEREL_STD);
+    }
+
+    function getQuarterDateRange(year, quarter) {
+      const ranges = {
+        'Q1': { start: `${year}-01-01`, end: `${year}-03-31` },
+        'Q2': { start: `${year}-04-01`, end: `${year}-06-30` },
+        'Q3': { start: `${year}-07-01`, end: `${year}-09-30` },
+        'Q4': { start: `${year}-10-01`, end: `${year}-12-31` }
+      };
+      return ranges[quarter];
+    }
+
+    function aggregateToSubjectLevel(data) {
+      const groups = {};
+
+      data.forEach(row => {
+        const subjectId = getSubjectId(row);
+        const term = row.DisplayedTerm;
+        const key = `${subjectId}|||${term}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      const result = [];
+
+      for (const key in groups) {
+        const events = groups[key];
+        const repr = { ...events[0] };
+        let hasConflict = false;
+
+        let bestSer = events[0].AESER;
+        const serVals = new Set();
+        events.forEach(e => {
+          serVals.add(e.AESER);
+          if ((SERIOUSNESS_PRIORITY[e.AESER] || 0) > (SERIOUSNESS_PRIORITY[bestSer] || 0))
+            bestSer = e.AESER;
+        });
+        if (serVals.size > 1) hasConflict = true;
+        repr.AESER = bestSer;
+
+        let bestTox = events[0].AETOXGR_STD;
+        const toxVals = new Set();
+        events.forEach(e => {
+          toxVals.add(e.AETOXGR_STD);
+          if ((TOXICITY_PRIORITY[e.AETOXGR_STD] || 0) > (TOXICITY_PRIORITY[bestTox] || 0))
+            bestTox = e.AETOXGR_STD;
+        });
+        if (toxVals.size > 1) hasConflict = true;
+        repr.AETOXGR_STD = bestTox;
+
+        let bestRel = events[0].AEREL_STD;
+        const relVals = new Set();
+        events.forEach(e => {
+          relVals.add(e.AEREL_STD);
+          if ((RELATIONSHIP_PRIORITY[e.AEREL_STD] || 0) > (RELATIONSHIP_PRIORITY[bestRel] || 0))
+            bestRel = e.AEREL_STD;
+        });
+        if (relVals.size > 1) hasConflict = true;
+        repr.AEREL_STD = bestRel;
+
+        let latestEvent = events[0];
+        let latestDate = null;
+        events.forEach(e => {
+          const dateStr = e.AESTDAT_INT || e.AESTDAT_RAW || e.AESTDAT || '';
+          const d = parseDate(dateStr);
+          if (d && (!latestDate || d > latestDate)) {
+            latestDate = d;
+            latestEvent = e;
+          }
+        });
+        repr.AEOUT_STD = latestEvent.AEOUT_STD;
+        repr.AEACN_STD = latestEvent.AEACN_STD;
+
+        repr._eventCount = events.length;
+        repr._hasConflict = hasConflict;
+        repr._allEvents = events;
+        repr._subjectId = getSubjectId(events[0]);
+
+        result.push(repr);
+      }
+
+      return result;
+    }
+
+    function processData() {
+      let filtered;
+
+      if (state.showCumulative) {
+        document.getElementById('dateRangeDisplay').textContent = 'All Data (Cumulative)';
+        filtered = state.aeData.filter(row => {
+          const dateStr = row.AESTDAT_INT || row.AESTDAT_RAW || row.AESTDAT || '';
+          return dateStr && dateStr.trim() !== '';
+        });
+      } else {
+        const year = document.getElementById('yearSelect').value;
+        const quarter = document.getElementById('quarterSelect').value;
+        const dateRange = getQuarterDateRange(year, quarter);
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        document.getElementById('dateRangeDisplay').textContent =
+          `${formatDate(startDate)} - ${formatDate(endDate)}`;
+        filtered = state.aeData.filter(row => {
+          const dateStr = row.AESTDAT_INT || row.AESTDAT_RAW || row.AESTDAT || '';
+          const date = parseDate(dateStr);
+          if (!date) return false;
+          return date >= startDate && date <= endDate;
+        });
+      }
+
+      filtered = filtered.map(row => {
+        const aetermPt = row.AETERM_pt || row.AETERM_PT || '';
+        const aeterm = row.AETERM || '';
+        const isFallback = !aetermPt || aetermPt.trim() === '';
+        return {
+          ...row,
+          DisplayedTerm: isFallback ? aeterm.toLowerCase() : aetermPt,
+          isFallback,
+          AESER: normalizeSeriousness(row.AESER || row.AESER_STD),
+          AETOXGR_STD: normalizeValue(row.AETOXGR_STD || row.AETOXGR, 'UNKNOWN'),
+          AEREL_STD: normalizeRelationshipValue(row.AEREL_STD || row.AEREL),
+          AEOUT_STD: normalizeValue(row.AEOUT_STD || row.AEOUT, 'UNKNOWN'),
+          AEACN_STD: normalizeValue(row.AEACN_STD || row.AEACN, 'UNKNOWN')
+        };
+      });
+
+      state.filteredData = filtered;
+
+      const subjectData = aggregateToSubjectLevel(filtered);
+      state.subjectData = subjectData;
+
+      document.getElementById('recordCount').textContent = subjectData.length;
+      return subjectData;
+    }
+
+    function updateSummaryStats(data) {
+      const uniqueSubjects = new Set(data.map(d => d._subjectId)).size;
+      const uniqueTerms = new Set(data.map(d => d.DisplayedTerm)).size;
+      const relatedSubjects = new Set(data.filter(isRelatedAE).map(d => d._subjectId)).size;
+      const nonRelatedSubjects = new Set(data.filter(d => !isRelatedAE(d)).map(d => d._subjectId)).size;
+      document.getElementById('statSubjects').textContent = uniqueSubjects;
+      document.getElementById('statTerms').textContent = uniqueTerms;
+      document.getElementById('statRelated').textContent = relatedSubjects;
+      document.getElementById('statNonRelated').textContent = nonRelatedSubjects;
+    }
+
+    function resolveColor(cat, colorScheme) {
+      let color = colorScheme[cat];
+      if (!color) {
+        const lowerCat = cat.toLowerCase();
+        for (const key in colorScheme) {
+          if (key.toLowerCase() === lowerCat) { color = colorScheme[key]; break; }
+        }
+      }
+      return color || '#A9A9A9';
+    }
+
+    function prepareChartData(data, categoryField, colorScheme) {
+      const grouped = {};
+      const categories = new Set();
+
+      data.forEach(row => {
+        const term = row.DisplayedTerm;
+        const cat = row[categoryField] || 'UNKNOWN';
+        const related = isRelatedAE(row) ? 'related' : 'nonRelated';
+        categories.add(cat);
+
+        if (!grouped[term]) {
+          grouped[term] = {
+            total: 0,
+            categories: { related: {}, nonRelated: {} },
+            isFallback: row.isFallback
+          };
+        }
+        grouped[term].total++;
+        grouped[term].categories[related][cat] = (grouped[term].categories[related][cat] || 0) + 1;
+      });
+
+      const sortedTerms = Object.keys(grouped).sort((a, b) => {
+        const relatedA = Object.values(grouped[a].categories.related).reduce((sum, v) => sum + v, 0);
+        const relatedB = Object.values(grouped[b].categories.related).reduce((sum, v) => sum + v, 0);
+        if (relatedB !== relatedA) return relatedB - relatedA;
+        return grouped[b].total - grouped[a].total;
+      });
+      const orderedCategories = getOrderedCategories(categoryField, categories);
+
+      const datasetsRelated = [];
+      const datasetsNonRelated = [];
+      let maxSideTotal = 0;
+
+      sortedTerms.forEach(term => {
+        const relatedTotal = Object.values(grouped[term].categories.related).reduce((sum, v) => sum + v, 0);
+        const nonRelatedTotal = Object.values(grouped[term].categories.nonRelated).reduce((sum, v) => sum + v, 0);
+        maxSideTotal = Math.max(maxSideTotal, relatedTotal, nonRelatedTotal);
+      });
+
+      orderedCategories.forEach(cat => {
+        const color = resolveColor(cat, colorScheme);
+        datasetsNonRelated.push({
+          label: cat,
+          data: sortedTerms.map(term => grouped[term].categories.nonRelated[cat] || 0),
+          backgroundColor: color, borderColor: color, borderWidth: 0, stack: 'nonRelated'
+        });
+        datasetsRelated.push({
+          label: cat,
+          data: sortedTerms.map(term => grouped[term].categories.related[cat] || 0),
+          backgroundColor: color, borderColor: color, borderWidth: 0, stack: 'related'
+        });
+      });
+
+      const labels = sortedTerms.map(term => ({
+        text: term,
+        isFallback: grouped[term].isFallback
+      }));
+
+      return { labels, datasetsRelated, datasetsNonRelated, orderedCategories, maxSideTotal };
+    }
+
+    function getOrderedCategories(categoryField, categoriesSet) {
+      const categories = Array.from(categoriesSet);
+      const orderMap = {
+        AESER: ['Y', 'N', 'UNKNOWN'],
+        AETOXGR_STD: ['5', '4', '3', '2', '1', 'UNKNOWN'],
+        AEREL_STD: ['RELATED', 'POSSIBLY RELATED', 'UNLIKELY RELATED', 'NOT RELATED', 'UNKNOWN']
+      };
+      const preferredOrder = orderMap[categoryField];
+      if (!preferredOrder) return categories.sort();
+      const ordered = preferredOrder.filter(cat => categories.includes(cat));
+      const remaining = categories.filter(cat => !preferredOrder.includes(cat)).sort();
+      return [...ordered, ...remaining];
+    }
+
+    function renderLegend(legendId, categories, colorScheme) {
+      const container = document.getElementById(legendId);
+      const legendTitleMap = {
+        legendSeriousness: 'Seriousness',
+        legendToxicity: 'Toxicity Grade',
+        legendRelationship: 'Relationship',
+        legendOutcome: 'Outcome',
+        legendAction: 'Action Taken'
+      };
+      container.innerHTML = `
+        <div class="legend-title">${legendTitleMap[legendId] || 'Legend'}</div>
+        <div class="legend-items">
+          ${categories.map(cat => `
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: ${resolveColor(cat, colorScheme)}"></div>
+              <span>${cat}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderSplitChart(config, chartData) {
+      const leftCanvas = document.getElementById(config.leftCanvas);
+      const rightCanvas = document.getElementById(config.rightCanvas);
+      const labelsContainer = document.getElementById(config.labelsContainer);
+      if (!leftCanvas || !rightCanvas || !labelsContainer) return;
+
+      if (state.charts[config.leftCanvas]) state.charts[config.leftCanvas].destroy();
+      if (state.charts[config.rightCanvas]) state.charts[config.rightCanvas].destroy();
+
+      const numTerms = chartData.labels.length;
+      const fontSize = state.showCumulative ? 11 : 10;
+      const barHeight = fontSize + 4;
+      const minHeight = state.showCumulative ? 600 : 400;
+      const calculatedHeight = Math.max(minHeight, numTerms * barHeight + 150);
+
+      const wrapper = leftCanvas.closest('.chart-wrapper');
+      if (wrapper) {
+        wrapper.style.height = calculatedHeight + 'px';
+        wrapper.style.minHeight = calculatedHeight + 'px';
+      }
+
+      [leftCanvas, rightCanvas].forEach(canvas => {
+        const parent = canvas.parentElement;
+        if (parent) {
+          parent.style.height = calculatedHeight + 'px';
+          parent.style.minHeight = calculatedHeight + 'px';
+          parent.style.overflow = 'visible';
+        }
+        canvas.style.height = calculatedHeight + 'px';
+        canvas.style.width = '100%';
+      });
+      labelsContainer.style.height = calculatedHeight + 'px';
+
+      const maxX = Math.max(1, chartData.maxSideTotal || 0);
+      const sharedOptions = {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { right: 20, left: 20 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.x} subject(s)`
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true, beginAtZero: true, max: maxX,
+            grid: { color: '#e2e8f0' },
+            ticks: { stepSize: 1 },
+            title: { display: true, text: 'Number of Subjects' }
+          },
+          y: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { display: false, autoSkip: false }
+          }
+        }
+      };
+
+      const leftChart = new Chart(leftCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: chartData.labels.map(l => l.text),
+          datasets: chartData.datasetsNonRelated
+        },
+        options: {
+          ...sharedOptions,
+          scales: {
+            ...sharedOptions.scales,
+            x: { ...sharedOptions.scales.x, reverse: true }
+          },
+          plugins: {
+            ...sharedOptions.plugins,
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label} Non-related: ${ctx.parsed.x} subject(s)`
+              }
+            }
+          },
+          onClick: (event, elements) => {
+            if (elements.length === 0) return;
+            const element = elements[0];
+            const dataset = leftChart.data.datasets[element.datasetIndex];
+            const label = leftChart.data.labels[element.index];
+            showDetailsTable(config.type, label, dataset.label, config.field, 'nonRelated');
+          }
+        }
+      });
+
+      const rightChart = new Chart(rightCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: chartData.labels.map(l => l.text),
+          datasets: chartData.datasetsRelated
+        },
+        options: {
+          ...sharedOptions,
+          plugins: {
+            ...sharedOptions.plugins,
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label} Related: ${ctx.parsed.x} subject(s)`
+              }
+            }
+          },
+          onClick: (event, elements) => {
+            if (elements.length === 0) return;
+            const element = elements[0];
+            const dataset = rightChart.data.datasets[element.datasetIndex];
+            const label = rightChart.data.labels[element.index];
+            showDetailsTable(config.type, label, dataset.label, config.field, 'related');
+          }
+        }
+      });
+
+      state.charts[config.leftCanvas] = leftChart;
+      state.charts[config.rightCanvas] = rightChart;
+
+      const leftPane = leftCanvas.parentElement;
+      const rightPane = rightCanvas.parentElement;
+      if (leftPane && rightPane) {
+        const leftWidth = leftPane.clientWidth || leftCanvas.clientWidth;
+        const rightWidth = rightPane.clientWidth || rightCanvas.clientWidth;
+        if (leftWidth > 0) leftChart.resize(leftWidth, calculatedHeight);
+        if (rightWidth > 0) rightChart.resize(rightWidth, calculatedHeight);
+      }
+
+      renderLegend(config.legend, chartData.orderedCategories, config.colors);
+      renderMiddleLabels(labelsContainer, leftChart, chartData.labels, fontSize);
+      updateLabelColumnWidth(labelsContainer, chartData.labels, fontSize);
+    }
+
+    function renderMiddleLabels(container, chart, labels, fontSize) {
+      container.innerHTML = '';
+      container.style.position = 'relative';
+      const yScale = chart.scales.y;
+      if (!yScale) return;
+      labels.forEach((labelObj, index) => {
+        const y = yScale.getPixelForTick(index);
+        const label = document.createElement('div');
+        label.className = 'chart-label';
+        label.textContent = labelObj.text;
+        label.style.color = labelObj.isFallback ? 'blue' : '#333';
+        label.style.fontSize = `${fontSize}px`;
+        label.style.top = `${y}px`;
+        container.appendChild(label);
+      });
+    }
+
+    function updateLabelColumnWidth(labelsContainer, labels, fontSize) {
+      const section = labelsContainer.closest('.chart-section');
+      if (!section) return;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${fontSize}px sans-serif`;
+      const maxWidth = labels.reduce((max, labelObj) => {
+        return Math.max(max, ctx.measureText(labelObj.text).width);
+      }, 0);
+      const padded = Math.ceil(maxWidth + 16);
+      const sectionWidth = section.clientWidth || 0;
+      const maxAllowed = sectionWidth ? Math.floor(sectionWidth * 0.35) : 360;
+      const width = Math.min(Math.max(padded, 90), maxAllowed || 360);
+      section.style.setProperty('--label-col-width', `${width}px`);
+    }
+
+    function showDetailsTable(chartType, preferredTerm, category, categoryField, relatedMode) {
+      const title = document.querySelector(`#details${chartType} .header-title`);
+      const closeBtn = document.querySelector(`#details${chartType} .close-btn`);
+      const tableWrapper = document.getElementById(`detailsTable${chartType}`);
+      if (!tableWrapper) return;
+
+      const filtered = state.subjectData.filter(row => {
+        const term = row.DisplayedTerm;
+        const cat = row[categoryField] || 'UNKNOWN';
+        const isRelated = isRelatedAE(row);
+        if (term !== preferredTerm || cat !== category) return false;
+        return relatedMode === 'related' ? isRelated : !isRelated;
+      });
+
+      if (filtered.length === 0) return;
+
+      const relatedLabel = relatedMode === 'related' ? 'Related' : 'Non-related';
+      if (title) {
+        title.textContent = `Subject Details: ${preferredTerm} - ${category} (${relatedLabel}, ${filtered.length} subject${filtered.length === 1 ? '' : 's'})`;
+      }
+      if (closeBtn) closeBtn.style.display = 'inline-block';
+
+      tableWrapper.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Preferred Term</th>
+              <th>Serious</th>
+              <th>Toxicity Grade</th>
+              <th>Relationship</th>
+              <th>Outcome</th>
+              <th>Action Taken</th>
+              <th># Events</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(row => {
+              const noteText = row._hasConflict
+                ? '<span class="conflict-badge">Worst-case values shown</span>'
+                : '';
+              return `
+                <tr>
+                  <td>${row._subjectId}</td>
+                  <td>${row.DisplayedTerm}</td>
+                  <td>${row.AESER}</td>
+                  <td>${row.AETOXGR_STD}</td>
+                  <td>${row.AEREL_STD}</td>
+                  <td>${row.AEOUT_STD}</td>
+                  <td>${row.AEACN_STD}</td>
+                  <td><span class="count-badge">${row._eventCount}</span></td>
+                  <td>${noteText}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function closeDetailsTable(chartType) {
+      const closeBtn = document.querySelector(`#details${chartType} .close-btn`);
+      const tableWrapper = document.getElementById(`detailsTable${chartType}`);
+      if (closeBtn) closeBtn.style.display = 'none';
+      if (tableWrapper) {
+        tableWrapper.innerHTML = `
+          <div class="details-table-placeholder">
+            <div class="message">Click on any bar segment in the chart above</div>
+          </div>
+        `;
+      }
+    }
+
+    const CHART_CONFIG = {
+      seriousness: {
+        type: 'Seriousness', field: 'AESER',
+        leftCanvas: 'seriousnessChartLeft', rightCanvas: 'seriousnessChartRight',
+        labelsContainer: 'seriousnessLabels', legend: 'legendSeriousness',
+        colors: COLOR_SCHEMES.seriousness
+      },
+      toxicity: {
+        type: 'Toxicity', field: 'AETOXGR_STD',
+        leftCanvas: 'toxicityChartLeft', rightCanvas: 'toxicityChartRight',
+        labelsContainer: 'toxicityLabels', legend: 'legendToxicity',
+        colors: COLOR_SCHEMES.toxicity
+      },
+      relationship: {
+        type: 'Relationship', field: 'AEREL_STD',
+        leftCanvas: 'relationshipChartLeft', rightCanvas: 'relationshipChartRight',
+        labelsContainer: 'relationshipLabels', legend: 'legendRelationship',
+        colors: COLOR_SCHEMES.relationship
+      },
+      outcome: {
+        type: 'Outcome', field: 'AEOUT_STD',
+        leftCanvas: 'outcomeChartLeft', rightCanvas: 'outcomeChartRight',
+        labelsContainer: 'outcomeLabels', legend: 'legendOutcome',
+        colors: COLOR_SCHEMES.outcome
+      },
+      action: {
+        type: 'Action', field: 'AEACN_STD',
+        leftCanvas: 'actionChartLeft', rightCanvas: 'actionChartRight',
+        labelsContainer: 'actionLabels', legend: 'legendAction',
+        colors: COLOR_SCHEMES.action
+      }
+    };
+
+    function renderCurrentChart() {
+      const data = state.subjectData;
+      if (data.length === 0) return;
+      const config = CHART_CONFIG[state.currentChart];
+      const chartData = prepareChartData(data, config.field, config.colors);
+      renderSplitChart(config, chartData);
+      updateSplitExportChart(config);
+    }
+
+    function showChart(chartType) {
+      state.currentChart = chartType;
+      document.querySelectorAll('.chart-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === getChartButtonText(chartType)) btn.classList.add('active');
+      });
+      const chartIds = ['Seriousness', 'Toxicity', 'Relationship', 'Outcome', 'Action'];
+      chartIds.forEach(id => {
+        document.getElementById('chart' + id).style.display = 'none';
+        closeDetailsTable(id);
+      });
+      const sectionMap = {
+        seriousness: 'Seriousness', toxicity: 'Toxicity',
+        relationship: 'Relationship', outcome: 'Outcome', action: 'Action'
+      };
+      document.getElementById('chart' + sectionMap[chartType]).style.display = 'block';
+      renderCurrentChart();
+    }
+
+    function exportCurrentChartSection() {
+      const sectionMap = {
+        seriousness: 'Seriousness', toxicity: 'Toxicity',
+        relationship: 'Relationship', outcome: 'Outcome', action: 'Action'
+      };
+      const currentSectionId = 'chart' + sectionMap[state.currentChart];
+      const chartName = 'TEAE_Subject_' + sectionMap[state.currentChart];
+      if (typeof showBlockExportDialog === 'function') {
+        showBlockExportDialog(currentSectionId, chartName);
+      } else {
+        showChartExportDialog('splitChart', 'TEAE_Subject_Split', state);
+      }
+    }
+
+    function getChartButtonText(chartType) {
+      const map = {
+        seriousness: 'By Seriousness', toxicity: 'By Toxicity Grade',
+        relationship: 'By Relationship', outcome: 'By Outcome', action: 'By Action Taken'
+      };
+      return map[chartType] || '';
+    }
+
+    function toggleCumulative() {
+      const toggle = document.getElementById('cumulativeToggle');
+      state.showCumulative = toggle ? toggle.checked : false;
+      const yearSelect = document.getElementById('yearSelect');
+      const quarterSelect = document.getElementById('quarterSelect');
+      const applyButton = document.querySelector('.controls-panel .btn');
+      if (yearSelect && quarterSelect) {
+        yearSelect.disabled = state.showCumulative;
+        quarterSelect.disabled = state.showCumulative;
+        yearSelect.style.opacity = state.showCumulative ? '0.5' : '1';
+        quarterSelect.style.opacity = state.showCumulative ? '0.5' : '1';
+        yearSelect.style.cursor = state.showCumulative ? 'not-allowed' : 'pointer';
+        quarterSelect.style.cursor = state.showCumulative ? 'not-allowed' : 'pointer';
+      }
+      if (applyButton) {
+        applyButton.disabled = state.showCumulative;
+        applyButton.style.opacity = state.showCumulative ? '0.6' : '1';
+        applyButton.style.cursor = state.showCumulative ? 'not-allowed' : 'pointer';
+      }
+      setTimeout(() => applyFilters(), 100);
+    }
+
+    function applyFilters() {
+      const data = processData();
+      updateSummaryStats(data);
+      Object.values(state.charts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') chart.destroy();
+      });
+      state.charts = {};
+      renderCurrentChart();
+    }
+
+    function updateSplitExportChart(config) {
+      const exportChart = buildSplitExportChart(config);
+      if (exportChart) state.charts.splitChart = exportChart;
+    }
+
+    function buildSplitExportChart(config) {
+      const section = document.getElementById(`chart${config.type}`);
+      if (!section) return null;
+      const leftCanvas = document.getElementById(config.leftCanvas);
+      const rightCanvas = document.getElementById(config.rightCanvas);
+      const labelsContainer = document.getElementById(config.labelsContainer);
+      if (!leftCanvas || !rightCanvas || !labelsContainer) return null;
+      const sectionRect = section.getBoundingClientRect();
+      if (sectionRect.width === 0 || sectionRect.height === 0) return null;
+
+      return {
+        width: sectionRect.width,
+        height: sectionRect.height,
+        resize(width, height) { this.width = width; this.height = height; },
+        toBase64Image(type = 'image/png', scale = 1) {
+          const totalWidth = this.width || sectionRect.width;
+          const totalHeight = this.height || sectionRect.height;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(totalWidth * scale);
+          canvas.height = Math.round(totalHeight * scale);
+          const ctx = canvas.getContext('2d');
+          const scaleX = sectionRect.width ? totalWidth / sectionRect.width : 1;
+          const scaleY = sectionRect.height ? totalHeight / sectionRect.height : 1;
+          ctx.scale(scale * scaleX, scale * scaleY);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, sectionRect.width, sectionRect.height);
+
+          const drawBox = (el, fill, stroke) => {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const x = rect.left - sectionRect.left;
+            const y = rect.top - sectionRect.top;
+            ctx.save();
+            if (fill) { ctx.fillStyle = fill; ctx.fillRect(x, y, rect.width, rect.height); }
+            if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.strokeRect(x, y, rect.width, rect.height); }
+            ctx.restore();
+          };
+
+          const drawText = (el, align = 'left') => {
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const style = window.getComputedStyle(el);
+            const x = rect.left - sectionRect.left + (align === 'center' ? rect.width / 2 : 0);
+            const y = rect.top - sectionRect.top + rect.height / 2;
+            ctx.save();
+            ctx.fillStyle = style.color || '#333';
+            ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            ctx.textAlign = align;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(el.textContent || '', x, y);
+            ctx.restore();
+          };
+
+          drawBox(section, '#ffffff', null);
+          drawText(section.querySelector('.chart-title'), 'left');
+          section.querySelectorAll('.split-chart-title').forEach(el => drawText(el, 'center'));
+          drawBox(leftCanvas.parentElement, '#f8fafc', '#e2e8f0');
+          drawBox(rightCanvas.parentElement, '#fff5f5', '#fecaca');
+
+          const leftRect = leftCanvas.getBoundingClientRect();
+          const rightRect = rightCanvas.getBoundingClientRect();
+          ctx.drawImage(leftCanvas, leftRect.left - sectionRect.left, leftRect.top - sectionRect.top, leftRect.width, leftRect.height);
+          ctx.drawImage(rightCanvas, rightRect.left - sectionRect.left, rightRect.top - sectionRect.top, rightRect.width, rightRect.height);
+
+          Array.from(labelsContainer.querySelectorAll('.chart-label')).forEach(lbl => {
+            const lRect = lbl.getBoundingClientRect();
+            const style = window.getComputedStyle(lbl);
+            ctx.save();
+            ctx.fillStyle = style.color || '#333';
+            ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(lbl.textContent || '', lRect.left - sectionRect.left + lRect.width / 2, lRect.top - sectionRect.top + lRect.height / 2);
+            ctx.restore();
+          });
+
+          const legend = section.querySelector('.legend-panel');
+          if (legend) {
+            drawBox(legend, '#f8fafc', '#e2e8f0');
+            drawText(legend.querySelector('.legend-title'), 'left');
+            legend.querySelectorAll('.legend-item').forEach(item => {
+              const colorDot = item.querySelector('.legend-color');
+              const lbl = item.querySelector('span');
+              if (colorDot) {
+                const dotRect = colorDot.getBoundingClientRect();
+                ctx.save();
+                ctx.fillStyle = window.getComputedStyle(colorDot).backgroundColor;
+                ctx.beginPath();
+                ctx.arc(dotRect.left - sectionRect.left + dotRect.width / 2, dotRect.top - sectionRect.top + dotRect.height / 2, Math.min(dotRect.width, dotRect.height) / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+              }
+              if (lbl) {
+                const lblRect = lbl.getBoundingClientRect();
+                const itemRect = item.getBoundingClientRect();
+                const style = window.getComputedStyle(lbl);
+                ctx.save();
+                ctx.fillStyle = style.color || '#333';
+                ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(lbl.textContent || '', lblRect.left - sectionRect.left, itemRect.top - sectionRect.top + itemRect.height / 2);
+                ctx.restore();
+              }
+            });
+          }
+
+          const details = section.querySelector('.details-table-container');
+          if (details) {
+            drawText(details.querySelector('.header-title'), 'left');
+            drawText(details.querySelector('.hint-text'), 'left');
+            const placeholder = details.querySelector('.details-table-placeholder');
+            if (placeholder) {
+              drawBox(placeholder, '#f8fafc', '#cbd5e1');
+              drawText(placeholder.querySelector('.message'), 'center');
+            }
+          }
+
+          return canvas.toDataURL(type);
+        }
+      };
+    }
+
+    async function init() {
+      try {
+        const basePath = '../../data/';
+        const loadWithFallback = async (baseName, variations) => {
+          for (const name of variations) {
+            try {
+              const data = await loadCSV(basePath + name);
+              if (data && data.length > 0) return data;
+            } catch (e) { continue; }
+          }
+          return [];
+        };
+
+        const aeData = await loadWithFallback('ae', ['ae.CSV', 'ae.csv', 'AE.CSV']);
+        if (aeData.length === 0) {
+          throw new Error('No AE data found. Please ensure ae.CSV exists in the data folder.');
+        }
+        state.aeData = aeData;
+        if (typeof initChartExportDialog === 'function') initChartExportDialog();
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('TEAE_Subject');
+        }
+        applyFilters();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.querySelector('.page-subtitle').textContent = 'Error: ' + error.message;
+        document.getElementById('loadingOverlay').innerHTML = `
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Error: ${error.message}</div>
+        `;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

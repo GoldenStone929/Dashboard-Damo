@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient List - Clinical Trial Dashboard</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <style>
+    .filter-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .filter-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .filter-select {
+      padding: 10px 14px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 14px;
+      min-width: 160px;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--nav-accent);
+    }
+    
+    .patient-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .patient-table th,
+    .patient-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+    
+    .patient-table th {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--page-bg);
+    }
+    
+    .patient-table td {
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+    
+    .patient-table tbody tr {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    
+    .patient-table tbody tr:hover {
+      background: #f8fafc;
+    }
+    
+    .patient-link {
+      color: #0369a1;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .patient-link:hover {
+      text-decoration: underline;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-ongoing { background: #dbeafe; color: #1d4ed8; }
+    .status-completed { background: #d1fae5; color: #059669; }
+    .status-discontinued { background: #fee2e2; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">Patient List</h1>
+      <p class="page-subtitle">Click a patient row to view detailed profile</p>
+    </div>
+    
+    <div class="card">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label">Site</label>
+          <select class="filter-select">
+            <option value="">All Sites</option>
+            <option value="001">Site 001</option>
+            <option value="002">Site 002</option>
+            <option value="003">Site 003</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Dose Cohort</label>
+          <select class="filter-select">
+            <option value="">All Cohorts</option>
+            <option value="1">Cohort 1 - 10mg</option>
+            <option value="2">Cohort 2 - 25mg</option>
+            <option value="3">Cohort 3 - 50mg</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Status</label>
+          <select class="filter-select">
+            <option value="">All Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="discontinued">Discontinued</option>
+          </select>
+        </div>
+      </div>
+      
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>Subject ID</th>
+            <th>Site</th>
+            <th>Dose Cohort</th>
+            <th>Enrollment Date</th>
+            <th>Status</th>
+            <th>Last Visit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="location.href='patient-profile/summary.html?id=P-001'">
+            <td><a href="patient-profile/summary.html?id=P-001" class="patient-link">P-001</a></td>
+            <td>Site 001</td>
+            <td>Cohort 1 - 10mg</td>
+            <td>2024-01-15</td>
+            <td><span class="status-badge status-completed">Completed</span></td>
+            <td>C8D1</td>
+          </tr>
+          <tr onclick="location.href='patient-profile/summary.html?id=P-002'">
+            <td><a href="patient-profile/summary.html?id=P-002" class="patient-link">P-002</a></td>
+            <td>Site 001</td>
+            <td>Cohort 1 - 10mg</td>
+            <td>2024-01-18</td>
+            <td><span class="status-badge status-ongoing">Ongoing</span></td>
+            <td>C6D1</td>
+          </tr>
+          <tr onclick="location.href='patient-profile/summary.html?id=P-003'">
+            <td><a href="patient-profile/summary.html?id=P-003" class="patient-link">P-003</a></td>
+            <td>Site 002</td>
+            <td>Cohort 2 - 25mg</td>
+            <td>2024-02-01</td>
+            <td><span class="status-badge status-discontinued">Discontinued</span></td>
+            <td>C3D8</td>
+          </tr>
+          <tr onclick="location.href='patient-profile/summary.html?id=P-004'">
+            <td><a href="patient-profile/summary.html?id=P-004" class="patient-link">P-004</a></td>
+            <td>Site 002</td>
+            <td>Cohort 2 - 25mg</td>
+            <td>2024-02-05</td>
+            <td><span class="status-badge status-ongoing">Ongoing</span></td>
+            <td>C5D1</td>
+          </tr>
+          <tr onclick="location.href='patient-profile/summary.html?id=P-005'">
+            <td><a href="patient-profile/summary.html?id=P-005" class="patient-link">P-005</a></td>
+            <td>Site 003</td>
+            <td>Cohort 3 - 50mg</td>
+            <td>2024-02-20</td>
+            <td><span class="status-badge status-ongoing">Ongoing</span></td>
+            <td>C4D1</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // sections/patients/ -> root needs '../../'
+    renderNav('patients', 'patient-list', '../../');
+  </script>
+</body>
+</html>

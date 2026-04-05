@@ -1,0 +1,62 @@
+<!--
+  Authentication Configuration File
+  DO NOT SHARE OR DISTRIBUTE
+  Last Updated: 2024-12-17
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Config</title>
+</head>
+<body>
+<script>
+/**
+ * Authentication Configuration
+ * Password format: [PREFIX]-[DYNAMIC_SUFFIX]
+ * Dynamic suffix is based on system date
+ */
+(function() {
+  // Obfuscated configuration - DO NOT MODIFY unless you know what you're doing
+  // This is NOT the actual password - it's encoded configuration data
+  const _0x = {
+    // Base prefix (encoded)
+    p: [66,72,45,51,48,54,52,51,45],
+    // Hash salt
+    s: 'ct_dashboard_2024',
+    // Version
+    v: '1.0.0'
+  };
+  
+  // Decode function
+  function _d(arr) {
+    return arr.map(c => String.fromCharCode(c)).join('');
+  }
+  
+  // Export configuration
+  window.AUTH_CONFIG = {
+    getPrefix: function() {
+      return _d(_0x.p);
+    },
+    getSalt: function() {
+      return _0x.s;
+    },
+    getVersion: function() {
+      return _0x.v;
+    },
+    // Get current dynamic suffix (month)
+    getDynamicSuffix: function() {
+      const now = new Date();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      return month;
+    },
+    // Build expected password
+    buildExpectedPassword: function() {
+      return this.getPrefix() + this.getDynamicSuffix();
+    }
+  };
+})();
+</script>
+</body>
+</html>
+

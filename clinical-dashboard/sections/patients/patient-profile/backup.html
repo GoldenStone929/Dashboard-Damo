@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dose & AE & Lab - normalized</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="../../../assets/js/chart-export.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0; padding: 0; background: #f5f5f5; color: #333;
+    }
+    .lab-plots-container { max-width: 100%; margin: 0 auto; padding: 20px; }
+    .page-title { font-size: 28px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; }
+    .page-subtitle { font-size: 14px; color: #7F8C8D; margin-bottom: 20px; }
+    .controls-panel {
+      background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;
+      padding: 15px 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    .control-group label { font-weight: 600; color: #2C3E50; font-size: 13px; }
+    .control-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; min-width: 200px; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+    .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    .checkbox-group label { font-size: 13px; color: #34495E; }
+    .info-panel { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; }
+    .info-panel h4 { margin: 0 0 10px 0; color: #1565c0; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .info-item { display: flex; gap: 8px; }
+    .info-label { font-weight: 600; color: #1565c0; }
+    .info-value { color: #34495E; }
+    .plots-wrapper { display: flex; flex-direction: column; gap: 30px; }
+    .plot-section { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; position: relative; }
+    .plot-header { display: flex !important; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .plot-title { font-size: 16px; font-weight: bold; color: #2C3E50; text-align: center; flex: 1; }
+    .plot-subtitle { font-size: 19px; color: #7F8C8D; margin-bottom: 15px; text-align: center; }
+    .chart-wrapper { position: relative; width: 100%; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; background: #fff; }
+    .export-btn { 
+      background: #dc3545 !important; color: white !important; border: none !important; 
+      padding: 8px 16px !important; border-radius: 4px !important; cursor: pointer !important; 
+      font-size: 14px !important; font-weight: bold !important;
+      transition: background 0.2s; margin-left: 10px !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    }
+    .export-btn:hover { background: #c82333 !important; }
+    .chart-export-dialog { 
+      display: none; position: fixed; z-index: 1000; left: 50%; top: 50%; 
+      transform: translate(-50%, -50%); background: white; padding: 20px; 
+      border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+      min-width: 300px; 
+    }
+    .chart-export-dialog.active { display: block; }
+    .chart-export-dialog h3 { margin-top: 0; margin-bottom: 15px; }
+    .chart-export-dialog .form-group { margin-bottom: 15px; }
+    .chart-export-dialog label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .chart-export-dialog input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .chart-export-dialog .button-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .chart-export-dialog button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+    .chart-export-dialog .btn-primary { background: #4285f4; color: white; }
+    .chart-export-dialog .btn-secondary { background: #e0e0e0; color: #333; }
+    .chart-export-dialog-overlay {
+      display: none; position: fixed; z-index: 999; left: 0; top: 0; 
+      width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+    }
+    .chart-export-dialog-overlay.active { display: block; }
+    .ae-legend { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 19px; }
+    .ae-legend-item { display: flex; align-items: center; gap: 5px; }
+    .ae-legend-color { width: 20px; height: 12px; border-radius: 2px; }
+    .cm-legend { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 8px; font-size: 17px; padding: 8px; background: #f8f9fa; border-radius: 4px; }
+    .no-data-message { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: #7F8C8D; font-size: 18px; }
+    .no-data-message .icon { font-size: 48px; margin-bottom: 10px; }
+    .loading-message { text-align: center; padding: 40px; color: #7F8C8D; }
+  </style>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+    <button class="local-tab" onclick="location.href='liver-panel-dosing-ae.html'+location.search">Liver Panel & Dosing & AE</button>
+    <button class="local-tab active">Dose & AE & Lab</button>
+  </nav>
+  <main class="page-content" style="padding: 20px;">
+    <div class="lab-plots-container">
+      <h1 class="page-title">Dose & AE & Lab - normalized</h1>
+      <p class="page-subtitle">Laboratory values normalized by ULN with daily dosing and adverse events</p>
+
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Select Patient</label>
+          <select id="patientSelect"><option value="">-- Select Patient --</option></select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showRefLine" checked>
+          <label for="showRefLine">Show ULN Reference Line (1x)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showDosing" checked>
+          <label for="showDosing">Show Daily Dosing Bars</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showCM" checked>
+          <label for="showCM">Show Concomitant Medications</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showAE" checked>
+          <label for="showAE">Show Adverse Events</label>
+        </div>
+        <div class="control-group">
+          <label>Y-axis Scale</label>
+          <select id="yAxisScale">
+            <option value="linear">Linear</option>
+            <option value="log2">Log 2</option>
+            <option value="log10">Log 10</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-panel" id="infoPanel" style="display: none;">
+        <h4>📋 Patient Information</h4>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Patient ID:</span><span class="info-value" id="infoPatientId">-</span></div>
+          <div class="info-item"><span class="info-label">Total Lab Records:</span><span class="info-value" id="infoRecords">-</span></div>
+          <div class="info-item"><span class="info-label">Visits/Cycles:</span><span class="info-value" id="infoVisits">-</span></div>
+          <div class="info-item"><span class="info-label">Date Range:</span><span class="info-value" id="infoDateRange">-</span></div>
+          <div class="info-item"><span class="info-label">First Dosing Date (Day 1):</span><span class="info-value" id="infoFirstDoseDate">-</span></div>
+          <div class="info-item"><span class="info-label">Adverse Events:</span><span class="info-value" id="infoAECount">-</span></div>
+        </div>
+      </div>
+
+      <div class="plots-wrapper" id="plotsWrapper" style="display: none;">
+        <div class="plot-section">
+          <div class="plot-header">
+            <div class="plot-title">Plot 1: Laboratory Values Normalized by ULN (xULN) with Daily Dosing and Adverse Events</div>
+            <button class="export-btn" onclick="showChartExportDialog('chartCombined', 'Plot1', state)">Export</button>
+          </div>
+          <div class="plot-subtitle">BILI, AST, ALT, ALP - Dashed line indicates 1× ULN threshold; Bars show daily dose</div>
+          <div class="cm-legend" id="cmLegend">
+            <span style="font-weight: bold; margin-right: 10px;">Concomitant Medications:</span>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #2196F3;"></div><span>Ended</span></div>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #FF9800;"></div><span>Ongoing</span></div>
+          </div>
+          <div class="ae-legend" id="aeLegend">
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #4CAF50;"></div><span>Grade 1</span></div>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #FFEB3B;"></div><span>Grade 2</span></div>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #FF9800;"></div><span>Grade 3</span></div>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #F44336;"></div><span>Grade 4</span></div>
+            <div class="ae-legend-item"><div class="ae-legend-color" style="background-color: #9C27B0;"></div><span>Grade 5</span></div>
+            <div class="ae-legend-item"><span style="font-size: 22px;">→</span><span>Ongoing</span></div>
+          </div>
+          <div class="chart-wrapper" id="chartWrapper1">
+            <canvas id="chartCombined"></canvas>
+          </div>
+          <div id="plot1MissingAnalytes" style="font-size: 14px; color: #dc3545; margin-top: 8px; text-align: center; font-style: italic;"></div>
+          <div id="plot1DoseSource" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+
+        <div class="plot-section">
+          <div class="plot-header">
+            <div class="plot-title">Plot 2: Albumin (ALB) - Actual Values with Daily Dosing and Adverse Events</div>
+            <button class="export-btn" onclick="showChartExportDialog('chartALB', 'Plot2_ALB', state)">Export</button>
+          </div>
+          <div class="plot-subtitle" id="albSubtitle">Light blue shading indicates normal range</div>
+          <div class="chart-wrapper" id="chartWrapper2">
+            <canvas id="chartALB"></canvas>
+          </div>
+          <div id="plot2DoseSource" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+      </div>
+
+      <div class="no-data-message" id="noDataMessage">
+        <div class="icon">📊</div>
+        <div>Please select a patient to view laboratory value trends</div>
+      </div>
+
+      <div class="loading-message" id="loadingMessage" style="display: none;">
+        Loading data...
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ========================================================================
+    // Configuration
+    // ========================================================================
+    const DATA_PATHS = {
+      lab: '../../../data/lab.csv',
+      lblc: '../../../data/lblc.csv',
+      ecclin: '../../../data/ecclin.csv',
+      ecsd: '../../../data/ecsd.csv',
+      ecad: '../../../data/ecad.csv',
+      ecmd: '../../../data/ecmd.csv',
+      ae: '../../../data/ae.csv',
+      cm: '../../../data/cm.csv'
+    };
+
+    // ========================================================================
+    // Constants
+    // ========================================================================
+    const ANALYTE_NAMES = {
+      BILI: "Bilirubin; BILI", AST: "Aspartate Aminotransferase; AST",
+      ALT: "Alanine Aminotransferase; ALT", ALP: "Alkaline Phosphatase; ALP", ALB: "Albumin; ALB"
+    };
+    const PLOT1_ANALYTES = ['BILI', 'AST', 'ALT', 'ALP'];
+    const AE_GRADE_COLORS = { 1: '#4CAF50', 2: '#FFEB3B', 3: '#FF9800', 4: '#F44336', 5: '#9C27B0' };
+    const AE_DEFAULT_COLOR = '#9E9E9E';
+    const AE_ROW_HEIGHT = 24;
+    const AE_BAR_HEIGHT = 16;
+    const AE_SECTION_GAP = 15;  // Gap between AE and chart
+    const AE_CM_GAP = 20;       // Gap between AE and CM sections
+    const X_AXIS_PADDING_DAYS = 7;
+
+    // CM (Concomitant Medications) Constants
+    const CM_ROW_HEIGHT = 28;
+    const CM_BAR_HEIGHT = 4;  // Thin like arrow line
+    const CM_SECTION_GAP = 15;
+    const CM_MIN_DAY = -28; // Only show CM from Day -28 onwards
+    const CM_COLOR_ONGOING = '#FF9800'; // Orange for ongoing
+    const CM_COLOR_ENDED = '#2196F3';   // Blue for ended
+
+    // ========================================================================
+    // State
+    // ========================================================================
+    const state = {
+      labData: [], lblcData: [], ecclinData: [], ecsdData: [], ecmdData: [], ecadData: [], aeData: [], cmData: [],
+      patients: [], currentPatient: null, charts: {},
+      firstDosingDates: {}, dailyDoses: {}, doseSource: {}, patientAEs: {}, patientCMs: {},
+      usvMappings: {},
+      dataLoaded: false,
+      // Checkbox state for individual CM/AE items (keyed by patient+term/label)
+      cmItemChecked: {},  // { 'patientId|label': true/false }
+      aeItemChecked: {}   // { 'patientId|term': true/false }
+    };
+
+    // ========================================================================
+    // Data Loading
+    // ========================================================================
+    async function loadCSV(path) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(path, {
+          download: true, header: true, skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    // ========================================================================
+    // Lab Range Imputation
+    // ========================================================================
+    function imputeLabRanges(labData) {
+      const labHighLookup = {};
+      const labLowLookup = {};
+      
+      labData.forEach(row => {
+        const key = `${row.Subject}|||${row.AnalyteName}`;
+        if (!(key in labHighLookup) && row.LabHigh && parseFloat(row.LabHigh) > 0) {
+          labHighLookup[key] = parseFloat(row.LabHigh);
+        }
+        if (!(key in labLowLookup) && row.LabLow && parseFloat(row.LabLow) > 0) {
+          labLowLookup[key] = parseFloat(row.LabLow);
+        }
+      });
+      
+      let imputedCount = 0;
+      labData.forEach(row => {
+        const key = `${row.Subject}|||${row.AnalyteName}`;
+        if ((!row.LabHigh || parseFloat(row.LabHigh) <= 0 || isNaN(parseFloat(row.LabHigh))) && labHighLookup[key]) {
+          row.LabHigh = labHighLookup[key];
+          imputedCount++;
+        }
+        if ((!row.LabLow || parseFloat(row.LabLow) <= 0 || isNaN(parseFloat(row.LabLow))) && labLowLookup[key]) {
+          row.LabLow = labLowLookup[key];
+        }
+      });
+      
+      console.log(`Imputed ${imputedCount} missing LabHigh values`);
+      return labData;
+    }
+
+    async function loadAllData() {
+      document.getElementById('loadingMessage').style.display = 'block';
+      document.getElementById('noDataMessage').style.display = 'none';
+      
+      try {
+        const [lab, lblc, ecclin, ecsd, ecad, ecmd, ae, cm] = await Promise.all([
+          loadCSV(DATA_PATHS.lab), loadCSV(DATA_PATHS.lblc), loadCSV(DATA_PATHS.ecclin),
+          loadCSV(DATA_PATHS.ecsd), loadCSV(DATA_PATHS.ecad), loadCSV(DATA_PATHS.ecmd), loadCSV(DATA_PATHS.ae),
+          loadCSV(DATA_PATHS.cm)
+        ]);
+
+        imputeLabRanges(lab);
+
+        state.labData = lab; state.lblcData = lblc; state.ecclinData = ecclin; state.ecsdData = ecsd;
+        state.ecadData = ecad; state.ecmdData = ecmd; state.aeData = ae; state.cmData = cm;
+
+        // Hardcoded dose change for patient 16-101-1002
+        const hardcodedPatientId = '16-101-1002';
+        const doseChangeDateStr = '26NOV2025:00:00:00.000';
+        const doseChangeDate = parseDate(doseChangeDateStr);
+        
+        const allDates = [];
+        [...state.lblcData, ...state.ecclinData, ...state.ecsdData, ...state.ecadData, ...state.ecmdData]
+          .filter(r => r.Subject === hardcodedPatientId)
+          .forEach(r => {
+            const startDate = parseDate(r.LBDAT_INT || r.ECSTDAT_INT);
+            if (startDate) allDates.push(startDate);
+            const endDate = parseDate(r.ECENDAT_INT);
+            if (endDate) allDates.push(endDate);
+          });
+        
+        const ecmdDates = state.ecmdData
+          .filter(r => r.Subject === hardcodedPatientId)
+          .map(r => {
+            const startDate = parseDate(r.ECSTDAT_INT);
+            const endDate = parseDate(r.ECENDAT_INT);
+            return [startDate, endDate].filter(d => d !== null);
+          })
+          .flat();
+        
+        let endDate;
+        if (ecmdDates.length > 0) {
+          const ecmdLatestDate = new Date(Math.max(...ecmdDates));
+          endDate = doseChangeDate && doseChangeDate > ecmdLatestDate ? doseChangeDate : ecmdLatestDate;
+        } else if (allDates.length > 0) {
+          const allLatestDate = new Date(Math.max(...allDates));
+          endDate = doseChangeDate && doseChangeDate > allLatestDate ? doseChangeDate : allLatestDate;
+        } else {
+          endDate = doseChangeDate;
+        }
+        
+        if (doseChangeDate && endDate) {
+          const endDateStr = formatDateForECAD(endDate);
+          
+          const hardcodedRecord = {
+            Subject: hardcodedPatientId,
+            ECSTDAT_INT: doseChangeDateStr,
+            ECENDAT_INT: endDateStr,
+            ECDSTXT: '20',
+            ECDSTXT_RAW: '20',
+            ECDOSFRQ_STD: 'BID',
+            ECADJ_STD: 'ADVERSE EVENT'
+          };
+          
+          state.ecadData.push(hardcodedRecord);
+          
+          console.log('Hardcoded dose record added for patient', hardcodedPatientId);
+        }
+
+        // Hardcoded initial dose for patient 16-103-1004
+        // ONLY add if no existing ecclin/ecsd records for this patient
+        const hardcodedPatientId2 = '16-103-1004';
+        
+        // Check if patient already has dosing data in ecclin or ecsd
+        const existingEcclin2 = state.ecclinData.filter(r => r.Subject === hardcodedPatientId2 && parseDate(r.ECSTDAT_INT));
+        const existingEcsd2 = state.ecsdData.filter(r => r.Subject === hardcodedPatientId2 && parseDate(r.ECSTDAT_INT));
+        
+        if (existingEcclin2.length === 0 && existingEcsd2.length === 0) {
+          // No existing dosing data - add hardcoded record
+          // Find the earliest lab date for this patient as reference
+          const patientLabDates = state.lblcData
+            .filter(r => r.Subject === hardcodedPatientId2)
+            .map(r => parseDate(r.LBDAT_INT))
+            .filter(d => d);
+          
+          let startDate2 = null;
+          if (patientLabDates.length > 0) {
+            startDate2 = new Date(Math.min(...patientLabDates));
+          }
+          
+          if (startDate2) {
+            const startDateStr2 = formatDateForECAD(startDate2);
+            
+            const hardcodedRecord2_ecclin = {
+              Subject: hardcodedPatientId2,
+              ECSTDAT_INT: startDateStr2
+            };
+            
+            const hardcodedRecord2_ecsd = {
+              Subject: hardcodedPatientId2,
+              ECSTDAT_INT: startDateStr2,
+              ECDSTXT: '40',
+              ECDSTXT_RAW: '40',
+              ECDOSFRQ_STD: 'BID'
+            };
+            
+            state.ecclinData.push(hardcodedRecord2_ecclin);
+            state.ecsdData.push(hardcodedRecord2_ecsd);
+            
+            console.log('Hardcoded initial dose record added for patient', hardcodedPatientId2, 'with date', startDateStr2);
+          }
+        } else {
+          console.log('Patient', hardcodedPatientId2, 'already has dosing data - skipping hardcoded record');
+        }
+
+        // Hardcoded lab data for patient 16-103-1004
+        const hardcodedLabPatientId = '16-103-1004';
+        const hardcodedLabData = [
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '18NOV2025:00:00:00.000', NumericValue: '0.7' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '19NOV2025:00:00:00.000', NumericValue: '0.7' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '26NOV2025:00:00:00.000', NumericValue: '3.4' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '28NOV2025:00:00:00.000', NumericValue: '4.3' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '01DEC2025:00:00:00.000', NumericValue: '2.1' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '03DEC2025:00:00:00.000', NumericValue: '1.8' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '08DEC2025:00:00:00.000', NumericValue: '5.9' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Bilirubin; BILI', RecordDate: '09DEC2025:00:00:00.000', NumericValue: '6.5' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '18NOV2025:00:00:00.000', NumericValue: '22' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '19NOV2025:00:00:00.000', NumericValue: '26' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '26NOV2025:00:00:00.000', NumericValue: '20' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '03DEC2025:00:00:00.000', NumericValue: '19' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '08DEC2025:00:00:00.000', NumericValue: '1314' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Aspartate Aminotransferase; AST', RecordDate: '09DEC2025:00:00:00.000', NumericValue: '470' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '18NOV2025:00:00:00.000', NumericValue: '12' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '19NOV2025:00:00:00.000', NumericValue: '13' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '26NOV2025:00:00:00.000', NumericValue: '12' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '03DEC2025:00:00:00.000', NumericValue: '13' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '08DEC2025:00:00:00.000', NumericValue: '1722' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alanine Aminotransferase; ALT', RecordDate: '09DEC2025:00:00:00.000', NumericValue: '1306' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alkaline Phosphatase; ALP', RecordDate: '18NOV2025:00:00:00.000', NumericValue: '74' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alkaline Phosphatase; ALP', RecordDate: '19NOV2025:00:00:00.000', NumericValue: '68' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alkaline Phosphatase; ALP', RecordDate: '26NOV2025:00:00:00.000', NumericValue: '73' },
+          { Subject: hardcodedLabPatientId, AnalyteName: 'Alkaline Phosphatase; ALP', RecordDate: '03DEC2025:00:00:00.000', NumericValue: '64' },
+        ];
+
+        const getLabRangesForAnalyte = (patientId, analyteName) => {
+          const existingData = state.labData.find(r => 
+            r.Subject === patientId && 
+            r.AnalyteName === analyteName && 
+            r.LabHigh && parseFloat(r.LabHigh) > 0
+          );
+          return {
+            LabHigh: existingData?.LabHigh || '',
+            LabLow: existingData?.LabLow || '',
+            LabUnits: existingData?.LabUnits || ''
+          };
+        };
+
+        const labDataByDate = {};
+        hardcodedLabData.forEach(row => {
+          const dateKey = row.RecordDate;
+          const analyteName = row.AnalyteName;
+          const value = parseFloat(row.NumericValue);
+          
+          if (!labDataByDate[dateKey]) labDataByDate[dateKey] = {};
+          if (!labDataByDate[dateKey][analyteName]) {
+            labDataByDate[dateKey][analyteName] = { value, row };
+          } else {
+            if (value > labDataByDate[dateKey][analyteName].value) {
+              labDataByDate[dateKey][analyteName] = { value, row };
+            }
+          }
+        });
+
+        const addedDates = new Set();
+        Object.entries(labDataByDate).forEach(([recordDate, analytes]) => {
+          const parsedDate = parseDate(recordDate);
+          const dateKey = parsedDate ? dateToKey(parsedDate) : null;
+          
+          Object.entries(analytes).forEach(([analyteName, { value, row }]) => {
+            const ranges = getLabRangesForAnalyte(hardcodedLabPatientId, analyteName);
+            
+            const labRecord = {
+              Subject: hardcodedLabPatientId,
+              AnalyteName: analyteName,
+              NumericValue: String(value),
+              Folder: 'Unknown',
+              RecordDate: recordDate,
+              LabHigh: ranges.LabHigh,
+              LabLow: ranges.LabLow,
+              LabUnits: ranges.LabUnits
+            };
+            state.labData.push(labRecord);
+          });
+          
+          if (dateKey && !addedDates.has(dateKey)) {
+            const dateExists = state.lblcData.some(r => 
+              r.Subject === hardcodedLabPatientId && 
+              parseDate(r.LBDAT_INT) && 
+              dateToKey(parseDate(r.LBDAT_INT)) === dateKey
+            );
+            if (!dateExists) {
+              state.lblcData.push({
+                Subject: hardcodedLabPatientId,
+                Folder: 'Unknown',
+                LBDAT_INT: recordDate
+              });
+              addedDates.add(dateKey);
+            }
+          }
+        });
+
+        console.log(`Hardcoded lab data added for patient ${hardcodedLabPatientId}`);
+
+        // Hardcoded missed dose for patient 12-101-1001
+        const hardcodedMissedDosePatientId = '12-101-1001';
+        const missedDoseStartDate = new Date(2025, 9, 22);
+        const missedDoseEndDate = new Date(2025, 10, 9);
+        
+        const missedDoseStartDateStr = formatDateForECAD(missedDoseStartDate);
+        const missedDoseEndDateStr = formatDateForECAD(missedDoseEndDate);
+        
+        const hardcodedMissedDoseRecord = {
+          Subject: hardcodedMissedDosePatientId,
+          ECSTDAT_INT: missedDoseStartDateStr,
+          ECENDAT_INT: missedDoseEndDateStr
+        };
+        
+        state.ecmdData.push(hardcodedMissedDoseRecord);
+        
+        console.log('Hardcoded missed dose record added for patient', hardcodedMissedDosePatientId);
+
+        buildAllUSVMappings();
+
+        const patientSet = new Set();
+        state.labData.forEach(r => { if (r.Subject) patientSet.add(r.Subject); });
+        state.patients = Array.from(patientSet).sort();
+
+        state.dataLoaded = true;
+        populatePatientSelect();
+        
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('loadingMessage').innerHTML = `
+          <div style="color: #e74c3c;">
+            <p>Error loading data files. Please check the file paths:</p>
+            <ul style="text-align: left; display: inline-block;">
+              ${Object.entries(DATA_PATHS).map(([k,v]) => `<li>${k}: ${v}</li>`).join('')}
+            </ul>
+          </div>`;
+      }
+    }
+
+    function populatePatientSelect() {
+      const select = document.getElementById('patientSelect');
+      select.innerHTML = '<option value="">-- Select Patient --</option>' + 
+        state.patients.map(p => `<option value="${p}">${p}</option>`).join('');
+      
+      if (state.patients.length > 0) {
+        const firstPatient = state.patients[0];
+        select.value = firstPatient;
+        state.currentPatient = firstPatient;
+        setTimeout(() => {
+          renderCharts();
+        }, 50);
+      }
+    }
+
+    // ========================================================================
+    // Utility Functions
+    // ========================================================================
+    function parseDate(dateStr) {
+      if (!dateStr) return null;
+      const str = String(dateStr).trim();
+      const match = str.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const months = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+        const month = months[monthStr];
+        if (month !== undefined) return new Date(year, month, day);
+      }
+      return null;
+    }
+
+    function dateToKey(date) {
+      if (!date) return null;
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+
+    function formatDateShort(date) {
+      if (!date) return '';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${date.getDate()}${months[date.getMonth()]}${date.getFullYear()}`;
+    }
+
+    function formatDateForECAD(date) {
+      if (!date) return '';
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day}${month}${year}:00:00:00.000`;
+    }
+
+    /**
+     * Calculate study day where First Dosing Date = Day 1
+     * Day 0 = one day before first dosing
+     * Day -1 = two days before first dosing
+     * Day 1, 2, 3... = first dosing date and onwards
+     */
+    function calculateStudyDay(targetDate, firstDosingDate) {
+      if (!targetDate || !firstDosingDate) return null;
+      const diffDays = Math.round((targetDate - firstDosingDate) / (1000 * 60 * 60 * 24));
+      // First dosing date (diffDays=0) = Day 1
+      // So all days get +1: diffDays=0 → Day 1, diffDays=-1 → Day 0, diffDays=-2 → Day -1
+      return diffDays + 1;
+    }
+
+    function studyDayToDate(studyDay, firstDosingDate) {
+      if (!firstDosingDate || studyDay === null) return null;
+      const result = new Date(firstDosingDate);
+      // Day 1 = firstDosingDate, so subtract 1 from studyDay to get offset
+      result.setDate(result.getDate() + studyDay - 1);
+      return result;
+    }
+
+    // ========================================================================
+    // USV Date Mapping Functions
+    // ========================================================================
+    function buildUSVDateMapping(patientId) {
+      const usvRecords = state.lblcData
+        .filter(r => r.Subject === patientId && r.Folder && r.Folder.toUpperCase() === 'USV')
+        .map(r => ({
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null,
+          originalRow: r
+        }))
+        .filter(r => r.date !== null);
+      
+      usvRecords.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      usvRecords.sort((a, b) => a.date - b.date);
+      
+      const dateToUSV = {};
+      const usvToDate = {};
+      const usvDates = [];
+      let usvIndex = 1;
+      
+      usvRecords.forEach(r => {
+        if (!dateToUSV[r.dateKey]) {
+          const usvName = `USV${usvIndex}`;
+          dateToUSV[r.dateKey] = usvName;
+          usvToDate[usvName] = r.date;
+          usvDates.push(r.date);
+          usvIndex++;
+        }
+      });
+      
+      return { dateToUSV, usvToDate, usvDates };
+    }
+    
+    function buildAllUSVMappings() {
+      const patients = new Set();
+      state.lblcData.forEach(r => { if (r.Subject) patients.add(r.Subject); });
+      
+      patients.forEach(patientId => {
+        state.usvMappings[patientId] = buildUSVDateMapping(patientId);
+      });
+    }
+    
+    function getUSVMapping(patientId) {
+      if (!state.usvMappings[patientId]) {
+        state.usvMappings[patientId] = buildUSVDateMapping(patientId);
+      }
+      return state.usvMappings[patientId];
+    }
+
+    /**
+     * Get first dosing date from ecclin.csv and ecsd.csv
+     * Returns the earliest ECSTDAT_INT date
+     * This date = Day 1
+     */
+    function getFirstDosingDate(patientId) {
+      if (state.firstDosingDates[patientId]) return state.firstDosingDates[patientId];
+      
+      const allDosingDates = [];
+      
+      // Get dates from ecclin.csv
+      const ecclinRecords = state.ecclinData.filter(r => r.Subject === patientId);
+      ecclinRecords.forEach(r => {
+        const date = parseDate(r.ECSTDAT_INT);
+        if (date) {
+          allDosingDates.push(date);
+          console.log(`  ecclin ECSTDAT_INT: ${r.ECSTDAT_INT} → ${formatDateShort(date)}`);
+        }
+      });
+      
+      // Get dates from ecsd.csv
+      const ecsdRecords = state.ecsdData.filter(r => r.Subject === patientId);
+      ecsdRecords.forEach(r => {
+        const date = parseDate(r.ECSTDAT_INT);
+        if (date) {
+          allDosingDates.push(date);
+          console.log(`  ecsd ECSTDAT_INT: ${r.ECSTDAT_INT} → ${formatDateShort(date)}`);
+        }
+      });
+      
+      if (allDosingDates.length === 0) {
+        console.warn(`No dosing dates found for patient ${patientId}`);
+        return null;
+      }
+      
+      // Get the earliest date - this will be Day 1
+      const firstDate = new Date(Math.min(...allDosingDates));
+      state.firstDosingDates[patientId] = firstDate;
+      
+      console.log(`★ First dosing date (Day 1) for ${patientId}: ${formatDateShort(firstDate)}`);
+      return firstDate;
+    }
+
+    function getFolderOrder(patientId) {
+      const { dateToUSV } = getUSVMapping(patientId);
+      
+      const patientLblc = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => ({ 
+          folder: r.Folder, 
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null
+        }))
+        .filter(r => r.folder && r.date);
+      
+      patientLblc.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      patientLblc.sort((a, b) => a.date - b.date);
+      
+      const ordered = [];
+      const seen = new Set();
+      
+      patientLblc.forEach(r => {
+        const folderUpper = r.folder.toUpperCase();
+        
+        if (folderUpper === 'USV') {
+          const renamedFolder = dateToUSV[r.dateKey];
+          if (renamedFolder && !seen.has(renamedFolder)) {
+            seen.add(renamedFolder);
+            ordered.push(renamedFolder);
+          }
+        } else if (folderUpper === 'UNKNOWN') {
+          const uniqueFolder = `Unknown-${r.dateKey}`;
+          if (!seen.has(uniqueFolder)) {
+            seen.add(uniqueFolder);
+            ordered.push(uniqueFolder);
+          }
+        } else {
+          if (!seen.has(r.folder)) {
+            seen.add(r.folder);
+            ordered.push(r.folder);
+          }
+        }
+      });
+      
+      return ordered;
+    }
+
+    function getFolderData(patientId) {
+      const { dateToUSV, usvToDate } = getUSVMapping(patientId);
+      
+      const patientLblc = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => ({ 
+          folder: r.Folder, 
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null,
+          originalFolder: r.Folder
+        }))
+        .filter(r => r.folder && r.date);
+      
+      patientLblc.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      patientLblc.sort((a, b) => a.date - b.date);
+      
+      const unique = [];
+      const seen = new Set();
+      
+      patientLblc.forEach(r => {
+        const folderUpper = r.folder.toUpperCase();
+        
+        if (folderUpper === 'USV') {
+          const renamedFolder = dateToUSV[r.dateKey];
+          if (renamedFolder && !seen.has(renamedFolder)) {
+            seen.add(renamedFolder);
+            unique.push({ 
+              folder: renamedFolder, 
+              date: r.date, 
+              originalFolder: r.folder,
+              dateKey: r.dateKey
+            });
+          }
+        } else if (folderUpper === 'UNKNOWN') {
+          const uniqueFolder = `Unknown-${r.dateKey}`;
+          if (!seen.has(uniqueFolder)) {
+            seen.add(uniqueFolder);
+            unique.push({ 
+              folder: uniqueFolder, 
+              date: r.date, 
+              originalFolder: r.folder,
+              dateKey: r.dateKey
+            });
+          }
+        } else {
+          if (!seen.has(r.folder)) {
+            seen.add(r.folder);
+            unique.push({ 
+              folder: r.folder, 
+              date: r.date, 
+              originalFolder: r.folder,
+              dateKey: r.dateKey
+            });
+          }
+        }
+      });
+      
+      return unique;
+    }
+
+    function getDateRange(patientId) {
+      const dates = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => parseDate(r.LBDAT_INT)).filter(d => d);
+      if (dates.length === 0) return '-';
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+      const fmt = d => d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+      return `${fmt(minDate)} - ${fmt(maxDate)}`;
+    }
+
+    // ========================================================================
+    // Dosing Functions
+    // ========================================================================
+    function calculateDailyDose(dose, freq) {
+      if (!dose || isNaN(dose)) return 0;
+      const f = String(freq || '').toUpperCase().trim();
+      if (f === 'BID') return dose * 2;
+      if (f === 'QD') return dose;
+      if (f === 'ONCE') return dose;
+      return dose;
+    }
+
+    function getDatesBetween(startDate, endDate) {
+      const dates = [];
+      if (!startDate || !endDate) return dates;
+      const current = new Date(startDate); const end = new Date(endDate);
+      while (current <= end) { dates.push(new Date(current)); current.setDate(current.getDate() + 1); }
+      return dates;
+    }
+
+    function calculatePatientDailyDoses(patientId) {
+      if (state.dailyDoses[patientId] && state.doseSource[patientId]) {
+        return { dailyDoseMap: state.dailyDoses[patientId], source: state.doseSource[patientId] };
+      }
+      const dailyDoseMap = {};
+      let doseSource = '';
+      
+      // Day 1 = earliest ECSTDAT_INT from ecclin.csv or ecsd.csv
+      const firstDosingDate = getFirstDosingDate(patientId);
+      if (!firstDosingDate) {
+        state.dailyDoses[patientId] = dailyDoseMap;
+        state.doseSource[patientId] = '';
+        return { dailyDoseMap, source: '' };
+      }
+      
+      console.log(`[calculatePatientDailyDoses] Patient ${patientId}: Day 1 = ${formatDateShort(firstDosingDate)}`);
+      
+      const patientLblcDates = state.lblcData
+        .filter(r => r.Subject === patientId)
+        .map(r => parseDate(r.LBDAT_INT))
+        .filter(d => d);
+      const latestLblcDate = patientLblcDates.length > 0 ? new Date(Math.max(...patientLblcDates)) : null;
+      
+      let dose = 0;
+      let freq = '';
+      
+      // Find dose amount from ecsd.csv
+      const ecsdRecords = state.ecsdData
+        .filter(r => r.Subject === patientId)
+        .map(r => ({ row: r, date: parseDate(r.ECSTDAT_INT) }))
+        .filter(r => r.date)
+        .sort((a, b) => a.date - b.date);
+      
+      if (ecsdRecords.length > 0) {
+        const matchingEcsd = ecsdRecords.find(r => 
+          dateToKey(r.date) === dateToKey(firstDosingDate)
+        );
+        const ecsdToUse = matchingEcsd || ecsdRecords[0];
+        dose = parseFloat(ecsdToUse.row.ECDSTXT || 0);
+        freq = ecsdToUse.row.ECDOSFRQ_STD || '';
+        doseSource = 'Dose from ecsd.csv';
+      }
+      
+      // Fill scheduled doses starting from Day 1 (firstDosingDate)
+      if (latestLblcDate && dose > 0) {
+        if (freq.toUpperCase() === 'ONCE') {
+          const dk = dateToKey(firstDosingDate);
+          dailyDoseMap[dk] = { dose: calculateDailyDose(dose, freq), source: 'scheduled' };
+        } else {
+          // Day 1 onwards: full daily dose
+          getDatesBetween(firstDosingDate, latestLblcDate).forEach(d => {
+            const dk = dateToKey(d);
+            dailyDoseMap[dk] = { dose: calculateDailyDose(dose, freq), source: 'scheduled' };
+          });
+        }
+      }
+
+      // Apply adjusted doses from ecad.csv (overrides scheduled)
+      state.ecadData.filter(r => r.Subject === patientId).forEach(row => {
+        const startDate = parseDate(row.ECSTDAT_INT);
+        const endDate = parseDate(row.ECENDAT_INT);
+        const adjDose = parseFloat(row.ECDSTXT || 0);
+        const adjFreq = row.ECDOSFRQ_STD || '';
+        if (!startDate) return;
+        getDatesBetween(startDate, endDate || startDate).forEach(d => {
+          const dk = dateToKey(d);
+          if (!dailyDoseMap[dk]) dailyDoseMap[dk] = { dose: 0, source: 'adjusted' };
+          dailyDoseMap[dk].dose = calculateDailyDose(adjDose, adjFreq);
+          dailyDoseMap[dk].source = 'adjusted';
+        });
+      });
+
+      // Apply missed doses from ecmd.csv (sets dose to 0)
+      state.ecmdData.filter(r => r.Subject === patientId).forEach(row => {
+        const startDate = parseDate(row.ECSTDAT_INT);
+        const endDate = parseDate(row.ECENDAT_INT);
+        if (!startDate) return;
+        getDatesBetween(startDate, endDate || startDate).forEach(d => {
+          const dk = dateToKey(d);
+          if (!dailyDoseMap[dk]) dailyDoseMap[dk] = { dose: 0, source: 'missed' };
+          dailyDoseMap[dk].dose = 0;
+          dailyDoseMap[dk].source = 'missed';
+        });
+      });
+
+      state.dailyDoses[patientId] = dailyDoseMap;
+      state.doseSource[patientId] = doseSource;
+      return { dailyDoseMap, source: doseSource };
+    }
+
+    function getDosingDateRange(patientId) {
+      const allDates = [];
+      [...state.ecclinData, ...state.ecsdData, ...state.ecadData, ...state.ecmdData]
+        .filter(r => r.Subject === patientId)
+        .forEach(r => {
+          const s = parseDate(r.ECSTDAT_INT); const e = parseDate(r.ECENDAT_INT);
+          if (s) allDates.push(s); if (e) allDates.push(e);
+        });
+      state.lblcData.filter(r => r.Subject === patientId).forEach(r => {
+        const d = parseDate(r.LBDAT_INT);
+        if (d) allDates.push(d);
+      });
+      if (allDates.length === 0) return { minDate: null, maxDate: null, range: '-' };
+      const minDate = new Date(Math.min(...allDates));
+      const maxDate = new Date(Math.max(...allDates));
+      const fmt = d => d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+      return { minDate, maxDate, range: `${fmt(minDate)} - ${fmt(maxDate)}` };
+    }
+
+    function getStudyDayRange(patientId) {
+      const firstDosingDate = getFirstDosingDate(patientId);
+      if (!firstDosingDate) return { minDay: 1, maxDay: 100, maxDate: null };
+      
+      const dosingRange = getDosingDateRange(patientId);
+      let minDay = 1, maxDay = 1;
+      let latestDate = firstDosingDate;
+      
+      if (dosingRange.minDate) {
+        minDay = Math.min(minDay, calculateStudyDay(dosingRange.minDate, firstDosingDate) || 1);
+        maxDay = Math.max(maxDay, calculateStudyDay(dosingRange.maxDate, firstDosingDate) || 1);
+        if (dosingRange.maxDate > latestDate) latestDate = dosingRange.maxDate;
+      }
+      
+      getFolderData(patientId).forEach(f => {
+        const sd = calculateStudyDay(f.date, firstDosingDate);
+        if (sd !== null) { minDay = Math.min(minDay, sd); maxDay = Math.max(maxDay, sd); }
+        if (f.date > latestDate) latestDate = f.date;
+      });
+      
+      getPatientAEData(patientId).forEach(ae => {
+        ae.intervals.forEach(i => {
+          if (i.startDay !== null) { minDay = Math.min(minDay, i.startDay); maxDay = Math.max(maxDay, i.startDay); }
+          if (i.endDay !== null && !i.ongoing) maxDay = Math.max(maxDay, i.endDay);
+          if (i.startDate && i.startDate > latestDate) latestDate = i.startDate;
+          if (i.endDate && i.endDate > latestDate) latestDate = i.endDate;
+        });
+      });
+      
+      const maxDayWithPadding = maxDay + X_AXIS_PADDING_DAYS;
+      const maxDate = studyDayToDate(maxDayWithPadding, firstDosingDate);
+      
+      // Set minimum to -27 days (to align with -27, -20, -13, -6, 1, 8, ...)
+      if (minDay < -27) minDay = Math.floor((minDay + 6) / 7) * 7 - 6;
+      
+      return { minDay, maxDay: maxDayWithPadding, maxDate, actualMaxDay: maxDay };
+    }
+
+    function getDailyDosesByStudyDay(patientId) {
+      const firstDosingDate = getFirstDosingDate(patientId);
+      if (!firstDosingDate) return { doses: {}, source: '' };
+      const { dailyDoseMap, source } = calculatePatientDailyDoses(patientId);
+      const result = {};
+      Object.entries(dailyDoseMap).forEach(([dk, info]) => {
+        const [y,m,d] = dk.split('-').map(Number);
+        const sd = calculateStudyDay(new Date(y, m-1, d), firstDosingDate);
+        if (sd !== null) result[sd] = info;
+      });
+      return { doses: result, source };
+    }
+
+    // ========================================================================
+    // AE Functions
+    // ========================================================================
+    function getPatientAEData(patientId) {
+      if (state.patientAEs[patientId]) return state.patientAEs[patientId];
+      const firstDosingDate = getFirstDosingDate(patientId);
+      const aeByTerm = {};
+      state.aeData.filter(r => r.Subject === patientId).forEach(row => {
+        const term = row.AETERM_pt || '';
+        if (!term) return;
+        const startDate = parseDate(row.AESTDAT_INT);
+        const endDate = parseDate(row.AEENDAT_INT);
+        const aeongoValue = String(row.AEONGO || '').toUpperCase();
+        const ongoingFromField = aeongoValue === 'YES' || aeongoValue === 'Y';
+        const grade = parseInt(row.AETOXGR_STD) || null;
+        const rel = row.AEREL_STD || '';
+        if (!startDate) return;
+        const startDay = firstDosingDate ? calculateStudyDay(startDate, firstDosingDate) : null;
+        const endDay = (endDate && firstDosingDate) ? calculateStudyDay(endDate, firstDosingDate) : null;
+        const ongoing = ongoingFromField || (endDay === null);
+        if (!aeByTerm[term]) aeByTerm[term] = { term, intervals: [] };
+        aeByTerm[term].intervals.push({ startDay, endDay, ongoing, grade, relatedness: rel, startDate, endDate });
+      });
+      const result = Object.values(aeByTerm).map(ae => ({
+        term: ae.term,
+        intervals: ae.intervals.sort((a,b) => (a.startDay||0) - (b.startDay||0))
+      }));
+      result.sort((a,b) => (a.intervals[0]?.startDay||0) - (b.intervals[0]?.startDay||0));
+      state.patientAEs[patientId] = result;
+      return result;
+    }
+
+    function getAEGradeColor(grade) { return AE_GRADE_COLORS[grade] || AE_DEFAULT_COLOR; }
+
+    function getContrastColor(hexColor) {
+      const r = parseInt(hexColor.slice(1, 3), 16);
+      const g = parseInt(hexColor.slice(3, 5), 16);
+      const b = parseInt(hexColor.slice(5, 7), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness > 150 ? '#000000' : '#FFFFFF';
+    }
+
+    // ========================================================================
+    // CM (Concomitant Medications) Functions
+    // ========================================================================
+    function getPatientCMData(patientId) {
+      if (state.patientCMs[patientId]) return state.patientCMs[patientId];
+      const firstDosingDate = getFirstDosingDate(patientId);
+      
+      const cmList = [];
+      state.cmData.filter(r => r.Subject === patientId).forEach(row => {
+        const drugName = row.CMTRT || '';
+        if (!drugName) return;
+        
+        const startDate = parseDate(row.CMSTDAT_INT);
+        const endDate = parseDate(row.CMENDAT_INT);
+        const cmOngoValue = String(row.CMONGO || '').toUpperCase();
+        const ongoingFromField = cmOngoValue === 'YES' || cmOngoValue === 'Y';
+        
+        if (!startDate && !ongoingFromField) return;
+        
+        let startDay = (startDate && firstDosingDate) ? calculateStudyDay(startDate, firstDosingDate) : null;
+        let endDay = (endDate && firstDosingDate) ? calculateStudyDay(endDate, firstDosingDate) : null;
+        const ongoing = ongoingFromField || (endDay === null);
+        
+        // Filter: only include CM that has relevance to Day -28 onwards
+        // If endDay < CM_MIN_DAY (-28), skip this CM entirely
+        if (endDay !== null && endDay < CM_MIN_DAY) return;
+        
+        // Truncate startDay to CM_MIN_DAY if it's earlier
+        if (startDay !== null && startDay < CM_MIN_DAY) {
+          startDay = CM_MIN_DAY;
+        }
+        
+        // Build label: drug name + dose + unit + route + frequency
+        const dose = row.CMDSTXT || '';
+        const unit = row.CMDOSU_STD || row.CMDOSU || '';
+        const route = row.CMROUTE_STD || row.CMROUTE || '';
+        const freq = row.CMDOSFRQ_STD || row.CMDOSFRQ || '';
+        const category = row.CMCAT || '';
+        const reason = row.CMREAS || '';
+        
+        // Compact label for display above bar
+        const labelParts = [drugName];
+        if (dose) labelParts.push(dose + (unit ? ' ' + unit : ''));
+        if (route) labelParts.push(route);
+        if (freq) labelParts.push(freq);
+        const label = labelParts.join(' | ');
+        
+        cmList.push({
+          drugName,
+          label,
+          startDay,
+          endDay,
+          ongoing,
+          startDate,
+          endDate,
+          dose,
+          unit,
+          route,
+          freq,
+          category,
+          reason
+        });
+      });
+      
+      // Sort by startDay
+      cmList.sort((a, b) => (a.startDay || 0) - (b.startDay || 0));
+      
+      state.patientCMs[patientId] = cmList;
+      return cmList;
+    }
+
+    function getCMColor(ongoing) {
+      return ongoing ? CM_COLOR_ONGOING : CM_COLOR_ENDED;
+    }
+
+    // ========================================================================
+    // Data Processing
+    // ========================================================================
+    function getAnalyteData(patientId, analyteName, folderOrder) {
+      const { dateToUSV, usvToDate, usvDates } = getUSVMapping(patientId);
+      const folderData = getFolderData(patientId);
+      
+      const folderDateMap = {};
+      folderData.forEach(f => folderDateMap[f.folder] = f.date);
+      
+      const patientLabRecords = state.labData.filter(r => 
+        r.Subject === patientId && 
+        r.AnalyteName === analyteName && 
+        !isNaN(parseFloat(r.NumericValue))
+      );
+      
+      const usvRecords = patientLabRecords.filter(r => r.Folder && r.Folder.toUpperCase() === 'USV');
+      const nonUSVRecords = patientLabRecords.filter(r => !r.Folder || r.Folder.toUpperCase() !== 'USV');
+      
+      const processedData = [];
+      
+      nonUSVRecords.forEach(r => {
+        let folder = r.Folder;
+        let date = folderDateMap[folder] || null;
+        
+        if (folder && folder.toUpperCase() === 'UNKNOWN') {
+          if (r.RecordDate) {
+            date = parseDate(r.RecordDate);
+          }
+          if (date) {
+            const dateKey = dateToKey(date);
+            folder = `Unknown-${dateKey}`;
+            date = folderDateMap[folder] || date;
+          } else {
+            return;
+          }
+        }
+        
+        if (folderOrder.includes(folder)) {
+          processedData.push({
+            folder: folder,
+            value: parseFloat(r.NumericValue),
+            labHigh: parseFloat(r.LabHigh),
+            labLow: parseFloat(r.LabLow),
+            labUnits: r.LabUnits,
+            date: date
+          });
+        }
+      });
+      
+      usvRecords.forEach((r, idx) => {
+        const usvDate = idx < usvDates.length ? usvDates[idx] : null;
+        const dateKey = usvDate ? dateToKey(usvDate) : null;
+        const renamedFolder = dateKey && dateToUSV[dateKey] ? dateToUSV[dateKey] : `USV${idx + 1}`;
+        
+        if (folderOrder.includes(renamedFolder)) {
+          processedData.push({
+            folder: renamedFolder,
+            value: parseFloat(r.NumericValue),
+            labHigh: parseFloat(r.LabHigh),
+            labLow: parseFloat(r.LabLow),
+            labUnits: r.LabUnits,
+            date: usvDate
+          });
+        }
+      });
+      
+      const folderMap = {};
+      processedData.forEach(r => {
+        if (!folderMap[r.folder] || r.value > folderMap[r.folder].value) {
+          folderMap[r.folder] = r;
+        }
+      });
+      
+      const result = Object.values(folderMap).sort((a, b) => 
+        folderOrder.indexOf(a.folder) - folderOrder.indexOf(b.folder)
+      );
+      
+      return result;
+    }
+
+    function calculateXULN(data) {
+      return data.filter(r => !isNaN(r.labHigh) && r.labHigh > 0).map(r => ({ ...r, xULN: r.value / r.labHigh }));
+    }
+
+    // ========================================================================
+    // AE Drawing Plugin
+    // ========================================================================
+    function createAEDrawPlugin(aeData, minDay, maxDay, actualMaxDay, firstDosingDate, patientId) {
+      let hitAreas = [];
+      let checkboxAreas = [];
+      const CHECKBOX_SIZE = 14;
+      const CHECKBOX_MARGIN = 15;
+      
+      return {
+        id: 'aeDrawPlugin',
+        
+        afterDraw(chart) {
+          const showAE = document.getElementById('showAE').checked;
+          if (!showAE || !aeData || aeData.length === 0) return;
+
+          const ctx = chart.ctx;
+          const chartArea = chart.chartArea;
+          const xScale = chart.scales.x;
+          
+          // Filter to only show checked items
+          const visibleAEs = aeData.filter(ae => {
+            const key = `${patientId}|${ae.term}`;
+            return state.aeItemChecked[key] !== false; // default to true if not set
+          });
+          
+          const aeHeight = aeData.length * AE_ROW_HEIGHT; // Keep full height for checkboxes
+          const aeTop = chartArea.top - aeHeight - AE_SECTION_GAP;
+          
+          hitAreas = [];
+          checkboxAreas = [];
+
+          ctx.save();
+
+          const aeBottom = chartArea.top - AE_SECTION_GAP / 2;
+
+          // Fill AE section with light grey background
+          ctx.fillStyle = 'rgba(240, 240, 240, 0.6)';
+          ctx.fillRect(chartArea.left, aeTop, chartArea.right - chartArea.left, aeBottom - aeTop);
+
+          // Draw AE section border
+          ctx.strokeStyle = '#ccc';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.rect(chartArea.left, aeTop, chartArea.right - chartArea.left, aeBottom - aeTop);
+          ctx.stroke();
+
+          // Draw "AE" label on the left (larger font)
+          ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.fillStyle = '#333';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('AE', chartArea.left - 10, aeTop + aeHeight / 2);
+
+          // Draw all rows (for checkboxes) but only draw bars for checked items
+          aeData.forEach((ae, idx) => {
+            const rowY = aeTop + idx * AE_ROW_HEIGHT + AE_ROW_HEIGHT / 2;
+            const key = `${patientId}|${ae.term}`;
+            const isChecked = state.aeItemChecked[key] !== false;
+            
+            // Alternating row background
+            if (idx % 2 === 0) {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+              ctx.fillRect(chartArea.left, rowY - AE_ROW_HEIGHT / 2, chartArea.right - chartArea.left, AE_ROW_HEIGHT);
+            }
+
+            // Draw checkbox on the right
+            const cbX = chartArea.right + CHECKBOX_MARGIN;
+            const cbY = rowY - CHECKBOX_SIZE / 2;
+            
+            // Checkbox background
+            ctx.fillStyle = isChecked ? '#4CAF50' : '#fff';
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(cbX, cbY, CHECKBOX_SIZE, CHECKBOX_SIZE, 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Checkmark if checked
+            if (isChecked) {
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(cbX + 3, cbY + CHECKBOX_SIZE / 2);
+              ctx.lineTo(cbX + CHECKBOX_SIZE / 2 - 1, cbY + CHECKBOX_SIZE - 4);
+              ctx.lineTo(cbX + CHECKBOX_SIZE - 3, cbY + 4);
+              ctx.stroke();
+            }
+            
+            // Store checkbox hit area
+            checkboxAreas.push({
+              x1: cbX - 2, x2: cbX + CHECKBOX_SIZE + 2,
+              y1: cbY - 2, y2: cbY + CHECKBOX_SIZE + 2,
+              term: ae.term,
+              key: key,
+              isCheckbox: true
+            });
+
+            // Only draw interval bars if checked
+            if (!isChecked) return;
+
+            ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+            const labelText = ae.term;
+            const textWidth = ctx.measureText(labelText).width;
+            let labelDisplayed = false;
+
+            ae.intervals.forEach((interval, intervalIdx) => {
+              let endDay = interval.endDay;
+              let isOngoing = interval.ongoing;
+              if (isOngoing) {
+                endDay = Math.max(interval.startDay + 7, actualMaxDay - 5);
+              }
+              if (endDay === null) endDay = interval.startDay + 1;
+
+              const xStart = xScale.getPixelForValue(interval.startDay);
+              const xEnd = xScale.getPixelForValue(endDay);
+              const barWidth = Math.max(xEnd - xStart, 4);
+              const color = getAEGradeColor(interval.grade);
+
+              hitAreas.push({
+                x1: xStart, x2: xStart + barWidth,
+                y1: rowY - AE_BAR_HEIGHT / 2, y2: rowY + AE_BAR_HEIGHT / 2,
+                term: ae.term, grade: interval.grade,
+                relatedness: interval.relatedness,
+                startDay: interval.startDay,
+                endDay: interval.ongoing ? 'Ongoing' : interval.endDay,
+                startDate: interval.startDate,
+                endDate: interval.endDate,
+                ongoing: interval.ongoing
+              });
+
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 1;
+              
+              const radius = 2;
+              const barTop = rowY - AE_BAR_HEIGHT / 2;
+              ctx.beginPath();
+              ctx.moveTo(xStart + radius, barTop);
+              ctx.lineTo(xStart + barWidth - radius, barTop);
+              ctx.quadraticCurveTo(xStart + barWidth, barTop, xStart + barWidth, barTop + radius);
+              ctx.lineTo(xStart + barWidth, barTop + AE_BAR_HEIGHT - radius);
+              ctx.quadraticCurveTo(xStart + barWidth, barTop + AE_BAR_HEIGHT, xStart + barWidth - radius, barTop + AE_BAR_HEIGHT);
+              ctx.lineTo(xStart + radius, barTop + AE_BAR_HEIGHT);
+              ctx.quadraticCurveTo(xStart, barTop + AE_BAR_HEIGHT, xStart, barTop + AE_BAR_HEIGHT - radius);
+              ctx.lineTo(xStart, barTop + radius);
+              ctx.quadraticCurveTo(xStart, barTop, xStart + radius, barTop);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+
+              if (isOngoing) {
+                ctx.save();
+                ctx.fillStyle = color;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                
+                const barEndX = xStart + barWidth;
+                const arrowEndX = Math.min(chartArea.right - 20, barEndX + (chartArea.right - chartArea.left) * 0.3);
+                const arrowSize = 10;
+                
+                if (arrowEndX > barEndX + arrowSize) {
+                  ctx.beginPath();
+                  ctx.moveTo(barEndX, rowY);
+                  ctx.lineTo(arrowEndX - arrowSize, rowY);
+                  ctx.stroke();
+                  
+                  ctx.beginPath();
+                  ctx.moveTo(arrowEndX, rowY);
+                  ctx.lineTo(arrowEndX - arrowSize, rowY - arrowSize / 2);
+                  ctx.lineTo(arrowEndX - arrowSize, rowY + arrowSize / 2);
+                  ctx.closePath();
+                  ctx.fill();
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(barEndX + arrowSize, rowY);
+                  ctx.lineTo(barEndX, rowY - arrowSize / 2);
+                  ctx.lineTo(barEndX, rowY + arrowSize / 2);
+                  ctx.closePath();
+                  ctx.fill();
+                }
+                
+                ctx.restore();
+              }
+
+              if (!labelDisplayed && intervalIdx === 0) {
+                const textColor = getContrastColor(color);
+                
+                if (barWidth > textWidth + 6) {
+                  ctx.fillStyle = textColor;
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  const centerX = xStart + barWidth / 2;
+                  ctx.fillText(labelText, centerX, rowY);
+                  labelDisplayed = true;
+                } else if (barWidth > 16) {
+                  let truncated = labelText;
+                  while (ctx.measureText(truncated + '...').width > barWidth - 6 && truncated.length > 3) {
+                    truncated = truncated.slice(0, -1);
+                  }
+                  if (truncated.length > 3) {
+                    ctx.fillStyle = textColor;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(truncated + '...', xStart + barWidth / 2, rowY);
+                    labelDisplayed = true;
+                  } else {
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
+                    const leftX = xStart - 4;
+                    if (leftX - textWidth > chartArea.left) {
+                      ctx.fillText(labelText, leftX, rowY);
+                      labelDisplayed = true;
+                    }
+                  }
+                } else {
+                  ctx.fillStyle = '#333';
+                  ctx.textAlign = 'right';
+                  ctx.textBaseline = 'middle';
+                  const leftX = xStart - 4;
+                  if (leftX - textWidth > chartArea.left) {
+                    ctx.fillText(labelText, leftX, rowY);
+                    labelDisplayed = true;
+                  }
+                }
+              }
+            });
+          });
+
+          ctx.restore();
+          
+          chart._aeHitAreas = hitAreas;
+          chart._aeCheckboxAreas = checkboxAreas;
+          chart._aeTop = aeTop;
+          chart._aeBottom = chartArea.top - AE_SECTION_GAP / 2;
+        },
+
+        afterEvent(chart, args) {
+          const showAE = document.getElementById('showAE').checked;
+          if (!showAE) return;
+
+          const x = args.event.x;
+          const y = args.event.y;
+          const chartArea = chart.chartArea;
+
+          // Handle click on checkbox
+          if (args.event.type === 'click' && chart._aeCheckboxAreas) {
+            for (const cb of chart._aeCheckboxAreas) {
+              if (x >= cb.x1 && x <= cb.x2 && y >= cb.y1 && y <= cb.y2) {
+                // Toggle checkbox state
+                const currentState = state.aeItemChecked[cb.key] !== false;
+                state.aeItemChecked[cb.key] = !currentState;
+                chart.update('none');
+                return;
+              }
+            }
+          }
+
+          if (args.event.type !== 'mousemove') return;
+          if (!chart._aeHitAreas) return;
+
+          // Check if hovering over checkbox area
+          if (chart._aeCheckboxAreas) {
+            for (const cb of chart._aeCheckboxAreas) {
+              if (x >= cb.x1 && x <= cb.x2 && y >= cb.y1 && y <= cb.y2) {
+                chart.canvas.style.cursor = 'pointer';
+                hideTooltip(chart.canvas.id);
+                hideCMTooltip(chart.canvas.id);
+                return;
+              }
+            }
+          }
+
+          if (y < chart._aeTop || y > chart._aeBottom || x < chartArea.left || x > chartArea.right) {
+            hideTooltip(chart.canvas.id);
+            hideCMTooltip(chart.canvas.id);
+            chart.canvas.style.cursor = 'default';
+            return;
+          }
+
+          let found = null;
+          for (const area of chart._aeHitAreas) {
+            if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2) {
+              found = area;
+              break;
+            }
+          }
+
+          if (found) {
+            showTooltip(chart.canvas.id, found, args.event.native);
+            hideCMTooltip(chart.canvas.id);
+            chart.canvas.style.cursor = 'pointer';
+          } else {
+            hideTooltip(chart.canvas.id);
+            hideCMTooltip(chart.canvas.id);
+            chart.canvas.style.cursor = 'default';
+          }
+        }
+      };
+    }
+
+    /**
+     * CM Draw Plugin - Draws concomitant medications above AE section
+     * cmData: array of CM objects
+     * aeHeight: height of AE section (to position CM above it)
+     */
+    function createCMDrawPlugin(cmData, minDay, maxDay, actualMaxDay, firstDosingDate, aeHeight, patientId) {
+      let hitAreas = [];
+      let checkboxAreas = [];
+      const CHECKBOX_SIZE = 14;
+      const CHECKBOX_MARGIN = 15;
+      
+      return {
+        id: 'cmDrawPlugin',
+        
+        afterDraw(chart) {
+          const showCM = document.getElementById('showCM').checked;
+          if (!showCM || !cmData || cmData.length === 0) return;
+
+          const ctx = chart.ctx;
+          const chartArea = chart.chartArea;
+          const xScale = chart.scales.x;
+          
+          const cmHeight = cmData.length * CM_ROW_HEIGHT;
+          // Position CM above AE section with gap
+          const aeBottom = chartArea.top - AE_SECTION_GAP / 2;
+          const cmBottom = aeBottom - aeHeight - AE_CM_GAP;
+          const cmTop = cmBottom - cmHeight;
+          
+          hitAreas = [];
+          checkboxAreas = [];
+
+          ctx.save();
+
+          // Fill CM section with white background
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.fillRect(chartArea.left, cmTop, chartArea.right - chartArea.left, cmHeight);
+
+          // Draw CM section border (box)
+          ctx.strokeStyle = '#ccc';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.rect(chartArea.left, cmTop, chartArea.right - chartArea.left, cmHeight);
+          ctx.stroke();
+
+          // Draw separator line between CM and AE (within chart area only)
+          ctx.strokeStyle = '#aaa';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(chartArea.left, cmBottom + AE_CM_GAP / 2);
+          ctx.lineTo(chartArea.right, cmBottom + AE_CM_GAP / 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Draw "CM" label on the left (larger font)
+          ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.fillStyle = '#333';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('CM', chartArea.left - 10, cmTop + cmHeight / 2);
+
+          cmData.forEach((cm, idx) => {
+            const rowY = cmTop + idx * CM_ROW_HEIGHT + CM_ROW_HEIGHT / 2;
+            const key = `${patientId}|${cm.label}`;
+            const isChecked = state.cmItemChecked[key] !== false;
+            
+            // Alternating row background (subtle)
+            if (idx % 2 === 0) {
+              ctx.fillStyle = 'rgba(245, 245, 245, 0.5)';
+              ctx.fillRect(chartArea.left, rowY - CM_ROW_HEIGHT / 2, chartArea.right - chartArea.left, CM_ROW_HEIGHT);
+            }
+
+            // Draw checkbox on the right
+            const cbX = chartArea.right + CHECKBOX_MARGIN;
+            const cbY = rowY - CHECKBOX_SIZE / 2;
+            
+            // Checkbox background
+            ctx.fillStyle = isChecked ? '#2196F3' : '#fff';
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(cbX, cbY, CHECKBOX_SIZE, CHECKBOX_SIZE, 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Checkmark if checked
+            if (isChecked) {
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(cbX + 3, cbY + CHECKBOX_SIZE / 2);
+              ctx.lineTo(cbX + CHECKBOX_SIZE / 2 - 1, cbY + CHECKBOX_SIZE - 4);
+              ctx.lineTo(cbX + CHECKBOX_SIZE - 3, cbY + 4);
+              ctx.stroke();
+            }
+            
+            // Store checkbox hit area
+            checkboxAreas.push({
+              x1: cbX - 2, x2: cbX + CHECKBOX_SIZE + 2,
+              y1: cbY - 2, y2: cbY + CHECKBOX_SIZE + 2,
+              label: cm.label,
+              key: key,
+              isCheckbox: true
+            });
+
+            // Only draw interval if checked
+            if (!isChecked) return;
+
+            let endDay = cm.endDay;
+            let isOngoing = cm.ongoing;
+            if (isOngoing) {
+              endDay = Math.max(cm.startDay + 7, actualMaxDay - 5);
+            }
+            if (endDay === null) endDay = cm.startDay + 1;
+
+            const xStart = xScale.getPixelForValue(cm.startDay);
+            const xEnd = xScale.getPixelForValue(endDay);
+            const lineLength = Math.max(xEnd - xStart, 4);
+            const color = getCMColor(cm.ongoing);
+
+            // Expand hit area for easier hover detection
+            hitAreas.push({
+              x1: xStart - 2, x2: xStart + lineLength + 2,
+              y1: rowY - 8, y2: rowY + 8,
+              drugName: cm.drugName,
+              label: cm.label,
+              startDay: cm.startDay,
+              endDay: cm.ongoing ? 'Ongoing' : cm.endDay,
+              startDate: cm.startDate,
+              endDate: cm.endDate,
+              ongoing: cm.ongoing,
+              dose: cm.dose,
+              unit: cm.unit,
+              route: cm.route,
+              freq: cm.freq,
+              category: cm.category,
+              reason: cm.reason,
+              isCM: true
+            });
+
+            // Draw thin line (like arrow)
+            ctx.strokeStyle = color;
+            ctx.lineWidth = CM_BAR_HEIGHT;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(xStart, rowY);
+            ctx.lineTo(xStart + lineLength, rowY);
+            ctx.stroke();
+
+            // Draw start marker (small circle)
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(xStart, rowY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw end marker or ongoing arrow
+            if (isOngoing) {
+              // Draw ongoing arrow
+              ctx.save();
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
+              ctx.lineWidth = CM_BAR_HEIGHT;
+              ctx.lineCap = 'round';
+              
+              const lineEndX = xStart + lineLength;
+              const arrowEndX = Math.min(chartArea.right - 15, lineEndX + (chartArea.right - chartArea.left) * 0.15);
+              const arrowSize = 8;
+              
+              if (arrowEndX > lineEndX + arrowSize) {
+                // Draw dashed line to arrow
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(lineEndX, rowY);
+                ctx.lineTo(arrowEndX - arrowSize, rowY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw arrow head
+                ctx.beginPath();
+                ctx.moveTo(arrowEndX, rowY);
+                ctx.lineTo(arrowEndX - arrowSize, rowY - arrowSize / 1.5);
+                ctx.lineTo(arrowEndX - arrowSize, rowY + arrowSize / 1.5);
+                ctx.closePath();
+                ctx.fill();
+              }
+              
+              ctx.restore();
+            } else {
+              // Draw end marker (small vertical bar)
+              ctx.fillStyle = color;
+              ctx.fillRect(xStart + lineLength - 2, rowY - 5, 4, 10);
+            }
+
+            // Draw label above line
+            ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            
+            const labelY = rowY - 6;
+            const maxLabelWidth = chartArea.right - xStart - 10;
+            let displayLabel = cm.label;
+            
+            // Truncate label if too long
+            while (ctx.measureText(displayLabel).width > maxLabelWidth && displayLabel.length > 10) {
+              displayLabel = displayLabel.slice(0, -1);
+            }
+            if (displayLabel !== cm.label) displayLabel += '...';
+            
+            ctx.fillText(displayLabel, xStart, labelY);
+          });
+
+          ctx.restore();
+          
+          chart._cmHitAreas = hitAreas;
+          chart._cmCheckboxAreas = checkboxAreas;
+          chart._cmTop = cmTop;
+          chart._cmBottom = cmBottom;
+        },
+
+        afterEvent(chart, args) {
+          const showCM = document.getElementById('showCM').checked;
+          if (!showCM) return;
+
+          const x = args.event.x;
+          const y = args.event.y;
+          const chartArea = chart.chartArea;
+
+          // Handle click on checkbox
+          if (args.event.type === 'click' && chart._cmCheckboxAreas) {
+            for (const cb of chart._cmCheckboxAreas) {
+              if (x >= cb.x1 && x <= cb.x2 && y >= cb.y1 && y <= cb.y2) {
+                // Toggle checkbox state
+                const currentState = state.cmItemChecked[cb.key] !== false;
+                state.cmItemChecked[cb.key] = !currentState;
+                chart.update('none');
+                return;
+              }
+            }
+          }
+
+          if (args.event.type !== 'mousemove') return;
+          if (!chart._cmHitAreas) return;
+
+          // Check if hovering over checkbox area
+          if (chart._cmCheckboxAreas) {
+            for (const cb of chart._cmCheckboxAreas) {
+              if (x >= cb.x1 && x <= cb.x2 && y >= cb.y1 && y <= cb.y2) {
+                chart.canvas.style.cursor = 'pointer';
+                hideCMTooltip(chart.canvas.id);
+                return;
+              }
+            }
+          }
+
+          if (y < chart._cmTop || y > chart._cmBottom || x < chartArea.left || x > chartArea.right) {
+            hideCMTooltip(chart.canvas.id);
+            return; // Let AE plugin handle or hide tooltip
+          }
+
+          let found = null;
+          for (const area of chart._cmHitAreas) {
+            if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2) {
+              found = area;
+              break;
+            }
+          }
+
+          if (found) {
+            showCMTooltip(chart.canvas.id, found, args.event.native);
+            hideTooltip(chart.canvas.id); // Hide AE tooltip
+            chart.canvas.style.cursor = 'pointer';
+          } else {
+            hideCMTooltip(chart.canvas.id);
+          }
+        }
+      };
+    }
+
+    function showCMTooltip(canvasId, info, event) {
+      let tooltip = document.getElementById(`${canvasId}-cm-tooltip`);
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = `${canvasId}-cm-tooltip`;
+        tooltip.style.cssText = 'position:fixed;background:rgba(0,0,0,0.9);color:white;padding:10px 14px;border-radius:6px;font-size:17px;pointer-events:none;z-index:10001;max-width:400px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+        document.body.appendChild(tooltip);
+      }
+      const startDateStr = info.startDate ? formatDateShort(info.startDate) : '';
+      const endDateStr = info.ongoing ? 'Ongoing' : (info.endDate ? formatDateShort(info.endDate) : '');
+      
+      let html = `<div style="font-weight:bold;margin-bottom:6px;font-size:18px;">${info.drugName}</div>`;
+      if (info.category) html += `<div><span style="color:#aaa;">Category:</span> ${info.category}</div>`;
+      if (info.reason) html += `<div><span style="color:#aaa;">Reason:</span> ${info.reason}</div>`;
+      if (info.dose) html += `<div><span style="color:#aaa;">Dose:</span> ${info.dose}${info.unit ? ' ' + info.unit : ''}</div>`;
+      if (info.route) html += `<div><span style="color:#aaa;">Route:</span> ${info.route}</div>`;
+      if (info.freq) html += `<div><span style="color:#aaa;">Frequency:</span> ${info.freq}</div>`;
+      html += `<div style="margin-top:6px;border-top:1px solid #555;padding-top:6px;">`;
+      html += `<div><span style="color:#aaa;">Start Day:</span> ${info.startDay}${startDateStr ? ` (${startDateStr})` : ''}</div>`;
+      html += `<div><span style="color:#aaa;">End Day:</span> ${info.endDay}${endDateStr && !info.ongoing ? ` (${endDateStr})` : ''}</div>`;
+      html += `</div>`;
+      
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (event.clientX + 15) + 'px';
+      tooltip.style.top = (event.clientY + 15) + 'px';
+    }
+
+    function hideCMTooltip(canvasId) {
+      const tooltip = document.getElementById(`${canvasId}-cm-tooltip`);
+      if (tooltip) tooltip.style.display = 'none';
+    }
+
+    function showTooltip(canvasId, info, event) {
+      let tooltip = document.getElementById(`${canvasId}-tooltip`);
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = `${canvasId}-tooltip`;
+        tooltip.style.cssText = 'position:fixed;background:rgba(0,0,0,0.9);color:white;padding:10px 14px;border-radius:6px;font-size:19px;pointer-events:none;z-index:10000;max-width:320px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+        document.body.appendChild(tooltip);
+      }
+      const startDateStr = info.startDate ? formatDateShort(info.startDate) : '';
+      const endDateStr = info.ongoing ? 'Ongoing' : (info.endDate ? formatDateShort(info.endDate) : '');
+      tooltip.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${info.term}</div>
+        <div>Grade: ${info.grade || 'Unknown'}</div>
+        <div>Relatedness: ${info.relatedness || 'Unknown'}</div>
+        <div>Start Day: ${info.startDay}${startDateStr ? ` (${startDateStr})` : ''}</div>
+        <div>End Day: ${info.endDay}${endDateStr && !info.ongoing ? ` (${endDateStr})` : ''}</div>`;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (event.clientX + 15) + 'px';
+      tooltip.style.top = (event.clientY + 15) + 'px';
+    }
+
+    function hideTooltip(canvasId) {
+      const tooltip = document.getElementById(`${canvasId}-tooltip`);
+      if (tooltip) tooltip.style.display = 'none';
+    }
+
+    // ========================================================================
+    // Chart Rendering
+    // ========================================================================
+    function destroyCharts() {
+      Object.values(state.charts).forEach(c => { if (c && c.destroy) c.destroy(); });
+      state.charts = {};
+      document.querySelectorAll('[id$="-tooltip"]').forEach(el => el.remove());
+    }
+
+    /**
+     * Generate x-axis ticks: ..., -20, -13, -6, 1, 8, 15, 22, ...
+     * Interval is 7 days, starting from Day 1
+     */
+    function generateXAxisTicks(minDay, maxDay) {
+      const ticks = [];
+      // Generate negative ticks: -6, -13, -20, ...
+      let negTick = -6;
+      while (negTick >= minDay) {
+        ticks.push(negTick);
+        negTick -= 7;
+      }
+      // Generate positive ticks: 1, 8, 15, 22, ...
+      let posTick = 1;
+      while (posTick <= maxDay) {
+        ticks.push(posTick);
+        posTick += 7;
+      }
+      // Sort and return unique ticks
+      return [...new Set(ticks)].sort((a, b) => a - b);
+    }
+
+    function renderPlot1Chart(patientId, folderOrder) {
+      const showRefLine = document.getElementById('showRefLine').checked;
+      const showDosing = document.getElementById('showDosing').checked;
+      const showCM = document.getElementById('showCM').checked;
+      const showAE = document.getElementById('showAE').checked;
+      const yAxisScale = document.getElementById('yAxisScale').value;
+      const canvas = document.getElementById('chartCombined');
+      const wrapper = document.getElementById('chartWrapper1');
+      if (!canvas) return;
+
+      const colors = { BILI: '#e74c3c', AST: '#3498db', ALT: '#2ecc71', ALP: '#f39c12' };
+      const firstDosingDate = getFirstDosingDate(patientId);
+      const folderData = getFolderData(patientId);
+      const folderDateMap = {}; 
+      folderData.forEach(f => folderDateMap[f.folder] = f.date);
+      
+      PLOT1_ANALYTES.forEach(sn => {
+        const rawData = getAnalyteData(patientId, ANALYTE_NAMES[sn], folderOrder);
+        rawData.forEach(d => {
+          if (d.date && !folderDateMap[d.folder]) {
+            folderDateMap[d.folder] = d.date;
+          }
+        });
+      });
+      
+      const folderStudyDayMap = {};
+      folderOrder.forEach(f => {
+        const d = folderDateMap[f];
+        if (d && firstDosingDate) { 
+          const sd = calculateStudyDay(d, firstDosingDate); 
+          if (sd !== null) folderStudyDayMap[f] = sd; 
+        }
+      });
+
+      const allData = {};
+      let maxXULN = 0, minXULN = Infinity;
+      const missingAnalytes = [];
+      
+      PLOT1_ANALYTES.forEach(sn => {
+        const rawData = getAnalyteData(patientId, ANALYTE_NAMES[sn], folderOrder);
+        const data = calculateXULN(rawData);
+        
+        if (data.length > 0) {
+          allData[sn] = data;
+          maxXULN = Math.max(maxXULN, ...data.map(d => d.xULN));
+          minXULN = Math.min(minXULN, ...data.map(d => d.xULN));
+        } else {
+          if (rawData.length === 0) {
+            missingAnalytes.push({ name: sn, reason: 'no data available' });
+          } else {
+            missingAnalytes.push({ name: sn, reason: 'no valid LabHigh values for normalization' });
+          }
+        }
+      });
+
+      const missingMsgEl = document.getElementById('plot1MissingAnalytes');
+      if (missingAnalytes.length > 0) {
+        const reasons = missingAnalytes.map(m => `${m.name}: ${m.reason}`).join('; ');
+        missingMsgEl.textContent = `Note: ${reasons}`;
+        missingMsgEl.style.display = 'block';
+      } else {
+        missingMsgEl.textContent = '';
+        missingMsgEl.style.display = 'none';
+      }
+
+      if (Object.keys(allData).length === 0) {
+        if (state.charts['chartCombined']) state.charts['chartCombined'].destroy();
+        return;
+      }
+
+      const { minDay, maxDay, maxDate, actualMaxDay } = getStudyDayRange(patientId);
+      const aeData = getPatientAEData(patientId);
+      const cmData = getPatientCMData(patientId);
+
+      const baseHeight = 720;
+      const aeHeight = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT + AE_SECTION_GAP + 30 : 0;
+      const cmHeight = (showCM && cmData.length > 0) ? cmData.length * CM_ROW_HEIGHT + CM_SECTION_GAP + 30 : 0;
+      const cmAeGapHeight = (showCM && cmData.length > 0 && showAE && aeData.length > 0) ? AE_CM_GAP : 0;
+      wrapper.style.height = (baseHeight + aeHeight + cmHeight + cmAeGapHeight) + 'px';
+
+      const { doses: studyDayDoses, source: doseSource } = getDailyDosesByStudyDay(patientId);
+      const doseValues = Object.values(studyDayDoses).map(d => d.dose);
+      const maxDose = doseValues.length > 0 ? Math.max(...doseValues) : 100;
+
+      const doseSourceText = doseSource ? `Initial dose: ${doseSource}` : '';
+      document.getElementById('plot1DoseSource').textContent = doseSourceText;
+
+      let yMax = Math.ceil(maxXULN * 2) / 2;
+      const padding = Math.max(maxXULN * 0.2, 1.0);
+      yMax = yMax + padding;
+      
+      let yMin = Math.max(0, Math.floor(minXULN * 2) / 2 - 0.5);
+      if (yAxisScale !== 'linear') {
+        if (yMin <= 0) yMin = Math.min(...Object.values(allData).flatMap(d => d.map(dd => dd.xULN)).filter(v => v > 0)) * 0.5 || 0.1;
+        if (yMax <= 0) yMax = 1;
+        yMax = yMax * 1.3;
+      }
+
+      const datasets = [];
+      if (showDosing) {
+        const doseLineData = [];
+        // Day 1 = first dosing date (ECSTDAT_INT), start from Day 1
+        for (let d = 1; d <= actualMaxDay; d++) {
+          const info = studyDayDoses[d];
+          if (info) {
+            doseLineData.push({ x: d, y: info.dose });
+          }
+        }
+        datasets.push({ 
+          type: 'line', 
+          label: 'Daily Dose', 
+          data: doseLineData, 
+          backgroundColor: 'rgba(66,133,244,0.2)', 
+          borderColor: 'rgba(66,133,244,0.8)', 
+          borderWidth: 2,
+          fill: 'origin',
+          stepped: 'before',
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          yAxisID: 'yDose', 
+          order: 2 
+        });
+      }
+
+      PLOT1_ANALYTES.forEach(sn => {
+        if (!allData[sn]) return;
+        const chartData = allData[sn].filter(d => {
+          if (folderStudyDayMap[d.folder] !== undefined) return true;
+          if (d.date && firstDosingDate) {
+            const sd = calculateStudyDay(d.date, firstDosingDate);
+            if (sd !== null) {
+              folderStudyDayMap[d.folder] = sd;
+              return true;
+            }
+          }
+          return false;
+        }).map(d => ({ 
+          x: folderStudyDayMap[d.folder], 
+          y: d.xULN, 
+          folder: d.folder,
+          date: d.date
+        })).sort((a,b) => a.x - b.x);
+        datasets.push({ type: 'line', label: sn, data: chartData, borderColor: colors[sn], backgroundColor: colors[sn], borderWidth: 2, pointBackgroundColor: colors[sn], pointRadius: 5, fill: false, tension: 0, yAxisID: 'y', order: 1 });
+      });
+
+      if (state.charts['chartCombined']) state.charts['chartCombined'].destroy();
+
+      const xAxisTicks = generateXAxisTicks(minDay, maxDay);
+      // Calculate top padding: CM (if visible) + AE (if visible) + gap between them
+      const aeTopPadding = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT + AE_SECTION_GAP + 20 : 0;
+      const cmTopPadding = (showCM && cmData.length > 0) ? cmData.length * CM_ROW_HEIGHT + CM_SECTION_GAP + 20 : 0;
+      const cmAeGapPadding = (showCM && cmData.length > 0 && showAE && aeData.length > 0) ? AE_CM_GAP : 0;
+      const topPadding = Math.max(50, aeTopPadding + cmTopPadding + cmAeGapPadding);
+
+      const scales = {
+        x: { 
+          type: 'linear', min: Math.min(minDay, CM_MIN_DAY), max: maxDay, 
+          title: { display: true, text: 'Study Days (Day 1 = First Dosing Date)', font: { size: 19, weight: 'bold' } },
+          ticks: { 
+            font: { size: 14 },
+            callback: function(v) {
+              // Only show labels for our generated ticks
+              if (xAxisTicks.includes(v) || v === maxDay) {
+                return `${v}`;
+              }
+              return '';
+            },
+            maxRotation: 45, 
+            autoSkip: false
+          }, 
+          grid: { display: false },
+          afterBuildTicks: function(axis) {
+            // Replace ticks with our custom ticks
+            axis.ticks = xAxisTicks.map(v => ({ value: v }));
+            // Ensure maxDay is included
+            if (!xAxisTicks.includes(maxDay)) {
+              axis.ticks.push({ value: maxDay });
+            }
+          }
+        },
+        y: { 
+          type: yAxisScale === 'linear' ? 'linear' : 'logarithmic',
+          position: 'left', 
+          min: yMin, 
+          max: yMax,
+          ...(yAxisScale !== 'linear' ? { base: yAxisScale === 'log2' ? 2 : 10 } : {}),
+          title: { display: true, text: 'xULN', font: { size: 19, weight: 'bold' } }, 
+          ticks: { 
+            ...(yAxisScale === 'linear' ? { stepSize: 0.5 } : {}),
+            font: { size: 14 } 
+          }, 
+          grid: { color: '#e0e0e0' } 
+        }
+      };
+      if (showDosing) {
+        scales.yDose = { type: 'linear', position: 'right', min: 0, max: maxDose * 1.1, title: { display: true, text: 'Daily Dose (mg)', font: { size: 19, weight: 'bold' } }, ticks: { font: { size: 14 }, callback: function(value) { return Math.round(value); } }, grid: { drawOnChartArea: false } };
+      }
+
+      const plugins = [
+        { id: 'refLine', beforeDraw: chart => { if (!showRefLine) return; const ctx = chart.ctx, yAxis = chart.scales.y, ca = chart.chartArea, y = yAxis.getPixelForValue(1); if (y >= ca.top && y <= ca.bottom) { ctx.save(); ctx.setLineDash([5,5]); ctx.strokeStyle = 'gray'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ca.left, y); ctx.lineTo(ca.right, y); ctx.stroke(); ctx.restore(); } } },
+        { id: 'xAxisDots', afterDraw: chart => {
+          const ctx = chart.ctx;
+          const xAxis = chart.scales.x;
+          const ca = chart.chartArea;
+          ctx.save();
+          ctx.fillStyle = '#666';
+          xAxis.ticks.forEach(tick => {
+            if (tick.label && tick.label !== '') {
+              const x = xAxis.getPixelForValue(tick.value);
+              if (x >= ca.left && x <= ca.right) {
+                ctx.beginPath();
+                ctx.arc(x, ca.bottom, 3, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+          ctx.restore();
+        } }
+      ];
+
+      // Add AE plugin first (draws below CM)
+      const actualAEHeight = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT : 0;
+      if (showAE && aeData.length > 0) {
+        plugins.push(createAEDrawPlugin(aeData, minDay, maxDay, actualMaxDay, firstDosingDate, patientId));
+      }
+      
+      // Add CM plugin (draws above AE)
+      if (showCM && cmData.length > 0) {
+        plugins.push(createCMDrawPlugin(cmData, minDay, maxDay, actualMaxDay, firstDosingDate, actualAEHeight, patientId));
+      }
+
+      state.charts['chartCombined'] = new Chart(canvas, {
+        data: { datasets },
+        options: { 
+          responsive: true, maintainAspectRatio: false,
+          events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+          layout: { padding: { top: topPadding, right: 60, bottom: 60, left: 50 } },
+          plugins: { 
+            legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 14 } } },
+            tooltip: { 
+              callbacks: { 
+                title: ctx => { 
+                  const sd = ctx[0].parsed.x; 
+                  const dp = ctx[0].raw; 
+                  const date = dp?.date || (firstDosingDate ? studyDayToDate(sd, firstDosingDate) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  if (dp?.folder) {
+                    return `Day ${sd} (${dp.folder})${dateStr ? ` - ${dateStr}` : ''}`;
+                  }
+                  return `Day ${sd}${dateStr ? ` (${dateStr})` : ''}`;
+                }, 
+                label: ctx => {
+                  const sd = ctx.parsed.x;
+                  const dp = ctx.raw;
+                  const date = dp?.date || (firstDosingDate ? studyDayToDate(sd, firstDosingDate) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  if (ctx.dataset.label.includes('Dose')) {
+                    return `${ctx.dataset.label}: ${ctx.parsed.y} mg${dateStr ? ` (${dateStr})` : ''}`;
+                  }
+                  return `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}x ULN${dateStr ? ` (${dateStr})` : ''}`;
+                }
+              } 
+            } 
+          }, 
+          scales
+        },
+        plugins
+      });
+    }
+
+    function renderPlot2Chart(patientId, folderOrder) {
+      const showDosing = document.getElementById('showDosing').checked;
+      const showCM = document.getElementById('showCM').checked;
+      const showAE = document.getElementById('showAE').checked;
+      const yAxisScale = document.getElementById('yAxisScale').value;
+      const canvas = document.getElementById('chartALB');
+      const wrapper = document.getElementById('chartWrapper2');
+      if (!canvas) return;
+
+      const data = getAnalyteData(patientId, ANALYTE_NAMES.ALB, folderOrder);
+      if (data.length === 0) {
+        if (state.charts['chartALB']) state.charts['chartALB'].destroy();
+        return;
+      }
+
+      const labHigh = data.find(d => !isNaN(d.labHigh))?.labHigh || null;
+      const labLow = data.find(d => !isNaN(d.labLow))?.labLow || null;
+      const labUnits = data.find(d => d.labUnits)?.labUnits || '';
+      document.getElementById('albSubtitle').textContent = `Normal range: ${labLow} - ${labHigh} ${labUnits}`;
+
+      const firstDosingDate = getFirstDosingDate(patientId);
+      const folderData = getFolderData(patientId);
+      const folderDateMap = {}; 
+      folderData.forEach(f => folderDateMap[f.folder] = f.date);
+      
+      data.forEach(d => {
+        if (d.date && !folderDateMap[d.folder]) {
+          folderDateMap[d.folder] = d.date;
+        }
+      });
+      
+      const folderStudyDayMap = {};
+      folderOrder.forEach(f => { 
+        const d = folderDateMap[f]; 
+        if (d && firstDosingDate) { 
+          const sd = calculateStudyDay(d, firstDosingDate); 
+          if (sd !== null) folderStudyDayMap[f] = sd; 
+        } 
+      });
+
+      const allValues = data.map(d => d.value);
+      if (labHigh !== null) allValues.push(labHigh);
+      if (labLow !== null) allValues.push(labLow);
+      const maxValue = Math.max(...allValues);
+      let yMax = maxValue;
+      if (yAxisScale === 'linear') {
+        const padding = Math.max(maxValue * 0.25, maxValue * 0.1);
+        yMax = maxValue + padding;
+      } else {
+        yMax = maxValue * 1.3;
+      }
+      
+      let yMin = Math.min(...allValues) * 0.85;
+      if (yAxisScale !== 'linear') {
+        if (yMin <= 0) yMin = Math.min(...allValues.filter(v => v > 0)) * 0.5 || 0.1;
+        if (yMax <= 0) yMax = 1;
+      } else {
+        if (yMin < 0) yMin = 0;
+      }
+
+      const { minDay, maxDay, maxDate, actualMaxDay } = getStudyDayRange(patientId);
+      const aeData = getPatientAEData(patientId);
+      const cmData = getPatientCMData(patientId);
+
+      const baseHeight = 560;
+      const aeHeight = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT + AE_SECTION_GAP + 30 : 0;
+      const cmHeight = (showCM && cmData.length > 0) ? cmData.length * CM_ROW_HEIGHT + CM_SECTION_GAP + 30 : 0;
+      const cmAeGapHeight = (showCM && cmData.length > 0 && showAE && aeData.length > 0) ? AE_CM_GAP : 0;
+      wrapper.style.height = (baseHeight + aeHeight + cmHeight + cmAeGapHeight) + 'px';
+
+      const { doses: studyDayDoses, source: doseSource } = getDailyDosesByStudyDay(patientId);
+      const doseValues = Object.values(studyDayDoses).map(d => d.dose);
+      const maxDose = doseValues.length > 0 ? Math.max(...doseValues) : 100;
+
+      const doseSourceText = doseSource ? `Initial dose: ${doseSource}` : '';
+      document.getElementById('plot2DoseSource').textContent = doseSourceText;
+
+      const datasets = [];
+      if (showDosing) {
+        const doseLineData = [];
+        // Day 1 = first dosing date (ECSTDAT_INT), start from Day 1
+        for (let d = 1; d <= actualMaxDay; d++) {
+          const info = studyDayDoses[d];
+          if (info) {
+            doseLineData.push({ x: d, y: info.dose });
+          }
+        }
+        datasets.push({ 
+          type: 'line', 
+          label: 'Daily Dose', 
+          data: doseLineData, 
+          backgroundColor: 'rgba(66,133,244,0.2)', 
+          borderColor: 'rgba(66,133,244,0.8)', 
+          borderWidth: 2,
+          fill: 'origin',
+          stepped: 'before',
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          yAxisID: 'yDose', 
+          order: 2 
+        });
+      }
+
+      const chartData = data.filter(d => {
+        if (folderStudyDayMap[d.folder] !== undefined) return true;
+        if (d.date && firstDosingDate) {
+          const sd = calculateStudyDay(d.date, firstDosingDate);
+          if (sd !== null) {
+            folderStudyDayMap[d.folder] = sd;
+            return true;
+          }
+        }
+        return false;
+      }).map(d => ({ 
+        x: folderStudyDayMap[d.folder], 
+        y: d.value, 
+        folder: d.folder,
+        date: d.date
+      })).sort((a,b) => a.x - b.x);
+      datasets.push({ type: 'line', label: 'Albumin', data: chartData, borderColor: 'black', borderWidth: 2, pointBackgroundColor: 'red', pointBorderColor: 'red', pointRadius: 6, fill: false, tension: 0, yAxisID: 'y', order: 1 });
+
+      if (state.charts['chartALB']) state.charts['chartALB'].destroy();
+
+      const xAxisTicks = generateXAxisTicks(minDay, maxDay);
+      // Calculate top padding: CM (if visible) + AE (if visible) + gap between them
+      const aeTopPadding = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT + AE_SECTION_GAP + 20 : 0;
+      const cmTopPadding = (showCM && cmData.length > 0) ? cmData.length * CM_ROW_HEIGHT + CM_SECTION_GAP + 20 : 0;
+      const cmAeGapPadding = (showCM && cmData.length > 0 && showAE && aeData.length > 0) ? AE_CM_GAP : 0;
+      const topPadding = Math.max(50, aeTopPadding + cmTopPadding + cmAeGapPadding);
+
+      const scales = {
+        x: { 
+          type: 'linear', min: Math.min(minDay, CM_MIN_DAY), max: maxDay, 
+          title: { display: true, text: 'Study Days (Day 1 = First Dosing Date)', font: { size: 19, weight: 'bold' } },
+          ticks: { 
+            font: { size: 14 },
+            callback: function(v) {
+              if (xAxisTicks.includes(v) || v === maxDay) {
+                return `${v}`;
+              }
+              return '';
+            },
+            maxRotation: 45, 
+            autoSkip: false
+          }, 
+          grid: { display: false },
+          afterBuildTicks: function(axis) {
+            axis.ticks = xAxisTicks.map(v => ({ value: v }));
+            if (!xAxisTicks.includes(maxDay)) {
+              axis.ticks.push({ value: maxDay });
+            }
+          }
+        },
+        y: { 
+          type: yAxisScale === 'linear' ? 'linear' : 'logarithmic',
+          position: 'left', 
+          min: yMin, 
+          max: yMax,
+          ...(yAxisScale !== 'linear' ? { base: yAxisScale === 'log2' ? 2 : 10 } : {}),
+          title: { display: true, text: `Albumin (${labUnits})`, font: { size: 19, weight: 'bold' } }, 
+          ticks: { font: { size: 14 } }, 
+          grid: { color: '#e0e0e0' } 
+        }
+      };
+      if (showDosing) {
+        scales.yDose = { type: 'linear', position: 'right', min: 0, max: maxDose * 1.1, title: { display: true, text: 'Daily Dose (mg)', font: { size: 19, weight: 'bold' } }, ticks: { font: { size: 14 }, callback: function(value) { return Math.round(value); } }, grid: { drawOnChartArea: false } };
+      }
+
+      const plugins = [
+        { id: 'normalRange', beforeDraw: chart => { if (labLow === null || labHigh === null) return; const ctx = chart.ctx, yAxis = chart.scales.y, ca = chart.chartArea; const yTop = yAxis.getPixelForValue(labHigh), yBot = yAxis.getPixelForValue(labLow); ctx.save(); ctx.fillStyle = 'rgba(173,216,230,0.4)'; ctx.fillRect(ca.left, Math.max(yTop, ca.top), ca.right - ca.left, Math.min(yBot, ca.bottom) - Math.max(yTop, ca.top)); ctx.restore(); } },
+        { id: 'xAxisDots', afterDraw: chart => {
+          const ctx = chart.ctx;
+          const xAxis = chart.scales.x;
+          const ca = chart.chartArea;
+          ctx.save();
+          ctx.fillStyle = '#666';
+          xAxis.ticks.forEach(tick => {
+            if (tick.label && tick.label !== '') {
+              const x = xAxis.getPixelForValue(tick.value);
+              if (x >= ca.left && x <= ca.right) {
+                ctx.beginPath();
+                ctx.arc(x, ca.bottom, 3, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+          ctx.restore();
+        } }
+      ];
+
+      // Add AE plugin first (draws below CM)
+      const actualAEHeight = (showAE && aeData.length > 0) ? aeData.length * AE_ROW_HEIGHT : 0;
+      if (showAE && aeData.length > 0) {
+        plugins.push(createAEDrawPlugin(aeData, minDay, maxDay, actualMaxDay, firstDosingDate, patientId));
+      }
+      
+      // Add CM plugin (draws above AE)
+      if (showCM && cmData.length > 0) {
+        plugins.push(createCMDrawPlugin(cmData, minDay, maxDay, actualMaxDay, firstDosingDate, actualAEHeight, patientId));
+      }
+
+      state.charts['chartALB'] = new Chart(canvas, {
+        data: { datasets },
+        options: { 
+          responsive: true, maintainAspectRatio: false,
+          events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+          layout: { padding: { top: topPadding, right: 60, bottom: showDosing ? 60 : 10, left: 10 } },
+          plugins: { 
+            legend: { display: showDosing, position: 'bottom', labels: { font: { size: 14 } } },
+            tooltip: { 
+              callbacks: {
+                title: ctx => {
+                  const sd = ctx[0].parsed.x;
+                  const dp = ctx[0].raw;
+                  const date = dp?.date || (firstDosingDate ? studyDayToDate(sd, firstDosingDate) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  return `Day ${sd}${dateStr ? ` (${dateStr})` : ''}`;
+                },
+                label: ctx => {
+                  const sd = ctx.parsed.x;
+                  const dp = ctx.raw;
+                  const date = dp?.date || (firstDosingDate ? studyDayToDate(sd, firstDosingDate) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  if (ctx.dataset.label.includes('Dose')) {
+                    return `${ctx.dataset.label}: ${ctx.parsed.y} mg${dateStr ? ` (${dateStr})` : ''}`;
+                  }
+                  return `Value: ${ctx.parsed.y.toFixed(2)} ${labUnits}${dateStr ? ` (${dateStr})` : ''}`;
+                }
+              }
+            } 
+          }, 
+          scales
+        },
+        plugins
+      });
+    }
+
+    function renderCharts() {
+      const patientId = state.currentPatient;
+      if (!patientId) {
+        document.getElementById('plotsWrapper').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('infoPanel').style.display = 'none';
+        return;
+      }
+
+      delete state.dailyDoses[patientId];
+      delete state.patientAEs[patientId];
+      delete state.patientCMs[patientId];
+      delete state.firstDosingDates[patientId];
+      
+      // Reset individual item checkboxes for this patient (so all show by default)
+      Object.keys(state.aeItemChecked).forEach(key => {
+        if (key.startsWith(patientId + '|')) delete state.aeItemChecked[key];
+      });
+      Object.keys(state.cmItemChecked).forEach(key => {
+        if (key.startsWith(patientId + '|')) delete state.cmItemChecked[key];
+      });
+
+      const folderOrder = getFolderOrder(patientId);
+      if (folderOrder.length === 0) {
+        document.getElementById('plotsWrapper').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+        return;
+      }
+
+      const patientRecords = state.labData.filter(r => r.Subject === patientId).length;
+      const firstDosingDate = getFirstDosingDate(patientId);
+      const aeData = getPatientAEData(patientId);
+      const totalAE = aeData.reduce((s, ae) => s + ae.intervals.length, 0);
+
+      document.getElementById('infoPatientId').textContent = patientId;
+      document.getElementById('infoRecords').textContent = patientRecords;
+      document.getElementById('infoVisits').textContent = folderOrder.length;
+      document.getElementById('infoDateRange').textContent = getDateRange(patientId);
+      document.getElementById('infoFirstDoseDate').textContent = firstDosingDate ? formatDateShort(firstDosingDate) : '-';
+      document.getElementById('infoAECount').textContent = `${aeData.length} unique (${totalAE} total)`;
+
+      const showAE = document.getElementById('showAE').checked;
+      const showCM = document.getElementById('showCM').checked;
+      const cmData = getPatientCMData(patientId);
+      document.getElementById('aeLegend').style.display = showAE && aeData.length > 0 ? 'flex' : 'none';
+      document.getElementById('cmLegend').style.display = showCM && cmData.length > 0 ? 'flex' : 'none';
+
+      document.getElementById('infoPanel').style.display = 'block';
+      document.getElementById('plotsWrapper').style.display = 'flex';
+      document.getElementById('noDataMessage').style.display = 'none';
+
+      destroyCharts();
+      renderPlot1Chart(patientId, folderOrder);
+      renderPlot2Chart(patientId, folderOrder);
+    }
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (state.currentPatient) renderCharts();
+      }, 250);
+    });
+
+    function init() {
+      document.getElementById('patientSelect').addEventListener('change', e => { 
+        state.currentPatient = e.target.value || null; 
+        renderCharts(); 
+      });
+      document.getElementById('showRefLine').addEventListener('change', renderCharts);
+      document.getElementById('showDosing').addEventListener('change', renderCharts);
+      document.getElementById('showCM').addEventListener('change', renderCharts);
+      document.getElementById('showAE').addEventListener('change', renderCharts);
+      document.getElementById('yAxisScale').addEventListener('change', renderCharts);
+
+      loadAllData();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initChartExportDialog();
+      init();
+    });
+  </script>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('patients', 'pp-dose-ae-lab', '../../../');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G360 Mutation Analysis</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <script src="../../assets/js/mutation-lock.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+    .page-content { margin-top: 60px; padding: 20px; }
+
+    .page-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%); color: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .page-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+    .page-header p { opacity: 0.85; font-size: 0.95rem; }
+
+    /* Controls bar */
+    .controls-bar { max-width: 1400px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; }
+    .control-panel { background: white; border-radius: 10px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .control-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #7f8c8d; margin-bottom: 8px; }
+    .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .toggle-switch { position: relative; width: 40px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 22px; cursor: pointer; transition: 0.3s; }
+    .toggle-slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle-switch input:checked + .toggle-slider { background: #3498db; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .toggle-label { font-size: 0.82rem; color: #2c3e50; font-weight: 500; }
+    .search-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .search-input {
+      min-width: 240px;
+      padding: 8px 10px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+    }
+    .search-hint { margin-top: 6px; font-size: 0.76rem; color: #7f8c8d; }
+    .btn-clear {
+      border: 1px solid #ced4da;
+      background: #f8f9fa;
+      color: #2c3e50;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-clear:hover { background: #ecf0f1; }
+
+    /* Color key */
+    .color-key { max-width: 1400px; margin: 0 auto 16px; padding: 12px 18px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 0.8rem; }
+    .color-key-title { font-weight: 700; color: #2c3e50; margin-right: 4px; }
+    .color-key-item { display: flex; align-items: center; gap: 5px; }
+    .color-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.15); }
+
+    /* Stats panel */
+    .stats-panel { max-width: 1400px; margin: 0 auto 16px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stats-grid { display: flex; flex-direction: column; gap: 10px; }
+    .stats-row-label { font-size: 0.72rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .stat-card { padding: 12px; border-radius: 8px; text-align: center; transition: all 0.2s; border: 2px solid transparent; min-width: 120px; flex: 1; }
+    .stat-card.clickable { background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%); cursor: pointer; border-left: 3px solid #3498db; }
+    .stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .stat-card.active { border-color: #3498db; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); box-shadow: 0 4px 12px rgba(52,152,219,0.3); }
+    .stat-card.info { background: #f8f9fb; cursor: default; border: 1px dashed #d5dbe1; }
+    .stat-card.info .stat-value { color: #5f6b7a; font-size: 1.4rem; }
+    .stat-card.info .stat-label { color: #8e99a4; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; color: #2c3e50; }
+    .stat-label { font-size: 0.78rem; color: #7f8c8d; margin-top: 2px; }
+
+    /* Charts grid — 2-column */
+    .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 1400px; margin: 0 auto; }
+    .chart-container { background: white; border-radius: 12px; padding: 20px; padding-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; border: 2px solid #bdc3c7; }
+    .chart-title { font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 10px; text-align: center; line-height: 1.3; }
+    .chart-title .group-tag { font-weight: 500; color: #7f8c8d; font-size: 0.85rem; }
+    .fail-badge { display: inline-block; background: #e74c3c; color: white; font-size: 0.65rem; font-weight: 600; padding: 1px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle; }
+    .chart-wrapper { position: relative; height: 320px; }
+    .no-data { display: flex; align-items: center; justify-content: center; height: 100%; color: #95a5a6; font-style: italic; }
+    .zoom-btn { position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; cursor: pointer; z-index: 10; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .zoom-btn:hover { background: #2980b9; transform: scale(1.05); }
+
+    /* Legend */
+    .legend-container { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-height: 80px; overflow-y: auto; padding: 6px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; width: 100%; flex-shrink: 0; }
+    .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.68rem; padding: 2px 6px; background: white; border: 1px solid #ced4da; border-radius: 4px; white-space: nowrap; }
+    .legend-color { width: 9px; height: 9px; border-radius: 50%; border: 1px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); flex-shrink: 0; }
+    .legend-item.driver .legend-color { width: 11px; height: 11px; box-shadow: 0 0 4px rgba(0,0,139,0.5); }
+    .legend-item.vus { opacity: 0.6; }
+
+    /* Zoom modal */
+    .zoom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+    .zoom-modal.active { display: flex; }
+    .zoom-content { background: white; border-radius: 12px; padding: 24px; max-width: 90%; max-height: 90%; width: 1200px; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: auto; }
+    .zoom-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #ecf0f1; }
+    .zoom-title { font-size: 1.3rem; font-weight: 700; color: #2c3e50; }
+    .zoom-close { background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .zoom-close:hover { background: #c0392b; }
+    .zoom-chart-wrapper { position: relative; height: 550px; width: 100%; }
+    .zoom-content > .legend-container { max-height: 100px; margin-top: 12px; border-bottom: none; padding: 8px; }
+
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+    .btn-secondary { background: #ecf0f1; color: #2c3e50; }
+    .btn-secondary:hover { background: #dfe6e9; }
+
+    .loading { text-align: center; padding: 60px; color: #7f8c8d; }
+    .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 3px solid #3498db; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } .chart-wrapper { height: 280px; } .controls-bar { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <div class="page-content">
+    <div class="page-header">
+      <h1>G360 Mutation Analysis</h1>
+      <p>ctDNA Variant Allele Frequency Analysis by Patient and Visit</p>
+    </div>
+
+    <div class="controls-bar">
+      <div class="control-panel" style="display:flex; align-items:center; gap:16px;">
+        <h3 style="margin-bottom:0;">Display Options</h3>
+        <div class="toggle-row">
+          <label class="toggle-switch"><input type="checkbox" id="vusToggle" checked><span class="toggle-slider"></span></label>
+          <span class="toggle-label">Show VUS (grey)</span>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle-switch"><input type="checkbox" id="driverToggle" checked><span class="toggle-slider"></span></label>
+          <span class="toggle-label">Highlight Driver</span>
+        </div>
+      </div>
+      <div class="control-panel">
+        <h3>Patient Search</h3>
+        <div class="search-row">
+          <input id="patientSearchInput" class="search-input" type="text" list="patientSearchSuggestions" placeholder="Type patient ID (e.g., 16-103-1004)">
+          <datalist id="patientSearchSuggestions"></datalist>
+          <button id="clearPatientSearchBtn" class="btn-clear" type="button">Clear</button>
+        </div>
+        <div id="patientSearchHint" class="search-hint">Type to search by patient ID. Suggestions are available.</div>
+      </div>
+    </div>
+
+    <div class="color-key">
+      <span class="color-key-title">Color Key:</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:#00008B"></span> EGFR Driver (baseline highest)</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:#87CEEB"></span> EGFR (non-C797)</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:#1E90FF"></span> EGFR C797*</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:#E41A1C"></span> Non-EGFR</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:#808080"></span> VUS</span>
+      <span class="color-key-item"><span class="color-swatch" style="background:transparent; border:2px dashed #aaa;"></span> ND = Not Detected (AF &lt; 0.01)</span>
+      <span class="color-key-item"><span style="font-size:1.1em;margin-right:4px;">&#9670;</span> c.HGVS conflict (diamond marker)</span>
+    </div>
+
+    <div id="statsPanel" class="stats-panel" style="display:none;">
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div id="mutationChartsExportBlock" style="position: relative;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; max-width:1400px; margin-left:auto; margin-right:auto;">
+        <button class="export-btn" onclick="showBlockExportDialog('mutationChartsExportBlock', 'Mutation_Charts')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+      </div>
+      <div id="chartsContainer" class="charts-grid"></div>
+    </div>
+
+    <div id="zoomModal" class="zoom-modal">
+      <div class="zoom-content" id="zoomContent">
+        <div class="zoom-header">
+          <div class="zoom-title" id="zoomTitle">Patient Chart</div>
+          <button class="zoom-close" id="zoomClose">Close</button>
+        </div>
+        <div class="zoom-chart-wrapper" id="zoomChartWrapper"></div>
+      </div>
+    </div>
+
+    <div id="loadingIndicator" class="loading" style="display:none;">Processing data...</div>
+  </div>
+
+<script>
+const ND_VALUE = 0.01;
+const DRIVER_CATEGORIES = ['Classical', 'Atypical', 'Exon 20 Insertion', 'Exon 19 Insertion'];
+const VISIT_MAPPING = {
+  'PH1 C0 D-1': 'C1', 'C0D-1': 'C1',
+  'PH1 C2 D1': 'C2', 'C2D1': 'C2',
+  'C3D1': 'C3', 'C5D1': 'C5', 'C7D1': 'C7'
+};
+
+let patientDataMap = {};
+let patientGroupInfo = {};
+let patientDriverInfo = {};
+let patientFailVisits = {};
+let driverDecline = {};
+let visitOrder = [];
+let sortedPatients = [];
+let charts = [];
+let currentFilter = null;
+let currentPatientQuery = '';
+let showVUS = true;
+let highlightDriver = true;
+let zoomChart = null;
+
+function mapVisit(v) {
+  const s = (v || '').trim();
+  return VISIT_MAPPING[s] || s.toUpperCase().replace(/\s+/g, '');
+}
+
+function findCol(row, candidates) {
+  if (!row) return null;
+  const keys = Object.keys(row);
+  for (const c of candidates) { if (keys.includes(c)) return c; }
+  for (const c of candidates) {
+    const norm = c.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    for (const k of keys) { if (k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === norm) return k; }
+  }
+  return null;
+}
+
+function processG360(rawData) {
+  if (!rawData || !rawData.length) return;
+
+  const cols = {
+    subject: findCol(rawData[0], ['Subject', 'SUBJID', 'subject']),
+    visit:   findCol(rawData[0], ['Visit', 'visit', 'VISIT']),
+    gene:    findCol(rawData[0], ['Gene', 'gene', 'GENE']),
+    pHGVS:   findCol(rawData[0], ['p.HGVS', 'p_HGVS', 'pHGVS', 'p HGVS']),
+    cHGVS:   findCol(rawData[0], ['c.HGVS', 'c_HGVS', 'cHGVS']),
+    af:      findCol(rawData[0], ['AF', 'af', 'Af']),
+    category: findCol(rawData[0], ['mutation...Category', 'mutation - Category', 'mutation_Category', 'mutationCategory', 'mutation___Category', 'Mutation Category'])
+  };
+
+  let data = rawData.map(r => ({
+    Subject: (r[cols.subject] || '').trim(),
+    Visit: mapVisit(r[cols.visit]),
+    Gene: (r[cols.gene] || '').trim(),
+    pHGVS: (r[cols.pHGVS] || '').trim(),
+    cHGVS: (r[cols.cHGVS] || '').trim(),
+    AF: parseFloat(r[cols.af]),
+    category: (r[cols.category] || '').trim()
+  })).filter(r => r.Subject && r.Visit);
+
+  const visitSet = new Set();
+  data.forEach(r => { if (/^C\d+$/.test(r.Visit)) visitSet.add(r.Visit); });
+  visitOrder = [...visitSet].sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+
+  patientFailVisits = {};
+  data.forEach(r => {
+    if (r.Gene === 'Fail' && visitOrder.includes(r.Visit)) {
+      if (!patientFailVisits[r.Subject]) patientFailVisits[r.Subject] = [];
+      if (!patientFailVisits[r.Subject].includes(r.Visit)) patientFailVisits[r.Subject].push(r.Visit);
+    }
+  });
+
+  data = data.filter(r => visitOrder.includes(r.Visit) && r.Gene !== 'Fail');
+  data = data.filter(r => r.pHGVS && r.pHGVS !== '' && r.pHGVS !== 'NULL');
+  data = data.map(r => ({ ...r, AF: (!isFinite(r.AF) || r.AF <= 0 || r.AF < ND_VALUE) ? ND_VALUE : r.AF }));
+  data.forEach(r => { r.legendLabel = r.Gene + '\n' + r.pHGVS; });
+
+  const conflictKeys = new Set();
+  const labelCHGVS = {};
+  data.forEach(r => {
+    const key = r.Subject + '||' + r.legendLabel;
+    if (!labelCHGVS[key]) labelCHGVS[key] = new Set();
+    if (r.cHGVS) labelCHGVS[key].add(r.cHGVS);
+  });
+  Object.entries(labelCHGVS).forEach(([key, s]) => { if (s.size > 1) conflictKeys.add(key); });
+
+  data.forEach(r => {
+    const key = r.Subject + '||' + r.legendLabel;
+    r.isConflict = conflictKeys.has(key);
+    r.seriesId = r.isConflict ? r.legendLabel + '\n' + r.cHGVS : r.legendLabel;
+  });
+
+  const byPatient = {};
+  data.forEach(r => {
+    if (!byPatient[r.Subject]) byPatient[r.Subject] = [];
+    byPatient[r.Subject].push(r);
+  });
+
+  Object.keys(byPatient).forEach(subj => {
+    const rows = byPatient[subj];
+    const seriesMap = {};
+    rows.forEach(r => {
+      if (!seriesMap[r.seriesId]) seriesMap[r.seriesId] = { ...r, visits: {} };
+      if (!seriesMap[r.seriesId].visits[r.Visit] || r.AF > seriesMap[r.seriesId].visits[r.Visit].AF) {
+        seriesMap[r.seriesId].visits[r.Visit] = { AF: r.AF, isOriginal: true };
+      }
+    });
+    const fails = patientFailVisits[subj] || [];
+    const patientVisits = [...new Set(rows.map(r => r.Visit))].filter(v => visitOrder.includes(v) && !fails.includes(v));
+    Object.values(seriesMap).forEach(s => {
+      patientVisits.forEach(v => {
+        if (!s.visits[v]) s.visits[v] = { AF: ND_VALUE, isOriginal: false };
+      });
+      fails.forEach(v => { delete s.visits[v]; });
+    });
+    byPatient[subj] = seriesMap;
+  });
+
+  patientDataMap = byPatient;
+
+  Object.keys(byPatient).forEach(subj => {
+    const series = Object.values(byPatient[subj]);
+    const nonVUS = series.filter(s => s.category !== 'VUS');
+    const hasC797S = nonVUS.some(s => s.pHGVS.includes('C797S'));
+    const hasG724 = nonVUS.some(s => /G724/.test(s.pHGVS));
+    const hasL718 = nonVUS.some(s => /L718/.test(s.pHGVS));
+    const hasT790M = nonVUS.some(s => /T790M/.test(s.pHGVS));
+    if (hasC797S) patientGroupInfo[subj] = 'C797S';
+    else if (hasG724 || hasL718) patientGroupInfo[subj] = 'G724/L718';
+    else if (hasT790M) patientGroupInfo[subj] = 'T790M only';
+    else patientGroupInfo[subj] = 'Other';
+  });
+
+  const CATEGORY_PRIORITY = { Classical: 1, Atypical: 2, 'Exon 20 Insertion': 3, 'Exon 19 Insertion': 4 };
+  const atypicalPriority = p => /^G719/.test(p) ? 1 : /^L861/.test(p) ? 2 : /^S768/.test(p) ? 3 : 4;
+
+  Object.keys(byPatient).forEach(subj => {
+    const series = Object.values(byPatient[subj]);
+    const drivers = series.filter(s => DRIVER_CATEGORIES.includes(s.category));
+    if (drivers.length === 0) return;
+    const firstVisit = visitOrder.find(v => drivers.some(d => d.visits[v] && d.visits[v].isOriginal));
+    if (!firstVisit) return;
+    drivers.sort((a, b) => {
+      const afA = a.visits[firstVisit] ? a.visits[firstVisit].AF : 0;
+      const afB = b.visits[firstVisit] ? b.visits[firstVisit].AF : 0;
+      if (afB !== afA) return afB - afA;
+      const cpA = CATEGORY_PRIORITY[a.category] || 5;
+      const cpB = CATEGORY_PRIORITY[b.category] || 5;
+      if (cpA !== cpB) return cpA - cpB;
+      return atypicalPriority(a.pHGVS) - atypicalPriority(b.pHGVS);
+    });
+    patientDriverInfo[subj] = drivers[0].seriesId;
+    const driverSeries = drivers[0];
+    const baselineAF = driverSeries.visits[firstVisit] ? driverSeries.visits[firstVisit].AF : ND_VALUE;
+    const lastVisit = [...visitOrder].reverse().find(v => driverSeries.visits[v]);
+    const lastAF = lastVisit && driverSeries.visits[lastVisit] ? driverSeries.visits[lastVisit].AF : baselineAF;
+    driverDecline[subj] = baselineAF - lastAF;
+  });
+
+  sortedPatients = Object.keys(byPatient);
+  sortedPatients.sort((a, b) => {
+    const ga = patientGroupInfo[a] || 'ZZZ';
+    const gb = patientGroupInfo[b] || 'ZZZ';
+    const groupOrder = ['C797S', 'G724/L718', 'T790M only', 'Other'];
+    const ia = groupOrder.indexOf(ga), ib = groupOrder.indexOf(gb);
+    if (ia !== ib) return ia - ib;
+    const da = driverDecline[a] ?? -Infinity;
+    const db = driverDecline[b] ?? -Infinity;
+    if (db !== da) return db - da;
+    return a.localeCompare(b, undefined, { numeric: true });
+  });
+}
+
+function buildColorMap(seriesList) {
+  const map = {};
+  seriesList.forEach(s => {
+    const isEGFR = s.Gene.substring(0, 4) === 'EGFR';
+    const isC797 = /^C797/.test(s.pHGVS);
+    const isVUS = s.category === 'VUS';
+    if (isVUS) map[s.legendLabel] = '#808080';
+    else if (isEGFR && isC797) map[s.legendLabel] = '#1E90FF';
+    else if (isEGFR) map[s.legendLabel] = '#87CEEB';
+    else map[s.legendLabel] = '#E41A1C';
+  });
+  return map;
+}
+
+function getPatientVisitRange(subj) {
+  const seriesMap = patientDataMap[subj];
+  if (!seriesMap) return [];
+  let maxCycle = 0;
+  Object.values(seriesMap).forEach(s => {
+    Object.keys(s.visits).forEach(v => {
+      if (s.visits[v].isOriginal) {
+        const n = parseInt(v.slice(1));
+        if (n > maxCycle) maxCycle = n;
+      }
+    });
+  });
+  if (maxCycle === 0) return visitOrder;
+  const range = [];
+  for (let i = 1; i <= maxCycle; i++) range.push('C' + i);
+  return range;
+}
+
+function createChart(containerId, subj, isZoom) {
+  const wrapper = document.getElementById(containerId);
+  if (!wrapper) return null;
+  const chartContainer = wrapper.closest('.chart-container') || wrapper.closest('.zoom-content');
+  const seriesMap = patientDataMap[subj];
+
+  if (!seriesMap || Object.keys(seriesMap).length === 0) {
+    wrapper.innerHTML = '<div class="no-data">No data available</div>';
+    return null;
+  }
+
+  const patientVisits = getPatientVisitRange(subj);
+  const allSeries = Object.values(seriesMap);
+  let displaySeries = showVUS ? allSeries : allSeries.filter(s => s.category !== 'VUS');
+  if (displaySeries.length === 0) {
+    wrapper.innerHTML = '<div class="no-data">No non-VUS mutations</div>';
+    return null;
+  }
+
+  const colorMap = buildColorMap(displaySeries);
+  const driverSeriesId = highlightDriver ? patientDriverInfo[subj] : null;
+  if (driverSeriesId) {
+    const ds = displaySeries.find(s => s.seriesId === driverSeriesId);
+    if (ds) colorMap[ds.legendLabel] = '#00008B';
+  }
+
+  const legendPriority = (s) => {
+    if (s.seriesId === driverSeriesId) return 1;
+    if (/^C797/.test(s.pHGVS)) return 2;
+    if (DRIVER_CATEGORIES.includes(s.category)) return 3;
+    if (s.category === 'VUS') return 5;
+    return 4;
+  };
+  displaySeries.sort((a, b) => {
+    const pa = legendPriority(a), pb = legendPriority(b);
+    if (pa !== pb) return pa - pb;
+    const c1a = a.visits['C1'] ? a.visits['C1'].AF : 0;
+    const c1b = b.visits['C1'] ? b.visits['C1'].AF : 0;
+    if (c1b !== c1a) return c1b - c1a;
+    const aMax = Math.max(...Object.values(a.visits).map(v => v.AF));
+    const bMax = Math.max(...Object.values(b.visits).map(v => v.AF));
+    return bMax - aMax;
+  });
+
+  const datasets = displaySeries.map(s => {
+    const isDriver = s.seriesId === driverSeriesId;
+    const isVUS = s.category === 'VUS';
+    const color = colorMap[s.legendLabel] || '#808080';
+    const pointStyles = patientVisits.map(v => {
+      if (!s.visits[v]) return 'circle';
+      return s.isConflict ? 'rectRot' : 'circle';
+    });
+    return {
+      label: s.legendLabel.replace('\n', ' '),
+      _legendLabel: s.legendLabel,
+      _isDriver: isDriver,
+      _isVUS: isVUS,
+      _isConflict: s.isConflict,
+      _cHGVS: s.cHGVS,
+      _category: s.category,
+      data: patientVisits.map(v => s.visits[v] ? s.visits[v].AF : null),
+      borderColor: color,
+      backgroundColor: color,
+      pointBackgroundColor: color,
+      pointBorderColor: 'white',
+      pointBorderWidth: isZoom ? 2 : (isDriver ? 2 : 1),
+      pointRadius: isZoom ? 7 : (isDriver ? 6 : (isVUS ? 3 : 4)),
+      pointHoverRadius: isZoom ? 9 : 7,
+      pointStyle: pointStyles,
+      borderWidth: isDriver ? (isZoom ? 3 : 2.5) : (isVUS ? (isZoom ? 1 : 0.8) : (isZoom ? 2 : 1.2)),
+      tension: 0,
+      spanGaps: false,
+      order: isDriver ? 0 : (isVUS ? 10 : 5)
+    };
+  });
+
+  wrapper.innerHTML = '<canvas></canvas>';
+  const ctx = wrapper.querySelector('canvas').getContext('2d');
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: patientVisits, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 300 },
+      interaction: { mode: 'point', intersect: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0] ? items[0].label : '',
+            label: item => {
+              const val = item.parsed.y;
+              const ds = item.dataset;
+              const lines = [`${ds.label}: ${val <= ND_VALUE ? 'ND' : val.toFixed(2)}%`];
+              if (ds._cHGVS) lines.push(`c.HGVS: ${ds._cHGVS}`);
+              if (ds._category) lines.push(`Category: ${ds._category}`);
+              if (ds._isConflict) lines.push('\u26A0 c.HGVS conflict');
+              if (ds._isDriver) lines.push('\u2605 Driver mutation');
+              return lines;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Visit (Cycle)', font: { size: isZoom ? 14 : 11, weight: 'bold' } },
+          grid: { display: false },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: { font: { size: isZoom ? 13 : 10 }, maxRotation: 45, minRotation: 0 }
+        },
+        y: {
+          type: 'logarithmic', min: 0.005, max: 100,
+          title: { display: true, text: 'AF Value (log\u2081\u2080 scale)', font: { size: isZoom ? 14 : 11, weight: 'bold' } },
+          grid: { display: false },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: {
+            font: { size: isZoom ? 12 : 10 },
+            callback: v => { if (v <= 0.01) return 'ND'; if ([0.1, 1, 10, 100].includes(v)) return v; return ''; }
+          },
+          afterBuildTicks: axis => { axis.ticks = [{ value: 0.01 }, { value: 0.1 }, { value: 1 }, { value: 10 }, { value: 100 }]; },
+          afterDataLimits: axis => { axis.min = 0.005; }
+        }
+      }
+    }
+  });
+
+  if (chartContainer) {
+    const legendTarget = chartContainer;
+    const old = legendTarget.querySelector('.legend-container');
+    if (old) old.remove();
+    const legendDiv = document.createElement('div');
+    legendDiv.className = 'legend-container';
+    displaySeries.forEach(s => {
+      const isDriver = s.seriesId === driverSeriesId;
+      const isVUS = s.category === 'VUS';
+      const item = document.createElement('div');
+      item.className = 'legend-item' + (isDriver ? ' driver' : '') + (isVUS ? ' vus' : '');
+      const conflictMark = s.isConflict ? ' \u25C6' : '';
+      const cHGVSLabel = s.isConflict && s.cHGVS ? ` [${s.cHGVS}]` : '';
+      item.innerHTML = `<span class="legend-color" style="background:${colorMap[s.legendLabel] || '#999'}"></span><span>${s.legendLabel.replace('\n', ' ')}${cHGVSLabel}${conflictMark}</span>`;
+      item.title = `${s.category || ''}${s.isConflict ? ' | c.HGVS conflict' : ''}${isDriver ? ' | Driver' : ''}`;
+      legendDiv.appendChild(item);
+    });
+    chartContainer.appendChild(legendDiv);
+  }
+
+  return chart;
+}
+
+function updateStats() {
+  const all = sortedPatients;
+  const groupCounts = {};
+  all.forEach(p => {
+    const g = patientGroupInfo[p] || 'Other';
+    groupCounts[g] = (groupCounts[g] || 0) + 1;
+  });
+
+  const allMutations = new Set();
+  all.forEach(p => {
+    Object.values(patientDataMap[p] || {}).forEach(s => allMutations.add(s.legendLabel));
+  });
+
+  const failCount = all.filter(p => patientFailVisits[p] && patientFailVisits[p].length > 0).length;
+
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = `
+    <div class="stats-row-label">Filter by Mutation Group (click to filter)</div>
+    <div class="stats-row">
+      <div class="stat-card clickable active" data-filter="all"><div class="stat-value">${all.length}</div><div class="stat-label">Total Patients</div></div>
+      <div class="stat-card clickable" data-filter="C797S"><div class="stat-value">${groupCounts['C797S'] || 0}</div><div class="stat-label">C797S</div></div>
+      <div class="stat-card clickable" data-filter="G724/L718"><div class="stat-value">${groupCounts['G724/L718'] || 0}</div><div class="stat-label">G724 / L718</div></div>
+      <div class="stat-card clickable" data-filter="T790M only"><div class="stat-value">${groupCounts['T790M only'] || 0}</div><div class="stat-label">T790M only</div></div>
+      <div class="stat-card clickable" data-filter="Other"><div class="stat-value">${groupCounts['Other'] || 0}</div><div class="stat-label">Other</div></div>
+    </div>
+    <div class="stats-row-label">Summary</div>
+    <div class="stats-row">
+      <div class="stat-card info"><div class="stat-value">${allMutations.size}</div><div class="stat-label">Unique Mutations</div></div>
+      <div class="stat-card info"><div class="stat-value">${failCount}</div><div class="stat-label">With Failed Visits</div></div>
+    </div>
+  `;
+
+  grid.querySelectorAll('.stat-card[data-filter]').forEach(card => {
+    card.addEventListener('click', function() {
+      const f = this.dataset.filter;
+      setFilter(f === 'all' ? null : f);
+    });
+  });
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  if (currentPatientQuery) {
+    currentPatientQuery = '';
+    const searchInput = document.getElementById('patientSearchInput');
+    if (searchInput) searchInput.value = '';
+  }
+  document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
+    card.classList.remove('active');
+    if ((filter === null && card.dataset.filter === 'all') || card.dataset.filter === filter) {
+      card.classList.add('active');
+    }
+  });
+  renderAllCharts();
+}
+
+function updatePatientSuggestions(patientIds) {
+  const datalist = document.getElementById('patientSearchSuggestions');
+  if (!datalist) return;
+  const ids = (patientIds || []).slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  datalist.innerHTML = ids.map(id => `<option value="${String(id).replace(/"/g, '&quot;')}"></option>`).join('');
+}
+
+function updatePatientSearchHint(matchCount, totalCount) {
+  const hint = document.getElementById('patientSearchHint');
+  if (!hint) return;
+  const query = (currentPatientQuery || '').trim();
+  if (!query) {
+    hint.textContent = `Type to search by patient ID. ${totalCount} patients available.`;
+    return;
+  }
+  hint.textContent = `${matchCount} patient(s) matched "${query}".`;
+}
+
+function getFilteredPatients() {
+  const q = (currentPatientQuery || '').trim().toLowerCase();
+  if (q) {
+    return sortedPatients.filter(p => p.toLowerCase().includes(q));
+  }
+  if (!currentFilter) return sortedPatients;
+  return sortedPatients.filter(p => patientGroupInfo[p] === currentFilter);
+}
+
+function renderAllCharts() {
+  charts.forEach(c => c && c.destroy());
+  charts = [];
+  const container = document.getElementById('chartsContainer');
+  container.innerHTML = '';
+
+  const patients = getFilteredPatients();
+  updatePatientSearchHint(patients.length, sortedPatients.length);
+
+  if (patients.length === 0) {
+    const q = (currentPatientQuery || '').trim();
+    const msg = q
+      ? `No patients match patient ID "${q}".`
+      : 'No patients match the selected filter.';
+    container.innerHTML = `<div style="text-align:center; padding:60px; color:#95a5a6; grid-column:1/-1;">${msg}</div>`;
+    return;
+  }
+
+  patients.forEach((subj, i) => {
+    const div = document.createElement('div');
+    div.className = 'chart-container';
+    const group = patientGroupInfo[subj] || 'Other';
+    const fails = patientFailVisits[subj];
+    const failBadge = fails && fails.length ? `<span class="fail-badge" title="Failed visits: ${fails.join(', ')}">Fail: ${fails.join(', ')}</span>` : '';
+
+    div.innerHTML = `
+      <div class="chart-title">
+        Patient: ${subj} <span class="group-tag">[${group}]</span>${failBadge}
+      </div>
+      <button class="zoom-btn" onclick="openZoomView('${subj}')">Zoom</button>
+      <div class="chart-wrapper" id="chart-${i}"></div>
+    `;
+    container.appendChild(div);
+
+    setTimeout(() => {
+      const c = createChart(`chart-${i}`, subj, false);
+      if (c) charts.push(c);
+    }, 0);
+  });
+}
+
+document.getElementById('vusToggle').addEventListener('change', function() { showVUS = this.checked; renderAllCharts(); });
+document.getElementById('driverToggle').addEventListener('change', function() { highlightDriver = this.checked; renderAllCharts(); });
+
+function openZoomView(subj) {
+  const modal = document.getElementById('zoomModal');
+  const title = document.getElementById('zoomTitle');
+  const chartWrapper = document.getElementById('zoomChartWrapper');
+  const content = document.getElementById('zoomContent');
+  const group = patientGroupInfo[subj] || 'Other';
+  const fails = patientFailVisits[subj];
+  const failStr = fails && fails.length ? ` | Failed: ${fails.join(', ')}` : '';
+
+  title.textContent = `Patient: ${subj} [${group}]${failStr}`;
+  if (zoomChart) { zoomChart.destroy(); zoomChart = null; }
+  chartWrapper.innerHTML = '';
+  content.querySelectorAll('.legend-container').forEach(el => el.remove());
+  modal.classList.add('active');
+  setTimeout(() => { zoomChart = createChart('zoomChartWrapper', subj, true); }, 100);
+}
+window.openZoomView = openZoomView;
+
+document.getElementById('zoomClose').addEventListener('click', () => {
+  document.getElementById('zoomModal').classList.remove('active');
+  if (zoomChart) { zoomChart.destroy(); zoomChart = null; }
+});
+document.getElementById('zoomModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.classList.remove('active');
+    if (zoomChart) { zoomChart.destroy(); zoomChart = null; }
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('zoomModal');
+    if (modal.classList.contains('active')) {
+      modal.classList.remove('active');
+      if (zoomChart) { zoomChart.destroy(); zoomChart = null; }
+    }
+  }
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof initBlockExportDialog === 'function') {
+    initBlockExportDialog();
+    setBlockExportPrefix('Mutation');
+  }
+  document.getElementById('loadingIndicator').style.display = 'block';
+
+  fetch('../../data/G360_Filtered.csv')
+    .then(response => {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    })
+    .then(csvText => {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          try {
+            processG360(results.data);
+
+            if (Object.keys(patientDataMap).length === 0) {
+              alert('No valid data found in CSV.');
+              document.getElementById('loadingIndicator').style.display = 'none';
+              return;
+            }
+
+            updateStats();
+            document.getElementById('statsPanel').style.display = 'block';
+            document.getElementById('loadingIndicator').style.display = 'none';
+            updatePatientSuggestions(sortedPatients);
+            renderAllCharts();
+
+            const searchInput = document.getElementById('patientSearchInput');
+            const clearBtn = document.getElementById('clearPatientSearchBtn');
+
+            function syncStatCardVisual() {
+              document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
+                card.classList.remove('active');
+                if (!currentPatientQuery) {
+                  if ((currentFilter === null && card.dataset.filter === 'all') || card.dataset.filter === currentFilter) {
+                    card.classList.add('active');
+                  }
+                }
+              });
+            }
+
+            if (searchInput) {
+              searchInput.addEventListener('input', function() {
+                currentPatientQuery = this.value.trim();
+                if (currentPatientQuery) currentFilter = null;
+                syncStatCardVisual();
+                renderAllCharts();
+              });
+              searchInput.addEventListener('change', function() {
+                currentPatientQuery = this.value.trim();
+                if (currentPatientQuery) currentFilter = null;
+                syncStatCardVisual();
+                renderAllCharts();
+              });
+            }
+            if (clearBtn) {
+              clearBtn.addEventListener('click', function() {
+                currentPatientQuery = '';
+                currentFilter = null;
+                if (searchInput) searchInput.value = '';
+                syncStatCardVisual();
+                renderAllCharts();
+              });
+            }
+          } catch (error) {
+            console.error('Error processing data:', error);
+            alert('Error processing data: ' + error.message);
+            document.getElementById('loadingIndicator').style.display = 'none';
+          }
+        },
+        error: function(error) {
+          console.error('Parse error:', error);
+          alert('Error parsing CSV: ' + error.message);
+          document.getElementById('loadingIndicator').style.display = 'none';
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Error loading data file:', error);
+      alert('Error loading G360_Filtered.csv: ' + error.message);
+      document.getElementById('loadingIndicator').style.display = 'none';
+    });
+});
+</script>
+
+<script src="../../assets/js/nav.js"></script>
+<script>
+if (typeof renderNav === 'function') renderNav('mutation', 'mutation-analysis', '../../');
+</script>
+</body>
+</html>

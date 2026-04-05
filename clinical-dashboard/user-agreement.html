@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Agreement - Clinical Trial Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #000000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #ffffff;
+    }
+    
+    .agreement-modal {
+      background: #1a1a1a;
+      border-radius: 16px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid #333;
+    }
+    
+    .modal-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      padding: 24px 30px;
+      border-radius: 16px 16px 0 0;
+      border-bottom: 2px solid #00bcd4;
+    }
+    
+    .modal-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    
+    .modal-header .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      color: #ffffff;
+    }
+    
+    .modal-content {
+      padding: 30px;
+    }
+    
+    .disclaimer-section {
+      margin-bottom: 24px;
+    }
+    
+    .disclaimer-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #00bcd4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .disclaimer-content {
+      font-size: 0.9rem;
+      line-height: 1.8;
+      color: #e0e0e0;
+    }
+    
+    .disclaimer-content ul {
+      margin: 12px 0 0 24px;
+    }
+    
+    .disclaimer-content li {
+      margin: 8px 0;
+    }
+    
+    .highlight-box {
+      background: rgba(231, 76, 60, 0.2);
+      border-left: 4px solid #e74c3c;
+      padding: 16px 20px;
+      margin-top: 20px;
+      border-radius: 0 8px 8px 0;
+      font-weight: 500;
+      color: #ffcccc;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 10px;
+      border: 2px solid #444;
+      margin: 24px 0;
+      transition: all 0.3s;
+    }
+    
+    .checkbox-wrapper:has(input:checked) {
+      border-color: #00bcd4;
+      background: rgba(0, 188, 212, 0.1);
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: #00bcd4;
+      flex-shrink: 0;
+    }
+    
+    .checkbox-wrapper label {
+      font-size: 0.95rem;
+      color: #e0e0e0;
+      cursor: pointer;
+      line-height: 1.7;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 16px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 188, 212, 0.5);
+    }
+    
+    .btn-primary:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .btn-secondary {
+      background: #333;
+      color: #e0e0e0;
+      border: 1px solid #555;
+    }
+    
+    .btn-secondary:hover {
+      background: #444;
+      border-color: #666;
+    }
+    
+    .info-section {
+      background: #2a2a2a;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    
+    .info-label {
+      font-size: 0.85rem;
+      color: #999;
+    }
+    
+    .info-value {
+      font-size: 0.9rem;
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+    
+    /* Scrollbar styling */
+    .agreement-modal::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .agreement-modal::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    
+    .agreement-modal::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+    
+    .agreement-modal::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="agreement-modal">
+    <div class="modal-header">
+      <h1>⚠️ User Agreement Required</h1>
+      <p class="subtitle">Clinical Trial Dashboard - BH-30643</p>
+    </div>
+    
+    <div class="modal-content">
+      <!-- Info Section -->
+      <div class="info-section">
+        <div class="info-item">
+          <span class="info-label">Study:</span>
+          <span class="info-value">BH-30643</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Protocol Version:</span>
+          <span class="info-value">3.0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Dashboard Status:</span>
+          <span class="info-value">Draft v0.8</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Access Level:</span>
+          <span class="info-value">Internal Use Only</span>
+        </div>
+      </div>
+      
+      <!-- Disclaimer -->
+      <section class="disclaimer-section">
+        <h2 class="disclaimer-title">
+          <span>🔒</span>
+          Important Disclaimer & Terms of Use
+        </h2>
+        <div class="disclaimer-content">
+          <p><strong>This dashboard is intended solely for internal quick data review purposes.</strong></p>
+          <ul>
+            <li><strong>No Sharing:</strong> Sharing, reposting, or distributing any content, screenshots, or data from this dashboard to external parties or platforms without prior written authorization is strictly prohibited.</li>
+            <li><strong>Preliminary Data:</strong> All data displayed is preliminary and subject to change prior to database lock. Do not use for official regulatory submissions, publications, or external communications.</li>
+            <li><strong>Not Validated:</strong> Visualizations and calculations have not been formally validated. For official analyses, refer to validated statistical outputs from the Biostatistics team.</li>
+            <li><strong>Confidential:</strong> Contains confidential patient-level clinical trial data protected under applicable data privacy regulations and company policies.</li>
+            <li><strong>Authorized Users Only:</strong> Access is restricted to authorized team members with signed confidentiality agreements.</li>
+          </ul>
+          <div class="highlight-box">
+            <strong>Compliance Notice:</strong> By accessing this dashboard, you agree to comply with company data confidentiality policies, Good Clinical Practice (GCP) guidelines, and applicable regulatory requirements. Violations may result in disciplinary action and/or legal consequences.
+          </div>
+        </div>
+      </section>
+      
+      <!-- Acknowledgment Checkbox -->
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="acknowledgeCheckbox">
+        <label for="acknowledgeCheckbox">
+          <strong>I acknowledge and agree that:</strong> I have read and understood the disclaimer above. I am an authorized user and will use this dashboard only for legitimate internal business purposes. I will not share, redistribute, screenshot, or use the data for any official reporting, publication, or external communication without proper authorization from the study team and management. I understand that all data is preliminary and subject to change.
+        </label>
+      </div>
+      
+      <!-- Buttons -->
+      <div class="button-group">
+        <button id="agreeBtn" class="btn btn-primary" disabled>
+          <span>✅</span>
+          <span>I Agree - Continue</span>
+        </button>
+        <button id="declineBtn" class="btn btn-secondary">
+          <span>❌</span>
+          <span>Decline</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const checkbox = document.getElementById('acknowledgeCheckbox');
+    const agreeBtn = document.getElementById('agreeBtn');
+    const declineBtn = document.getElementById('declineBtn');
+    
+    // Update button state when checkbox changes
+    checkbox.addEventListener('change', function() {
+      agreeBtn.disabled = !this.checked;
+    });
+    
+    // Handle agree button click
+    agreeBtn.addEventListener('click', function() {
+      if (!checkbox.checked) return;
+      
+      // Store acknowledgment in localStorage
+      const timestamp = new Date().toISOString();
+      localStorage.setItem('dashboard_agreement_accepted', 'true');
+      localStorage.setItem('dashboard_agreement_timestamp', timestamp);
+      
+      // Redirect to main dashboard
+      window.location.href = 'index.html';
+    });
+    
+    // Handle decline button click
+    declineBtn.addEventListener('click', function() {
+      if (confirm('Are you sure you want to decline? You will not be able to access the dashboard.')) {
+        window.location.href = 'about:blank';
+      }
+    });
+    
+    // Check if already agreed (shouldn't happen on this page, but just in case)
+    if (localStorage.getItem('dashboard_agreement_accepted') === 'true') {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>
+

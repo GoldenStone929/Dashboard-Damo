@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AE Detail Listing</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #ffffff;
+      color: #2c3e50;
+      line-height: 1.6;
+      padding: 20px;
+      font-size: 14px;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 15px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e8ecef;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    h1 { 
+      font-size: 2rem; 
+      color: #1a1a1a; 
+      font-weight: 700; 
+      margin: 0 0 6px 0;
+      letter-spacing: -0.02em;
+    }
+    
+    .subtitle { 
+      color: #6c757d; 
+      font-size: 0.95rem; 
+      font-weight: 400;
+      margin: 0;
+    }
+    
+    .header-badges {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .big-n-badge {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      box-shadow: 0 2px 4px rgba(52, 152, 219, 0.25);
+      letter-spacing: 0.02em;
+      display: inline-block;
+    }
+    
+    /* Controls Panel */
+    .controls-panel {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #e9ecef;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+    
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .control-group label {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 0.9rem;
+    }
+    
+    .control-group select,
+    .control-group input {
+      padding: 10px 14px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      min-width: 180px;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    
+    .control-group select:hover,
+    .control-group select:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+    
+    /* Cumulative Toggle Panel */
+    .cumulative-toggle-panel {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+      border: 2px solid #fecaca;
+      border-radius: 12px;
+      padding: 16px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+    }
+
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-switch input[type="checkbox"] {
+      display: none;
+    }
+
+    .toggle-slider {
+      position: relative;
+      width: 56px;
+      height: 28px;
+      background: #cbd5e1;
+      border-radius: 28px;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      top: 3px;
+      left: 3px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+      background: linear-gradient(135deg, #4F81BD 0%, #3d6a9f 100%);
+    }
+
+    .toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
+      transform: translateX(28px);
+    }
+
+    .toggle-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: 0.3px;
+    }
+
+    .toggle-switch:hover .toggle-slider {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(79, 129, 189, 0.1);
+    }
+    
+    /* Table Container */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    
+    .table-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    
+    .data-table th {
+      background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+      color: white;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #2c3e50;
+      white-space: nowrap;
+      font-size: 0.85rem;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    
+    .data-table th:hover {
+      background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+    }
+    
+    .data-table th.sortable::after {
+      content: ' ↕';
+      opacity: 0.5;
+      font-size: 0.8em;
+    }
+    
+    .data-table th.sort-asc::after {
+      content: ' ↑';
+      opacity: 1;
+    }
+    
+    .data-table th.sort-desc::after {
+      content: ' ↓';
+      opacity: 1;
+    }
+    
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 0.875rem;
+    }
+    
+    .data-table tr:nth-child(even) { 
+      background: #f8f9fa; 
+    }
+    
+    .data-table tr:hover { 
+      background: #e3f2fd; 
+      transition: background 0.15s ease;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge-serious { background: #fee; color: #c00; }
+    .badge-related { background: #fef3e6; color: #e67e22; }
+    .badge-dlt { background: #f3e5f5; color: #8e44ad; }
+    .badge-grade3 { background: #ffeaa7; color: #d35400; }
+    .badge-grade4 { background: #fab1a0; color: #c0392b; }
+    .badge-grade5 { background: #e74c3c; color: white; }
+    
+    .btn-export {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);
+      color: white;
+      min-width: 120px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-export:hover {
+      background: linear-gradient(135deg, #219a52 0%, #1a7a40 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+    }
+    
+    .btn-grade-filter {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      min-width: 160px;
+    }
+    .btn-grade-filter:hover {
+      background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+    }
+    .btn-grade-filter.show-all {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    }
+    .btn-grade-filter.show-all:hover {
+      background: linear-gradient(135deg, #2980b9 0%, #1f6dad 100%);
+      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+      font-size: 1rem;
+    }
+    
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-msg {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c00;
+      padding: 16px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    
+    .hidden { display: none; }
+    
+    .info-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-left: 10px;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(52, 152, 219, 0.25);
+    }
+    
+    .back-link:hover {
+      background: linear-gradient(135deg, #2980b9 0%, #1f6391 100%);
+      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .back-link::before {
+      content: '←';
+      font-size: 1.1rem;
+    }
+    
+    /* Patient ID Search with Autocomplete */
+    .patient-search-wrapper {
+      position: relative;
+    }
+    
+    .patient-search-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .patient-search-input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ced4da;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: none;
+    }
+    
+    .autocomplete-dropdown.show {
+      display: block;
+    }
+    
+    .autocomplete-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.15s;
+    }
+    
+    .autocomplete-item:hover,
+    .autocomplete-item.highlighted {
+      background: #e3f2fd;
+    }
+    
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* Column Filter Dropdown Styles */
+    .column-filter-header {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .filter-icon {
+      font-size: 0.7em;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    
+    .filter-icon.active {
+      opacity: 1;
+      color: #3498db;
+    }
+    
+    .column-filter-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 250px;
+      max-width: 350px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: none;
+      margin-top: 8px;
+    }
+    
+    .column-filter-dropdown.show {
+      display: block;
+    }
+    
+    .column-filter-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e9ecef;
+      background: #f8f9fa;
+      border-radius: 8px 8px 0 0;
+    }
+    
+    .column-filter-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .column-filter-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .column-filter-btn {
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #495057;
+    }
+    
+    .column-filter-btn:hover {
+      background: #e9ecef;
+      border-color: #adb5bd;
+    }
+    
+    .column-filter-btn.apply-btn {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+    
+    .column-filter-btn.apply-btn:hover {
+      background: #2980b9;
+    }
+    
+    .column-filter-list {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    
+    .column-filter-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    
+    .column-filter-item:hover {
+      background: #f8f9fa;
+    }
+    
+    .column-filter-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-right: 10px;
+      cursor: pointer;
+      accent-color: #3498db;
+    }
+    
+    .column-filter-item label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #2c3e50;
+      font-weight: normal;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .column-filter-count {
+      font-size: 0.75rem;
+      color: #6c757d;
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+    
+    .column-filter-search {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .column-filter-search input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .column-filter-search input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+    }
+    
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <div class="container">
+      <header>
+        <div class="header-left">
+          <a href="dashboard.html" class="back-link">Back to Dashboard</a>
+        </div>
+      </header>
+      
+      <div id="loadingState" class="loading">
+        <div class="loading-spinner"></div>
+        Loading AE data...
+      </div>
+      
+      <div id="errorState" class="error-msg hidden"></div>
+      
+      <div id="mainContent" class="hidden">
+        
+        <!-- Cumulative Toggle -->
+        <div class="cumulative-toggle-panel">
+          <label class="toggle-switch">
+            <input type="checkbox" id="cumulativeToggle" onchange="toggleCumulative()">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Show Cumulative View (All Time)</span>
+          </label>
+        </div>
+        
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+          <div class="control-group">
+            <label>Select Year</label>
+            <select id="yearSelect">
+              <option value="2024">2024</option>
+              <option value="2025" selected>2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Select Quarter</label>
+            <select id="quarterSelect">
+              <option value="Q1">Q1 (Jan - Mar)</option>
+              <option value="Q2">Q2 (Apr - Jun)</option>
+              <option value="Q3">Q3 (Jul - Sep)</option>
+              <option value="Q4" selected>Q4 (Oct - Dec)</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Sort By</label>
+            <select id="sortBy">
+              <option value="subject">Subject</option>
+              <option value="dose">Dose</option>
+              <option value="pt">Preferred Term</option>
+              <option value="grade">Grade</option>
+              <option value="startDate">Start Date</option>
+              <option value="endDate">End Date</option>
+              <option value="serious">Serious (Y/N)</option>
+              <option value="related">Relatedness</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Sort Order</label>
+            <select id="sortOrder">
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Filter by Dose</label>
+            <select id="filterDose">
+              <option value="">All Doses</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Filter by Grade</label>
+            <select id="filterGrade">
+              <option value="">All Grades</option>
+              <option value="1">Grade 1</option>
+              <option value="2">Grade 2</option>
+              <option value="3">Grade 3</option>
+              <option value="4">Grade 4</option>
+              <option value="5">Grade 5</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Grade Default</label>
+            <button class="btn-grade-filter" id="gradeFilterBtn" onclick="toggleGradeFilter()">Show All Grades</button>
+          </div>
+          <div class="control-group patient-search-wrapper">
+            <label>Search Patient ID</label>
+            <input type="text" id="searchPatient" class="patient-search-input" placeholder="Type to search patient ID...">
+            <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+          </div>
+          <div class="control-group" style="align-self: flex-end;">
+            <button class="btn-export" onclick="exportToCSV()">&#x2B73; Export CSV</button>
+          </div>
+        </div>
+        
+        <!-- Table Container -->
+        <div class="table-container">
+          <div class="table-title" id="tableTitle">
+            Adverse Events Listing
+            <span class="big-n-badge" id="bigNBadge">N = -</span>
+            <span class="info-badge" id="recordCount">0 records</span>
+          </div>
+          <table class="data-table" id="aeTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="subject">Subject</th>
+                <th class="sortable" data-sort="dose">Dose</th>
+                <th class="sortable" data-sort="pt">Preferred Term</th>
+                <th class="sortable filterable" data-sort="soc" data-filter="soc">
+                  <span class="column-filter-header">
+                    System Organ Class
+                    <span class="filter-icon" id="socFilterIcon">▼</span>
+                  </span>
+                  <div class="column-filter-dropdown" id="socFilterDropdown">
+                    <div class="column-filter-header-bar">
+                      <span class="column-filter-title">Filter by SOC</span>
+                      <div class="column-filter-actions">
+                        <button class="column-filter-btn" onclick="selectAllFilter('soc')">All</button>
+                        <button class="column-filter-btn" onclick="clearAllFilter('soc')">None</button>
+                        <button class="column-filter-btn apply-btn" onclick="applyColumnFilter('soc')">Apply</button>
+                      </div>
+                    </div>
+                    <div class="column-filter-search">
+                      <input type="text" placeholder="Search SOC..." id="socFilterSearch" onclick="event.stopPropagation()">
+                    </div>
+                    <div class="column-filter-list" id="socFilterList"></div>
+                  </div>
+                </th>
+                <th class="sortable" data-sort="grade">Grade</th>
+                <th class="sortable" data-sort="serious">Serious</th>
+                <th class="sortable" data-sort="related">Relatedness</th>
+                <th class="sortable filterable" data-sort="outcome" data-filter="outcome">
+                  <span class="column-filter-header">
+                    Outcome
+                    <span class="filter-icon" id="outcomeFilterIcon">▼</span>
+                  </span>
+                  <div class="column-filter-dropdown" id="outcomeFilterDropdown">
+                    <div class="column-filter-header-bar">
+                      <span class="column-filter-title">Filter by Outcome</span>
+                      <div class="column-filter-actions">
+                        <button class="column-filter-btn" onclick="selectAllFilter('outcome')">All</button>
+                        <button class="column-filter-btn" onclick="clearAllFilter('outcome')">None</button>
+                        <button class="column-filter-btn apply-btn" onclick="applyColumnFilter('outcome')">Apply</button>
+                      </div>
+                    </div>
+                    <div class="column-filter-search">
+                      <input type="text" placeholder="Search Outcome..." id="outcomeFilterSearch" onclick="event.stopPropagation()">
+                    </div>
+                    <div class="column-filter-list" id="outcomeFilterList"></div>
+                  </div>
+                </th>
+                <th class="sortable" data-sort="startDate">Start Date</th>
+                <th class="sortable" data-sort="endDate">End Date</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('safety', 'ae-detail', '../../');
+    }
+  </script>
+  <script>
+// ============================================
+// AE DETAIL LISTING PAGE
+// ============================================
+
+let AE_DATA = [];
+let DM_DATA = [];
+let BIG_N = 0;
+let ALL_RECORDS = [];
+let BASE_FILTERED_RECORDS = []; // Records filtered by URL parameter (TRAE, serious, etc.)
+let FILTERED_RECORDS = []; // Records after additional filters (dose, grade, patient search)
+let CURRENT_SORT = { field: 'subject', order: 'asc' };
+let showCumulative = false; // Whether to show all-time data or quarterly
+let showAllGrades = false; // Default: only show Grade 3+
+
+// Column filter state
+let columnFilters = {
+  soc: { all: [], selected: [], tempSelected: [] },
+  outcome: { all: [], selected: [], tempSelected: [] }
+};
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function loadCSV(filename) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(filename, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (err) => reject(err)
+    });
+  });
+}
+
+function getGrade(gradeStr) {
+  if (!gradeStr) return 0;
+  const match = String(gradeStr).match(/\d+/);
+  return match ? parseInt(match[0]) : 0;
+}
+
+function isYes(val) {
+  if (!val) return false;
+  const str = String(val).toUpperCase().trim();
+  return str === 'YES' || str === 'Y' || str === '1' || str === 'TRUE';
+}
+
+function isTRAE(relStr) {
+  if (!relStr) return false;
+  const str = String(relStr).toUpperCase().trim();
+  return str.includes('RELATED') || str.includes('POSSIBLE') || str.includes('PROBABLE');
+}
+
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+  const cleaned = str.split(':')[0];
+  const match = cleaned.match(/(\d{1,2})([A-Z]{3})(\d{4})/i);
+  if (!match) return null;
+  const months = { JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11 };
+  const day = parseInt(match[1]);
+  const month = months[match[2].toUpperCase()];
+  const year = parseInt(match[3]);
+  if (month === undefined) return null;
+  return new Date(year, month, day);
+}
+
+function formatDate(date) {
+  if (!date) return '-';
+  if (typeof date === 'string') return date;
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function truncate(str, len) {
+  if (!str) return '-';
+  const s = String(str);
+  return s.length > len ? s.substring(0, len) + '...' : s;
+}
+
+// ============================================
+// DATA PROCESSING
+// ============================================
+
+function processData() {
+  const records = [];
+  
+  AE_DATA.forEach(row => {
+    const subject = row.Subject;
+    const pt = row.AETERM_pt || row.AETERM || 'Unknown';
+    const soc = row.AETERM_soc || 'Unknown';
+    const grade = getGrade(row.AETOXGR_STD || row.AETOXGR);
+    const isSerious = isYes(row.AESER_STD || row.AESER);
+    const isTreatmentRelated = isTRAE(row.AEREL_STD || row.AEREL);
+    const relLevel = String(row.AEREL_STD || row.AEREL || 'Unknown').trim();
+    const outcome = row.AEOUT_STD || row.AEOUT || '';
+    const action = row.AEACN_STD || row.AEACN || 'Unknown';
+    const dose = row.ARM || 'Unknown Dose';
+    const startDate = parseDate(row.AESTDAT_INT);
+    const endDate = parseDate(row.AEENDAT_INT);
+    const isDLT = isYes(row.AEDLT_1_STD || row.AEDLT_1);
+    
+    records.push({
+      subject,
+      dose,
+      pt,
+      soc,
+      grade,
+      isSerious,
+      isTreatmentRelated,
+      isDLT,
+      relLevel,
+      outcome,
+      action,
+      startDate,
+      endDate,
+      startDateStr: formatDate(startDate),
+      endDateStr: formatDate(endDate)
+    });
+  });
+  
+  ALL_RECORDS = records;
+  return records;
+}
+
+// ============================================
+// QUARTER DATE RANGE HELPER
+// ============================================
+
+function getQuarterDateRange(year, quarter) {
+  const ranges = {
+    'Q1': { start: `${year}-01-01`, end: `${year}-03-31` },
+    'Q2': { start: `${year}-04-01`, end: `${year}-06-30` },
+    'Q3': { start: `${year}-07-01`, end: `${year}-09-30` },
+    'Q4': { start: `${year}-10-01`, end: `${year}-12-31` }
+  };
+  return ranges[quarter];
+}
+
+// ============================================
+// CUMULATIVE TOGGLE
+// ============================================
+
+function toggleCumulative() {
+  const toggle = document.getElementById('cumulativeToggle');
+  showCumulative = toggle ? toggle.checked : false;
+  
+  // Enable/disable year and quarter selectors
+  const yearSelect = document.getElementById('yearSelect');
+  const quarterSelect = document.getElementById('quarterSelect');
+  
+  if (yearSelect && quarterSelect) {
+    if (showCumulative) {
+      yearSelect.disabled = true;
+      quarterSelect.disabled = true;
+      yearSelect.style.opacity = '0.5';
+      quarterSelect.style.opacity = '0.5';
+      yearSelect.style.cursor = 'not-allowed';
+      quarterSelect.style.cursor = 'not-allowed';
+    } else {
+      yearSelect.disabled = false;
+      quarterSelect.disabled = false;
+      yearSelect.style.opacity = '1';
+      quarterSelect.style.opacity = '1';
+      yearSelect.style.cursor = 'pointer';
+      quarterSelect.style.cursor = 'pointer';
+    }
+  }
+  
+  // Re-apply filters to update the view
+  applyFilters();
+}
+
+// ============================================
+// GRADE FILTER TOGGLE
+// ============================================
+
+function toggleGradeFilter() {
+  showAllGrades = !showAllGrades;
+  const btn = document.getElementById('gradeFilterBtn');
+  if (showAllGrades) {
+    // Currently showing all grades, button offers to filter to Grade 3+
+    btn.textContent = 'Show Grade ≥3 Only';
+    btn.classList.add('show-all');
+  } else {
+    // Currently showing Grade 3+ only, button offers to show all
+    btn.textContent = 'Show All Grades';
+    btn.classList.remove('show-all');
+  }
+  applyFilters();
+}
+
+// ============================================
+// FILTERING & SORTING
+// ============================================
+
+function applyFilters() {
+  const doseFilter = document.getElementById('filterDose').value;
+  const gradeFilter = document.getElementById('filterGrade').value;
+  const patientSearch = document.getElementById('searchPatient').value.trim().toLowerCase();
+  
+  // Start from BASE_FILTERED_RECORDS (already filtered by URL parameter)
+  let records = BASE_FILTERED_RECORDS;
+  
+  // Apply quarter filter if not in cumulative mode
+  if (!showCumulative) {
+    const year = document.getElementById('yearSelect').value;
+    const quarter = document.getElementById('quarterSelect').value;
+    const dateRange = getQuarterDateRange(year, quarter);
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999); // Include the entire end day
+    
+    records = records.filter(r => {
+      if (!r.startDate) return false;
+      return r.startDate >= startDate && r.startDate <= endDate;
+    });
+  }
+  
+  // Apply Grade 3+ filter (default) unless showing all grades or specific grade selected
+  if (!showAllGrades && !gradeFilter) {
+    records = records.filter(r => r.grade >= 3);
+  }
+  
+  // Apply additional filters including column filters
+  FILTERED_RECORDS = records.filter(r => {
+    if (doseFilter && r.dose !== doseFilter) return false;
+    if (gradeFilter && r.grade !== parseInt(gradeFilter)) return false;
+    if (patientSearch && !r.subject.toLowerCase().includes(patientSearch)) return false;
+    
+    // Apply SOC column filter
+    const socValue = r.soc || 'Unknown';
+    if (columnFilters.soc.selected.length < columnFilters.soc.all.length) {
+      if (!columnFilters.soc.selected.includes(socValue)) return false;
+    }
+    
+    // Apply Outcome column filter
+    const outcomeValue = r.outcome || 'Not Specified';
+    if (columnFilters.outcome.selected.length < columnFilters.outcome.all.length) {
+      if (!columnFilters.outcome.selected.includes(outcomeValue)) return false;
+    }
+    
+    return true;
+  });
+  
+  applySort();
+}
+
+function applySort() {
+  const sortField = document.getElementById('sortBy').value;
+  const sortOrder = document.getElementById('sortOrder').value;
+  
+  CURRENT_SORT = { field: sortField, order: sortOrder };
+  
+  FILTERED_RECORDS.sort((a, b) => {
+    let aVal, bVal;
+    
+    switch (sortField) {
+      case 'subject':
+        aVal = a.subject;
+        bVal = b.subject;
+        break;
+      case 'dose':
+        aVal = a.dose;
+        bVal = b.dose;
+        break;
+      case 'pt':
+        aVal = a.pt.toLowerCase();
+        bVal = b.pt.toLowerCase();
+        break;
+      case 'grade':
+        aVal = a.grade;
+        bVal = b.grade;
+        break;
+      case 'serious':
+        aVal = a.isSerious ? 1 : 0;
+        bVal = b.isSerious ? 1 : 0;
+        break;
+      case 'related':
+        aVal = a.relLevel.toLowerCase();
+        bVal = b.relLevel.toLowerCase();
+        break;
+      case 'startDate':
+        aVal = a.startDate ? a.startDate.getTime() : 0;
+        bVal = b.startDate ? b.startDate.getTime() : 0;
+        break;
+      case 'endDate':
+        aVal = a.endDate ? a.endDate.getTime() : 0;
+        bVal = b.endDate ? b.endDate.getTime() : 0;
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  renderTable();
+}
+
+// ============================================
+// RENDERING
+// ============================================
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  
+  // Update record count
+  const recordCountEl = document.getElementById('recordCount');
+  if (recordCountEl) {
+    recordCountEl.textContent = `${FILTERED_RECORDS.length} records`;
+  }
+  
+  // Update Big N badge
+  const bigNBadgeEl = document.getElementById('bigNBadge');
+  if (bigNBadgeEl) {
+    bigNBadgeEl.textContent = `N = ${BIG_N}`;
+  }
+  
+  if (FILTERED_RECORDS.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;padding:40px;">No records found</td></tr>';
+    return;
+  }
+  
+  FILTERED_RECORDS.forEach(r => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${r.subject}</td>
+      <td>${r.dose}</td>
+      <td>${truncate(r.pt, 40)}</td>
+      <td>${truncate(r.soc, 35)}</td>
+      <td>Grade ${r.grade}</td>
+      <td>${r.isSerious ? '<span class="badge badge-serious">Y</span>' : 'N'}</td>
+      <td>${r.relLevel}</td>
+      <td>${r.outcome || '-'}</td>
+      <td>${r.startDateStr}</td>
+      <td>${r.endDateStr}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  
+  updateSortIndicators();
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('.data-table th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === CURRENT_SORT.field) {
+      th.classList.add(CURRENT_SORT.order === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function setupTableHeaderClicks() {
+  document.querySelectorAll('.data-table th.sortable').forEach(th => {
+    // Skip filterable columns - they have their own click handler for dropdown
+    if (th.classList.contains('filterable')) {
+      return;
+    }
+    
+    th.addEventListener('click', () => {
+      const field = th.dataset.sort;
+      const currentField = document.getElementById('sortBy').value;
+      const currentOrder = document.getElementById('sortOrder').value;
+      
+      if (field === currentField) {
+        // Toggle order
+        document.getElementById('sortOrder').value = currentOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        // Change field
+        document.getElementById('sortBy').value = field;
+      }
+      
+      applySort();
+    });
+  });
+}
+
+function populateFilters() {
+  // Populate dose filter based on BASE_FILTERED_RECORDS (not ALL_RECORDS)
+  const doses = [...new Set(BASE_FILTERED_RECORDS.map(r => r.dose))].sort();
+  const doseSelect = document.getElementById('filterDose');
+  doseSelect.innerHTML = '<option value="">All Doses</option>' +
+    doses.map(d => `<option value="${d}">${d}</option>`).join('');
+  
+  // Setup patient ID autocomplete based on BASE_FILTERED_RECORDS
+  setupPatientAutocomplete();
+}
+
+function setupPatientAutocomplete() {
+  const searchInput = document.getElementById('searchPatient');
+  const dropdown = document.getElementById('autocompleteDropdown');
+  const allPatients = [...new Set(BASE_FILTERED_RECORDS.map(r => r.subject))].sort();
+  let highlightedIndex = -1;
+  
+  function showSuggestions(query) {
+    if (!query || query.trim() === '') {
+      dropdown.classList.remove('show');
+      return;
+    }
+    
+    const queryLower = query.toLowerCase();
+    const matches = allPatients.filter(p => 
+      p.toLowerCase().includes(queryLower)
+    ).slice(0, 10); // Limit to 10 suggestions
+    
+    if (matches.length === 0) {
+      dropdown.classList.remove('show');
+      return;
+    }
+    
+    dropdown.innerHTML = matches.map((patient, index) => 
+      `<div class="autocomplete-item" data-patient="${patient}" data-index="${index}">${patient}</div>`
+    ).join('');
+    
+    dropdown.classList.add('show');
+    highlightedIndex = -1;
+  }
+  
+  function selectPatient(patient) {
+    searchInput.value = patient;
+    dropdown.classList.remove('show');
+    applyFilters();
+  }
+  
+  // Input event
+  searchInput.addEventListener('input', (e) => {
+    showSuggestions(e.target.value);
+    highlightedIndex = -1;
+  });
+  
+  // Click on suggestion
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.autocomplete-item');
+    if (item) {
+      selectPatient(item.dataset.patient);
+    }
+  });
+  
+  // Keyboard navigation
+  searchInput.addEventListener('keydown', (e) => {
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+      items.forEach((item, idx) => {
+        item.classList.toggle('highlighted', idx === highlightedIndex);
+      });
+      if (items[highlightedIndex]) {
+        items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightedIndex = Math.max(highlightedIndex - 1, -1);
+      items.forEach((item, idx) => {
+        item.classList.toggle('highlighted', idx === highlightedIndex);
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && items[highlightedIndex]) {
+        selectPatient(items[highlightedIndex].dataset.patient);
+      } else if (items.length === 1) {
+        selectPatient(items[0].dataset.patient);
+      } else {
+        applyFilters();
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('show');
+      highlightedIndex = -1;
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
+  });
+  
+  // Apply filter when input changes (debounced)
+  let filterTimeout;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+      applyFilters();
+    }, 300);
+  });
+}
+
+// ============================================
+// COLUMN FILTER FUNCTIONS
+// ============================================
+
+function initColumnFilters() {
+  // Get unique SOC values with counts
+  const socCounts = {};
+  const outcomeCounts = {};
+  
+  BASE_FILTERED_RECORDS.forEach(r => {
+    const soc = r.soc || 'Unknown';
+    const outcome = r.outcome || 'Not Specified';
+    socCounts[soc] = (socCounts[soc] || 0) + 1;
+    outcomeCounts[outcome] = (outcomeCounts[outcome] || 0) + 1;
+  });
+  
+  // Sort and store
+  columnFilters.soc.all = Object.entries(socCounts)
+    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+    .map(([value, count]) => ({ value, count }));
+  
+  columnFilters.outcome.all = Object.entries(outcomeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([value, count]) => ({ value, count }));
+  
+  // Initially select all
+  columnFilters.soc.selected = columnFilters.soc.all.map(item => item.value);
+  columnFilters.soc.tempSelected = [...columnFilters.soc.selected];
+  columnFilters.outcome.selected = columnFilters.outcome.all.map(item => item.value);
+  columnFilters.outcome.tempSelected = [...columnFilters.outcome.selected];
+  
+  // Populate filter lists
+  populateFilterList('soc');
+  populateFilterList('outcome');
+  
+  // Setup search filters
+  setupFilterSearch('soc');
+  setupFilterSearch('outcome');
+  
+  // Setup dropdown toggle
+  setupFilterDropdownToggle();
+}
+
+function populateFilterList(filterType, searchQuery = '') {
+  const listEl = document.getElementById(`${filterType}FilterList`);
+  const items = columnFilters[filterType].all;
+  const tempSelected = columnFilters[filterType].tempSelected;
+  
+  const query = searchQuery.toLowerCase().trim();
+  const filteredItems = query 
+    ? items.filter(item => item.value.toLowerCase().includes(query))
+    : items;
+  
+  listEl.innerHTML = filteredItems.map(item => {
+    const isChecked = tempSelected.includes(item.value);
+    const escapedValue = item.value.replace(/"/g, '&quot;');
+    return `
+      <div class="column-filter-item" onclick="toggleFilterItem('${filterType}', '${escapedValue}', event)">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); toggleFilterItem('${filterType}', '${escapedValue}', event)">
+        <label title="${escapedValue}">${item.value}</label>
+        <span class="column-filter-count">${item.count}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleFilterItem(filterType, value, event) {
+  event.stopPropagation();
+  const tempSelected = columnFilters[filterType].tempSelected;
+  const index = tempSelected.indexOf(value);
+  
+  if (index > -1) {
+    tempSelected.splice(index, 1);
+  } else {
+    tempSelected.push(value);
+  }
+  
+  // Re-render to update checkboxes
+  const searchEl = document.getElementById(`${filterType}FilterSearch`);
+  populateFilterList(filterType, searchEl ? searchEl.value : '');
+}
+
+function selectAllFilter(filterType) {
+  event.stopPropagation();
+  columnFilters[filterType].tempSelected = columnFilters[filterType].all.map(item => item.value);
+  const searchEl = document.getElementById(`${filterType}FilterSearch`);
+  populateFilterList(filterType, searchEl ? searchEl.value : '');
+}
+
+function clearAllFilter(filterType) {
+  event.stopPropagation();
+  columnFilters[filterType].tempSelected = [];
+  const searchEl = document.getElementById(`${filterType}FilterSearch`);
+  populateFilterList(filterType, searchEl ? searchEl.value : '');
+}
+
+function applyColumnFilter(filterType) {
+  event.stopPropagation();
+  columnFilters[filterType].selected = [...columnFilters[filterType].tempSelected];
+  
+  // Close dropdown
+  const dropdown = document.getElementById(`${filterType}FilterDropdown`);
+  dropdown.classList.remove('show');
+  
+  // Update filter icon state
+  const icon = document.getElementById(`${filterType}FilterIcon`);
+  const all = columnFilters[filterType].all.length;
+  const selected = columnFilters[filterType].selected.length;
+  if (selected < all && selected > 0) {
+    icon.classList.add('active');
+  } else {
+    icon.classList.remove('active');
+  }
+  
+  // Apply filters
+  applyFilters();
+}
+
+function setupFilterSearch(filterType) {
+  const searchEl = document.getElementById(`${filterType}FilterSearch`);
+  if (searchEl) {
+    searchEl.addEventListener('input', (e) => {
+      populateFilterList(filterType, e.target.value);
+    });
+    searchEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+}
+
+function setupFilterDropdownToggle() {
+  // Handle clicking on filterable headers
+  document.querySelectorAll('th.filterable').forEach(th => {
+    th.addEventListener('click', (e) => {
+      const filterType = th.dataset.filter;
+      const dropdown = document.getElementById(`${filterType}FilterDropdown`);
+      
+      // Check if click was on dropdown itself
+      if (e.target.closest('.column-filter-dropdown')) {
+        return;
+      }
+      
+      // Close all other dropdowns first
+      document.querySelectorAll('.column-filter-dropdown.show').forEach(d => {
+        if (d.id !== `${filterType}FilterDropdown`) {
+          d.classList.remove('show');
+        }
+      });
+      
+      // Toggle this dropdown
+      const isOpen = dropdown.classList.contains('show');
+      
+      if (!isOpen) {
+        // Opening: sync tempSelected with selected
+        columnFilters[filterType].tempSelected = [...columnFilters[filterType].selected];
+        populateFilterList(filterType);
+        dropdown.classList.add('show');
+        
+        // Clear search
+        const searchEl = document.getElementById(`${filterType}FilterSearch`);
+        if (searchEl) {
+          searchEl.value = '';
+        }
+      } else {
+        dropdown.classList.remove('show');
+      }
+      
+      e.stopPropagation();
+    });
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.column-filter-dropdown') && !e.target.closest('th.filterable')) {
+      document.querySelectorAll('.column-filter-dropdown.show').forEach(d => {
+        d.classList.remove('show');
+      });
+    }
+  });
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Get filter type from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterType = urlParams.get('filter') || 'all';
+    
+    // Load data
+    AE_DATA = await loadCSV('../../data/ae.CSV');
+    if (!AE_DATA || AE_DATA.length === 0) {
+      throw new Error('No AE data found');
+    }
+    
+    // Try to load DM data for Big N
+    try {
+      DM_DATA = await loadCSV('../../data/dm.CSV');
+      if (DM_DATA && DM_DATA.length > 0) {
+        const validSubjects = new Set();
+        DM_DATA.forEach(row => {
+          const rfx = String(row.RFXSTDTC || '').trim();
+          const subject = String(row.SUBJID || '').trim();
+          if (rfx.length >= 2 && rfx.toUpperCase() !== 'UNKNOWN' && subject) {
+            validSubjects.add(subject);
+          }
+        });
+        BIG_N = validSubjects.size;
+      }
+    } catch (e) {
+      console.log('dm.csv not found, using AE data for N');
+    }
+    
+    if (BIG_N === 0) {
+      BIG_N = new Set(AE_DATA.map(r => r.Subject)).size;
+    }
+    
+    // Merge ARM from DM to AE
+    if (DM_DATA && DM_DATA.length > 0) {
+      const armMap = {};
+      DM_DATA.forEach(row => {
+        armMap[row.SUBJID] = row.ARM;
+      });
+      AE_DATA.forEach(row => {
+        if (!row.ARM && armMap[row.Subject]) {
+          row.ARM = armMap[row.Subject];
+        }
+      });
+    }
+    
+    // Process data
+    processData();
+    
+    // Apply filter based on URL parameter and set title
+    let pageTitle = 'Adverse Events Listing';
+    switch (filterType) {
+      case 'all':
+        BASE_FILTERED_RECORDS = ALL_RECORDS;
+        pageTitle = 'All Adverse Events';
+        break;
+      case 'subjects':
+        BASE_FILTERED_RECORDS = ALL_RECORDS;
+        pageTitle = 'Subjects with Adverse Events';
+        break;
+      case 'teae':
+        BASE_FILTERED_RECORDS = ALL_RECORDS;
+        pageTitle = 'Treatment-Emergent Adverse Events (TEAE)';
+        break;
+      case 'trae':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.isTreatmentRelated);
+        pageTitle = 'Treatment-Related Adverse Events (TRAE)';
+        break;
+      case 'serious':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.isSerious);
+        pageTitle = 'Serious Adverse Events';
+        break;
+      case 'serious-trae':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.isSerious && r.isTreatmentRelated);
+        pageTitle = 'Serious Treatment-Related Adverse Events';
+        break;
+      case 'grade3':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.grade >= 3);
+        pageTitle = 'Grade ≥3 Adverse Events';
+        break;
+      case 'grade3-trae':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.grade >= 3 && r.isTreatmentRelated);
+        pageTitle = 'Grade ≥3 Treatment-Related Adverse Events';
+        break;
+      case 'grade4':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.grade === 4);
+        pageTitle = 'Grade 4 Adverse Events';
+        break;
+      case 'dlt':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.isDLT);
+        pageTitle = 'Dose Limiting Toxicity (DLT) Events';
+        break;
+      case 'deaths':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.grade === 5);
+        pageTitle = 'Grade 5 (Death) Adverse Events';
+        break;
+      case 'deaths-trae':
+        BASE_FILTERED_RECORDS = ALL_RECORDS.filter(r => r.grade === 5 && r.isTreatmentRelated);
+        pageTitle = 'Treatment-Related Deaths (Grade 5)';
+        break;
+      default:
+        BASE_FILTERED_RECORDS = ALL_RECORDS;
+        pageTitle = 'Adverse Events Listing';
+    }
+    
+    // Update page title
+    document.getElementById('tableTitle').innerHTML = `
+      ${pageTitle}
+      <span class="big-n-badge" id="bigNBadge">N = -</span>
+      <span class="info-badge" id="recordCount">0 records</span>
+    `;
+    
+    // Update Big N badge (will be updated in renderTable)
+    
+    // Populate filters
+    populateFilters();
+    
+    // Initialize column filters (SOC, Outcome dropdowns)
+    initColumnFilters();
+    
+    // Setup event listeners
+    document.getElementById('sortBy').addEventListener('change', applySort);
+    document.getElementById('sortOrder').addEventListener('change', applySort);
+    document.getElementById('filterDose').addEventListener('change', applyFilters);
+    document.getElementById('filterGrade').addEventListener('change', applyFilters);
+    document.getElementById('yearSelect').addEventListener('change', applyFilters);
+    document.getElementById('quarterSelect').addEventListener('change', applyFilters);
+    // Patient search is handled in setupPatientAutocomplete
+    
+    // Setup table header clicks
+    setupTableHeaderClicks();
+    
+    // Initial render - apply filters first, then sort
+    applyFilters(); // This will call applySort() internally
+    
+    // Show content
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('mainContent').classList.remove('hidden');
+    
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('errorState').textContent = `Error: ${err.message}. Please ensure ae.CSV and dm.CSV are in the data directory.`;
+    document.getElementById('errorState').classList.remove('hidden');
+  }
+});
+
+// ============================================
+// EXPORT TO CSV
+// ============================================
+
+function exportToCSV() {
+  if (!FILTERED_RECORDS || FILTERED_RECORDS.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  const headers = [
+    'Subject', 'Dose Cohort', 'Preferred Term', 'System Organ Class',
+    'Grade', 'Serious', 'Relatedness', 'DLT', 'Outcome', 'Action Taken',
+    'Start Date', 'End Date'
+  ];
+
+  const rows = FILTERED_RECORDS.map(r => [
+    r.subject,
+    r.dose,
+    r.pt,
+    r.soc,
+    r.grade,
+    r.isSerious ? 'Yes' : 'No',
+    r.relLevel,
+    r.isDLT ? 'Yes' : 'No',
+    r.outcome,
+    r.action,
+    r.startDateStr || '',
+    r.endDateStr || ''
+  ]);
+
+  let csv = headers.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(cell => {
+      const str = String(cell == null ? '' : cell);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(',') + '\n';
+  });
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+
+  // Build filename from page title
+  const titleEl = document.getElementById('tableTitle');
+  const titleText = titleEl ? titleEl.textContent.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') : 'AE_Detail';
+  link.download = titleText + '.csv';
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
+

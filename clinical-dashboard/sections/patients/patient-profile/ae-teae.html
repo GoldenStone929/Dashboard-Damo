@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile - TEAE</title>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    .subject-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .subject-selector select { padding: 10px 16px; font-size: 14px; border: 1px solid var(--border-light); border-radius: 6px; min-width: 200px; }
+    .chart-container { 
+      background: white; 
+      border: 1px solid #e0e0e0; 
+      border-radius: 10px; 
+      padding: 24px; 
+      min-height: 400px; 
+      max-height: 600px; 
+      overflow-x: auto; 
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .dual-axis { display: flex; flex-direction: column; }
+    .axis-row { 
+      display: flex; 
+      font-size: 11px; 
+      color: #2c3e50; 
+      padding-left: 200px; 
+      min-width: 1000px; 
+      position: relative;
+      height: 40px;
+    }
+    .axis-row.top { 
+      border-bottom: 2px solid #3498db; 
+      padding-bottom: 8px; 
+      margin-bottom: 4px;
+      background: linear-gradient(to bottom, rgba(52, 152, 219, 0.05), transparent);
+    }
+    .axis-row.top span { 
+      position: absolute; 
+      top: -20px; 
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .axis-row.bottom { 
+      border-top: 2px solid #3498db; 
+      padding-top: 8px; 
+      margin-top: 8px;
+      background: linear-gradient(to top, rgba(52, 152, 219, 0.05), transparent);
+    }
+    .axis-row.bottom span {
+      font-weight: 500;
+      color: #34495e;
+    }
+    .ae-row { 
+      display: flex; 
+      align-items: center; 
+      min-height: 40px; 
+      border-bottom: 1px solid #e8ecef;
+      transition: background 0.2s;
+    }
+    .ae-row:hover {
+      background: #f8f9fa;
+    }
+    .ae-label { 
+      width: 200px; 
+      min-width: 200px; 
+      font-size: 12px; 
+      padding: 6px 10px; 
+      text-align: right; 
+      border: 1px solid #dee2e6; 
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 6px; 
+      margin-right: 12px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    .ae-label.fallback { 
+      color: #0066cc;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-color: #90caf9;
+    }
+    .ae-bar-area { 
+      flex: 1; 
+      position: relative; 
+      height: 32px; 
+      min-width: 800px;
+      padding: 2px 0;
+    }
+    .ae-segment { 
+      position: absolute; 
+      height: 8px; 
+      top: 12px; 
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: opacity 0.2s;
+    }
+    .ae-segment:hover {
+      opacity: 0.8;
+    }
+    .ae-point { 
+      position: absolute; 
+      width: 12px; 
+      height: 12px; 
+      border-radius: 50%; 
+      top: 10px; 
+      transform: translateX(-6px);
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    .ae-duration { 
+      position: absolute; 
+      font-size: 10px; 
+      color: #2c3e50; 
+      top: -4px; 
+      transform: translateX(-50%);
+      font-weight: 600;
+      background: rgba(255,255,255,0.9);
+      padding: 1px 3px;
+      border-radius: 3px;
+    }
+    .legend-container { display: flex; gap: 40px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; flex-wrap: wrap; }
+    .legend-section h4 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+    .legend-color { width: 24px; height: 6px; border-radius: 3px; }
+    .legend-shape { width: 10px; height: 10px; border-radius: 50%; }
+    .no-data { text-align: center; padding: 60px; color: #7F8C8D; font-size: 18px; }
+    /* AE Listing Table Styles */
+    .listing-section { margin-top: 40px; }
+    .listing-section h2 { margin-bottom: 20px; font-size: 18px; color: #1e293b; }
+    .ae-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .ae-table th { background: #2C3E50; color: white; font-weight: bold; padding: 10px 6px; text-align: left; }
+    .ae-table td { padding: 8px 6px; color: #34495E; border: 1px solid #E1E8ED; vertical-align: top; }
+    .ae-table tr:nth-child(odd) td { background: #FFFFFF; }
+    .ae-table tr:nth-child(even) td { background: #F7F9FC; }
+    .dset-reason { font-style: italic; color: #2C3E50; margin-top: 16px; font-size: 14px; }
+    .pagination { display: flex; gap: 8px; margin-top: 20px; justify-content: center; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; }
+    .pagination button.active { background: #2C3E50; color: white; }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab-absolute.html'+location.search">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab active">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content">
+    <h1 id="pageTitle">Treatment-Emergent Adverse Events</h1>
+    <div class="subject-selector">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+    </div>
+    <div class="card">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="legend-container">
+        <div class="legend-section">
+          <h4>Severity</h4>
+          <div class="legend-item"><span class="legend-color" style="background: lightblue;"></span> Grade 1</div>
+          <div class="legend-item"><span class="legend-color" style="background: #90EE90;"></span> Grade 2</div>
+          <div class="legend-item"><span class="legend-color" style="background: orange;"></span> Grade 3</div>
+          <div class="legend-item"><span class="legend-color" style="background: #e00d10;"></span> Grade 4</div>
+          <div class="legend-item"><span class="legend-color" style="background: #570203;"></span> Grade 5</div>
+        </div>
+        <div class="legend-section">
+          <h4>Relation</h4>
+          <div class="legend-item"><span class="legend-shape" style="background: black;"></span> Not Related</div>
+          <div class="legend-item"><span class="legend-shape" style="background: grey;"></span> Unlikely Related</div>
+          <div class="legend-item"><span class="legend-shape" style="background: red;"></span> Possibly Related</div>
+          <div class="legend-item"><span class="legend-shape" style="background: blue;"></span> Probably Related</div>
+          <div class="legend-item"><span class="legend-shape" style="background: green;"></span> Definitely Related</div>
+        </div>
+      </div>
+      <div class="listing-section">
+        <h2>Adverse Event Data Listing</h2>
+        <div id="tableContainer"></div>
+        <div class="pagination" id="pagination"></div>
+        <div class="dset-reason" id="dsetReason"></div>
+      </div>
+    </div>
+  </main>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    renderNav('patients', 'pp-ae-teae', '../../../');
+    let aeData = [], visData = [], dsetData = [];
+    let currentSubject = null;
+    let currentPage = 1;
+    const ROWS_PER_PAGE = 14;
+    const severityColors = { 'Grade 1': 'lightblue', 'Grade 2': '#90EE90', 'Grade 3': 'orange', 'Grade 4': '#e00d10', 'Grade 5': '#570203' };
+    const relationColors = { 'Not Related': 'black', 'Unlikely Related': 'grey', 'Possibly Related': 'red', 'Probably Related': 'blue', 'Definitely Related': 'green' };
+    
+    // R: short_date <- function(x) { ... substr(trimws(x_chr), 1, 9) }
+    function shortDate(str) { return (!str || str.trim() === '') ? '' : str.trim().substring(0, 9); }
+    
+    function parseAEDate(str) {
+      if (!str || str.trim() === '') return null;
+      const parts = str.trim().split(' ');
+      if (parts.length !== 3) return null;
+      // Support both uppercase and capitalized month names
+      const months = {
+        Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11,
+        JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11
+      };
+      const day = parseInt(parts[0]);
+      const monthKey = parts[1];
+      const month = months[monthKey];
+      const year = parseInt(parts[2]);
+      if (isNaN(day) || month === undefined || isNaN(year)) return null;
+      const date = new Date(year, month, day);
+      if (isNaN(date.getTime())) return null;
+      return date;
+    }
+    function parseSasDate(str) {
+      if (!str || str.trim() === '') return null;
+      // Try VISDAT_1_RAW format: "10 JAN 2025"
+      const parts = str.trim().split(' ');
+      if (parts.length === 3) {
+        const months = {
+          Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11,
+          JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11
+        };
+        const day = parseInt(parts[0]);
+        const month = months[parts[1]];
+        const year = parseInt(parts[2]);
+        if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime())) return date;
+        }
+      }
+      // Try SAS datetime format: "10JAN2025:00:00:00.000"
+      const dateOnly = str.substring(0, 9);
+      if (dateOnly.length === 9) {
+        const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+        const day = parseInt(dateOnly.substring(0,2));
+        const month = months[dateOnly.substring(2,5).toUpperCase()];
+        const year = parseInt(dateOnly.substring(5,9));
+        if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime())) return date;
+        }
+      }
+      return null;
+    }
+    
+    async function loadData() {
+      const [ae, vis, dset] = await Promise.all([
+        new Promise(res => Papa.parse('../../../data/ae.csv', { 
+          download: true, 
+          header: true, 
+          skipEmptyLines: true, 
+          complete: r => {
+            console.log('AE data loaded:', r.data.length, 'rows');
+            res(r.data);
+          }, 
+          error: (err) => {
+            console.error('Error loading AE data:', err);
+            res([]);
+          }
+        })),
+        new Promise(res => Papa.parse('../../../data/vis.CSV', { 
+          download: true, 
+          header: true, 
+          skipEmptyLines: true, 
+          complete: r => {
+            console.log('Visit data loaded:', r.data.length, 'rows');
+            if (r.data.length > 0) console.log('Visit columns:', Object.keys(r.data[0]));
+            res(r.data);
+          }, 
+          error: (err) => {
+            console.error('Error loading visit data:', err);
+            res([]);
+          }
+        })),
+        new Promise(res => Papa.parse('../../../data/dset.CSV', { 
+          download: true, 
+          header: true, 
+          skipEmptyLines: true, 
+          complete: r => res(r.data), 
+          error: () => res([]) 
+        }))
+      ]);
+      aeData = ae; visData = vis; dsetData = dset;
+    }
+    
+    function populateSubjects() {
+      if (!aeData || aeData.length === 0) {
+        document.getElementById('subjectSelect').innerHTML = '<option value="">No data available</option>';
+        document.getElementById('chartContainer').innerHTML = '<div class="no-data">No AE data available</div>';
+        return;
+      }
+      
+      const subjectCol = aeData[0].Subject ? 'Subject' : 
+                        aeData[0].subject ? 'subject' : 
+                        aeData[0].SUBJECT ? 'SUBJECT' : 'Subject';
+      
+      const subjects = [...new Set(aeData.map(r => r[subjectCol]))].filter(Boolean).sort();
+      console.log('Found subjects:', subjects);
+      
+      const select = document.getElementById('subjectSelect');
+      if (subjects.length === 0) {
+        select.innerHTML = '<option value="">No subjects found</option>';
+        return;
+      }
+      
+      select.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      const params = new URLSearchParams(window.location.search);
+      currentSubject = params.get('id') || subjects[0];
+      if (subjects.includes(currentSubject)) select.value = currentSubject;
+      else currentSubject = subjects[0];
+      select.addEventListener('change', e => { 
+        currentSubject = e.target.value; 
+        currentPage = 1;
+        history.replaceState(null, '', `?id=${currentSubject}`); 
+        renderChart(); 
+        renderTable(); 
+      });
+      renderChart();
+      renderTable();
+    }
+    
+    function renderChart() {
+      const container = document.getElementById('chartContainer');
+      const subj = currentSubject;
+      
+      const subjectCol = aeData[0]?.Subject ? 'Subject' : 
+                        aeData[0]?.subject ? 'subject' : 
+                        aeData[0]?.SUBJECT ? 'SUBJECT' : 'Subject';
+      
+      // Get baseline date from visit data - try C0D1 first, then C1D1, then fallback to first AE date
+      const visSubj = visData.filter(r => r.Subject === subj);
+      console.log(`Visit data for subject ${subj}:`, visSubj.length, 'records');
+      console.log('Sample visit record:', visSubj[0]);
+      
+      // Helper function to parse date from visit row
+      const parseVisitDate = (row) => {
+        if (!row) return null;
+        const dateCol = row.VISDAT_1_RAW || row.VISDAT || row.VISDAT_1 || row.VISDAT_INT;
+        return parseSasDate(dateCol);
+      };
+      
+      // Try to find C0D1 first
+      const c0d1Row = visSubj.find(r => r.Folder === 'C0D1');
+      let baselineDate = null;
+      let baselineSource = null;
+      
+      if (c0d1Row) {
+        baselineDate = parseVisitDate(c0d1Row);
+        if (baselineDate) {
+          baselineSource = 'C0D1';
+          console.log('C0D1 date found:', baselineDate);
+        }
+      }
+      
+      // If C0D1 not found, try C1D1
+      if (!baselineDate) {
+        const c1d1Row = visSubj.find(r => r.Folder === 'C1D1');
+        if (c1d1Row) {
+          baselineDate = parseVisitDate(c1d1Row);
+          if (baselineDate) {
+            baselineSource = 'C1D1';
+            console.log('C1D1 date found:', baselineDate);
+          }
+        }
+      }
+      
+      // Load and parse AE data
+      let data = aeData.filter(r => r[subjectCol] === subj).map(r => ({
+        ...r,
+        startDate: parseAEDate(r.AESTDAT_RAW),
+        endDate: parseAEDate(r.AEENDAT_RAW),
+        displayTerm: (r.AETERM_pt && r.AETERM_pt.trim()) ? r.AETERM_pt : r.AETERM,
+        isFallback: !r.AETERM_pt || r.AETERM_pt.trim() === ''
+      })).filter(r => r.startDate && !isNaN(r.startDate.getTime()));
+      
+      if (!data.length) { 
+        container.innerHTML = '<div class="no-data">No adverse events data with valid dates</div>'; 
+        return; 
+      }
+      
+      // If no C0D1 or C1D1 date, use first AE date as baseline (fallback)
+      let warningHtml = '';
+      if (!baselineDate) {
+        const firstAEDate = new Date(Math.min(...data.map(r => r.startDate.getTime())));
+        baselineDate = firstAEDate;
+        baselineSource = 'first AE date';
+        console.log('Using first AE date as baseline:', baselineDate);
+        warningHtml = '<div style="background: #fffbe6; border: 1px solid #ffe58f; padding: 12px; margin-bottom: 16px; border-radius: 6px; font-size: 13px;">⚠️ No C0D1 or C1D1 visit data found. Using first AE date as baseline for relative timeline.</div>';
+      }
+      
+      // R: StartDay = as.numeric(difftime(AESTDAT, baseline, units = "days"))
+      data = data.map(r => ({
+        ...r,
+        startDay: Math.round((r.startDate - baselineDate) / (1000 * 60 * 60 * 24)),
+        endDay: r.endDate ? Math.round((r.endDate - baselineDate) / (1000 * 60 * 60 * 24)) : null
+      }));
+      
+      // R: Pre_day <- -30
+      const PRE_DAY = -30;
+      
+      // Get visit labels for dual axis FIRST - filter out 'Ongoing' and ensure proper sorting
+      const visits = visSubj.map(r => {
+        const dateCol = r.VISDAT_1_RAW || r.VISDAT || r.VISDAT_1 || r.VISDAT_INT;
+        const visitDate = parseSasDate(dateCol);
+        if (!visitDate || isNaN(visitDate.getTime())) return null;
+        const folder = r.Folder === 'DSET' ? 'EOT' : r.Folder;
+        // Filter out any 'Ongoing' entries from visits
+        if (folder && folder.toUpperCase() === 'ONGOING') return null;
+        const day = Math.round((visitDate - baselineDate) / (1000 * 60 * 60 * 24));
+        return {
+          folder: folder,
+          day: day
+        };
+      }).filter(v => v !== null && !isNaN(v.day)).sort((a, b) => a.day - b.day);
+      
+      // R: ongoing <- max(c(d$EndDay, d$StartDay), na.rm = TRUE) + 30
+      const maxDay = Math.max(...data.map(r => r.endDay !== null ? r.endDay : r.startDay));
+      const maxVisitDay = visits.length > 0 ? Math.max(...visits.map(v => v.day)) : PRE_DAY;
+      // Ensure ongoingDay is always after all visits
+      const ongoingDay = Math.max(maxDay, maxVisitDay) + 30;
+      
+      // Filter visits to only include those before ongoingDay
+      const filteredVisits = visits.filter(v => v.day < ongoingDay);
+      
+      data = data.map(r => ({ ...r, endDay: r.endDay === null ? ongoingDay : r.endDay, isOngoing: r.endDate === null }));
+      
+      // Ensure Ongoing is always at the end - separate it from cycle visits
+      const axisBreaks = [PRE_DAY, ...filteredVisits.map(v => v.day), ongoingDay];
+      const axisLabelsTop = ['Pre', ...filteredVisits.map(v => v.day), 'Ongoing'];
+      const axisLabelsBot = ['Pre', ...filteredVisits.map(v => v.folder), 'Ongoing'];
+      
+      const terms = [...new Set(data.map(r => r.displayTerm))];
+      const range = ongoingDay - PRE_DAY;
+      
+      document.getElementById('pageTitle').textContent = `Treatment-Emergent Adverse Events for Subject ${subj}`;
+      
+      let html = warningHtml + '<div class="dual-axis">';
+      
+      // Top axis (study days)
+      html += '<div class="axis-row top">';
+      axisBreaks.forEach((b, i) => {
+        const pct = ((b - PRE_DAY) / range) * 100;
+        html += `<span style="position:absolute;left:calc(200px + ${pct}%);transform:translateX(-50%);">${axisLabelsTop[i]}</span>`;
+      });
+      html += '</div>';
+      
+      // Data rows
+      for (const term of terms) {
+        const termData = data.filter(r => r.displayTerm === term);
+        html += `<div class="ae-row"><div class="ae-label${termData[0].isFallback ? ' fallback' : ''}">${term}</div><div class="ae-bar-area">`;
+        
+        for (const ae of termData) {
+          // Ensure endDay doesn't exceed ongoingDay for display purposes
+          const displayEndDay = Math.min(ae.endDay, ongoingDay);
+          const leftPct = ((ae.startDay - PRE_DAY) / range) * 100;
+          const widthPct = ((displayEndDay - ae.startDay) / range) * 100;
+          const sevColor = severityColors[ae.AETOXGR] || '#999';
+          const relColor = relationColors[ae.AEREL] || 'black';
+          const duration = ae.endDay - ae.startDay || 1;
+          
+          if (ae.startDay !== ae.endDay) {
+            html += `<div class="ae-segment" style="left:${leftPct}%;width:${widthPct}%;background:${sevColor};"></div>`;
+          }
+          html += `<div class="ae-point" style="left:${leftPct}%;background:${relColor};"></div>`;
+          
+          if (ae.isOngoing) {
+            html += `<div style="position:absolute;left:calc(${leftPct + widthPct}% - 1px);top:8px;width:0;height:0;border-left:8px solid ${sevColor};border-top:4px solid transparent;border-bottom:4px solid transparent;"></div>`;
+          } else if (ae.startDay !== ae.endDay) {
+            html += `<span style="position:absolute;left:${leftPct + widthPct}%;top:6px;font-size:14px;">|</span>`;
+          }
+          
+          // Duration label (R: label = ifelse((EndDay - StartDay) == 0, 1, EndDay - StartDay))
+          html += `<div class="ae-duration" style="left:${leftPct + widthPct/2}%;">${duration}</div>`;
+        }
+        html += '</div></div>';
+      }
+      
+      // Bottom axis (visit names) - rotate cycle labels 45 degrees, ensure Ongoing is last
+      html += '<div class="axis-row bottom">';
+      axisBreaks.forEach((b, i) => {
+        const pct = ((b - PRE_DAY) / range) * 100;
+        const label = axisLabelsBot[i];
+        // Check if label contains cycle (C1, C2, etc.) or is EOT and rotate it
+        const isCycle = /^C\d+/.test(label) || label === 'EOT';
+        const isOngoing = label === 'Ongoing';
+        const isPre = label === 'Pre';
+        let transform, paddingTop = '0px';
+        
+        if (isCycle) {
+          transform = 'translateX(-50%) rotate(-45deg)';
+          paddingTop = '8px';
+        } else if (isOngoing) {
+          transform = 'translateX(-50%)';
+          // Ensure Ongoing is positioned correctly and visible
+        } else {
+          transform = 'translateX(-50%)';
+        }
+        
+        html += `<span style="position:absolute;left:calc(200px + ${pct}%);transform:${transform};transform-origin:center;white-space:nowrap;display:inline-block;padding-top:${paddingTop};font-weight:${isOngoing ? '600' : '500'};color:${isOngoing ? '#e74c3c' : '#34495e'};">${label}</span>`;
+      });
+      html += '</div></div>';
+      
+      container.innerHTML = html;
+    }
+    
+    function renderTable() {
+      const container = document.getElementById('tableContainer');
+      const subj = currentSubject;
+      
+      if (!aeData || aeData.length === 0) {
+        if (container) container.innerHTML = '<div class="no-data">No adverse events data available</div>';
+        if (document.getElementById('pagination')) document.getElementById('pagination').innerHTML = '';
+        if (document.getElementById('dsetReason')) document.getElementById('dsetReason').textContent = '';
+        return;
+      }
+      
+      const subjectCol = aeData[0]?.Subject ? 'Subject' : 
+                        aeData[0]?.subject ? 'subject' : 
+                        aeData[0]?.SUBJECT ? 'SUBJECT' : 'Subject';
+      
+      // R code transformation logic
+      let data = aeData.filter(r => r[subjectCol] === subj).map(r => ({
+        aeTerm: (r.AETERM_pt && r.AETERM_pt.trim()) ? r.AETERM_pt : r.AETERM,
+        startDate: shortDate(r.AESTDAT_INT),
+        endDate: shortDate(r.AEENDAT_INT),
+        outcome: r.AEOUT || '',
+        grade: r.AETOXGR_STD || '',
+        related: r.AEREL_STD || '',
+        action: r.AEACN_STD || '',
+        // R: SAE Flag = if_else(tolower(trimws(coalesce(AESER_STD, AESER, ""))) %in% c("y","yes","1","true","t"), "Yes", "No")
+        saeFlag: ['y','yes','1','true','t'].includes((r.AESER_STD || r.AESER || '').toLowerCase().trim()) ? 'Yes' : 'No',
+        discontinuation: r.AEDIS_STD || ''
+      }));
+      
+      if (!data.length) {
+        if (container) container.innerHTML = '<div class="no-data">No adverse events data available</div>';
+        if (document.getElementById('pagination')) document.getElementById('pagination').innerHTML = '';
+        if (document.getElementById('dsetReason')) document.getElementById('dsetReason').textContent = '';
+        return;
+      }
+      
+      const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
+      const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+      const pageData = data.slice(startIdx, startIdx + ROWS_PER_PAGE);
+      
+      let html = `<table class="ae-table"><thead><tr>
+        <th style="width:22%">AE Term</th><th style="width:9%">Start Date</th><th style="width:9%">End Date</th>
+        <th style="width:11%">Outcome</th><th style="width:7%">Grade</th><th style="width:12%">Related</th>
+        <th style="width:13%">Action Taken</th><th style="width:7%">SAE</th><th style="width:10%">Discont.</th>
+      </tr></thead><tbody>`;
+      for (const row of pageData) {
+        html += `<tr><td>${row.aeTerm}</td><td>${row.startDate}</td><td>${row.endDate}</td><td>${row.outcome}</td><td>${row.grade}</td><td>${row.related}</td><td>${row.action}</td><td>${row.saeFlag}</td><td>${row.discontinuation}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (container) container.innerHTML = html;
+      
+      // Pagination
+      let pagHtml = '';
+      if (totalPages > 1) {
+        pagHtml += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Prev</button>`;
+        for (let p = 1; p <= totalPages; p++) pagHtml += `<button class="${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        pagHtml += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next →</button>`;
+      }
+      if (document.getElementById('pagination')) document.getElementById('pagination').innerHTML = pagHtml;
+      
+      // DSET reason on last page - R: if (page_i == total_pages && nzchar(dset_reason))
+      const dsetRow = dsetData.find(r => {
+        const subjCol = r.Subject || r.subject || r.SUBJECT;
+        return subjCol === subj;
+      });
+      if (document.getElementById('dsetReason')) {
+        document.getElementById('dsetReason').textContent = (currentPage === totalPages && dsetRow?.DSET_DSDECOD_STD) ? 
+          `Treatment Discontinued Reason: ${dsetRow.DSET_DSDECOD_STD}` : '';
+      }
+    }
+    
+    function goToPage(page) { 
+      currentPage = page; 
+      renderTable(); 
+    }
+    
+    loadData().then(() => {
+      console.log('Data loading complete, populating subjects...');
+      populateSubjects();
+    }).catch(err => {
+      console.error('Error in loadData:', err);
+    });
+  </script>
+</body>
+</html>

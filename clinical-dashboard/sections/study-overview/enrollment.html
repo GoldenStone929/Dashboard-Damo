@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enrollment & Disposition</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+    
+    .page-content {
+      padding: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #2C3E50;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      font-weight: 600;
+    }
+    
+    .page-subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 30px;
+      font-size: 1rem;
+    }
+    
+    /* Key Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 900px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-3px);
+    }
+    
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    
+    .metric-card.screened::before { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+    .metric-card.enrolled::before { background: linear-gradient(90deg, #3498db, #2980b9); }
+    .metric-card.dosed::before { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+    .metric-card.failed::before { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+    .metric-card.ongoing::before { background: linear-gradient(90deg, #1abc9c, #16a085); }
+    
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .metric-card.screened .metric-value { color: #9b59b6; }
+    .metric-card.enrolled .metric-value { color: #3498db; }
+    .metric-card.dosed .metric-value { color: #2ecc71; }
+    .metric-card.failed .metric-value { color: #e74c3c; }
+    .metric-card.ongoing .metric-value { color: #1abc9c; }
+    
+    .metric-label {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    .metric-sublabel {
+      font-size: 0.75rem;
+      color: #95a5a6;
+      margin-top: 3px;
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .card.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #3498db;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      color: #2C3E50;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    
+    th, td {
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    
+    th {
+      background: #34495E;
+      color: white;
+      font-weight: 600;
+    }
+    
+    td:first-child {
+      text-align: left;
+    }
+    
+    tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    
+    tr:hover {
+      background: #e8f4f8;
+    }
+    
+    .total-row {
+      background: #34495E !important;
+      color: white;
+      font-weight: 600;
+    }
+    
+    .total-row:hover {
+      background: #2C3E50 !important;
+    }
+    
+    /* Chart container */
+    .chart-container {
+      position: relative;
+      height: 350px;
+    }
+    
+    .chart-container.tall {
+      height: 400px;
+    }
+    
+    /* Status indicators */
+    .status-enrolled { color: #3498db; font-weight: 600; }
+    .status-dosed { color: #2ecc71; font-weight: 600; }
+    .status-ongoing { color: #1abc9c; font-weight: 600; }
+    .status-completed { color: #9b59b6; font-weight: 600; }
+    .status-failed { color: #e74c3c; font-weight: 600; }
+    
+    /* Disposition Flow */
+    .disposition-flow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 15px;
+      padding: 20px 0;
+    }
+    
+    .flow-box {
+      background: white;
+      border: 2px solid #3498db;
+      border-radius: 10px;
+      padding: 15px 25px;
+      text-align: center;
+      min-width: 120px;
+    }
+    
+    .flow-box.screened { border-color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
+    .flow-box.enrolled { border-color: #3498db; background: rgba(52, 152, 219, 0.1); }
+    .flow-box.dosed { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); }
+    .flow-box.failed { border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+    
+    .flow-box .flow-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    
+    .flow-box.screened .flow-value { color: #9b59b6; }
+    .flow-box.enrolled .flow-value { color: #3498db; }
+    .flow-box.dosed .flow-value { color: #2ecc71; }
+    .flow-box.failed .flow-value { color: #e74c3c; }
+    
+    .flow-box .flow-label {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+    
+    .flow-arrow {
+      font-size: 1.5rem;
+      color: #bdc3c7;
+    }
+    
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #7f8c8d;
+    }
+    
+    .loading .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Export button */
+    .export-btn {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+      background: linear-gradient(135deg, #2980b9, #1f6dad);
+      transform: translateY(-1px);
+    }
+    
+    /* Filter panel */
+    .filter-panel {
+      background: white;
+      border-radius: 10px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .filter-group label {
+      font-weight: 500;
+      color: #2C3E50;
+    }
+    
+    .filter-group select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      min-width: 150px;
+    }
+    
+    /* Screening Metrics */
+    .screening-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .screening-metric {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      border-left: 4px solid #3498db;
+    }
+    
+    .screening-metric.success {
+      border-left-color: #27ae60;
+    }
+    
+    .screening-metric.warning {
+      border-left-color: #f39c12;
+    }
+    
+    .screening-metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #2C3E50;
+    }
+    
+    .screening-metric-label {
+      font-size: 0.8rem;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+    
+    /* Progress indicator */
+    .progress-container {
+      margin: 15px 0;
+    }
+    
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+    
+    .progress-bar-bg {
+      background: #e9ecef;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #27ae60, #2ecc71);
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <h1>Enrollment & Disposition</h1>
+    <p class="page-subtitle">Subject enrollment timeline and disposition summary</p>
+    
+    <!-- Loading State -->
+    <div id="loadingState" class="loading">
+      <div class="spinner"></div>
+      <p>Loading enrollment data...</p>
+    </div>
+    
+    <!-- Dashboard Content -->
+    <div id="dashboardContent" style="display: none;">
+      
+      <!-- Key Metrics -->
+      <div class="metrics-grid" id="metricsGrid"></div>
+      
+      <!-- Disposition Flow -->
+      <div class="card full-width" id="cardFlow" style="margin-bottom: 25px;">
+        <div class="card-header">
+          <h3>Subject Flow</h3>
+          <button class="export-btn" onclick="showBlockExportDialog('cardFlow', 'Subject_Flow')">Export</button>
+        </div>
+        <div class="disposition-flow" id="dispositionFlow"></div>
+      </div>
+      
+      <!-- Filter Panel -->
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label>Country:</label>
+          <select id="countryFilter" onchange="applyFilters()">
+            <option value="all">All Countries</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Site:</label>
+          <select id="siteFilter" onchange="applyFilters()">
+            <option value="all">All Sites</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Main Dashboard Grid -->
+      <div class="dashboard-grid">
+        
+        <!-- Cumulative Enrollment -->
+        <div class="card full-width" id="cardCumulative">
+          <div class="card-header">
+            <h3>Cumulative Enrollment Over Time</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardCumulative', 'Cumulative_Enrollment')">Export</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="cumulativeChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Monthly Enrollment -->
+        <div class="card" id="cardMonthly">
+          <div class="card-header">
+            <h3>Monthly Enrollment</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardMonthly', 'Monthly_Enrollment')">Export</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Enrollment by Site -->
+        <div class="card" id="cardSite">
+          <div class="card-header">
+            <h3>Enrollment by Site</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardSite', 'Site_Enrollment')">Export</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="siteChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Enrollment by Cohort -->
+        <div class="card" id="cardCohort">
+          <div class="card-header">
+            <h3>Enrollment by Dose Cohort</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardCohort', 'Cohort_Enrollment')">Export</button>
+          </div>
+          <table id="cohortTable">
+            <thead>
+              <tr>
+                <th>Dose Cohort</th>
+                <th>Dosed</th>
+                <th>Ongoing</th>
+                <th>Off-Study</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Screening Performance Metrics -->
+        <div class="card" id="cardScreeningMetrics">
+          <div class="card-header">
+            <h3>📈 Screening Performance Metrics</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardScreeningMetrics', 'Screening_Metrics')">Export</button>
+          </div>
+          <div class="screening-metrics" id="screeningMetrics"></div>
+          <div id="screeningProgress"></div>
+        </div>
+        
+        <!-- Screen Failures -->
+        <div class="card" id="cardFailures">
+          <div class="card-header">
+            <h3>Screen Failure Reasons</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardFailures', 'Screen_Failures')">Export</button>
+          </div>
+          <table id="failureTable">
+            <thead>
+              <tr>
+                <th>Reason</th>
+                <th>N</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Site Detail Table -->
+        <div class="card full-width" id="cardSiteTable">
+          <div class="card-header">
+            <h3>Enrollment by Site (Detail)</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardSiteTable', 'Site_Detail')">Export</button>
+          </div>
+          <table id="siteTable">
+            <thead>
+              <tr>
+                <th>Site</th>
+                <th>Country</th>
+                <th>Screened</th>
+                <th>Enrolled</th>
+                <th>Screen Fail</th>
+                <th>Dosed</th>
+                <th>Ongoing</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+      </div>
+    </div>
+  </main>
+  
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    renderNav('study-overview', 'enrollment', '../../');
+    
+    // Set export filename prefix
+    if (typeof setBlockExportPrefix === 'function') {
+      setBlockExportPrefix('Enrollment');
+    }
+    
+    // Global data
+    let dsenData = [];
+    let dmData = [];
+    let charts = {};
+    const today = new Date();
+    
+    // Processed data
+    let allSubjects = [];
+    let filteredSubjects = [];
+    
+    function parseDate(str) {
+      if (!str || str.trim() === '') return null;
+      // Handle YYYY-MM-DD format
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
+      return null;
+    }
+    
+    function parseSasDate(str) {
+      if (!str) return null;
+      // Handle SAS datetime format: 18DEC2024:00:00:00.000
+      const match = str.match(/(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        return new Date(parseInt(match[3]), months[match[2].toUpperCase()], parseInt(match[1]));
+      }
+      return null;
+    }
+    
+    function formatDate(date) {
+      if (!date) return '';
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    function formatPercent(n, total) {
+      if (total === 0) return '0.0%';
+      return ((n / total) * 100).toFixed(1) + '%';
+    }
+    
+    function getMonthKey(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    
+    async function loadCSV(path) {
+      return new Promise(resolve => {
+        Papa.parse(path, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: r => resolve(r.data),
+          error: () => resolve([])
+        });
+      });
+    }
+    
+    async function init() {
+      try {
+        // Load data files
+        const [dsen, dm] = await Promise.all([
+          loadCSV('../../data/dsen.CSV'),
+          loadCSV('../../data/dm.csv')
+        ]);
+        
+        dsenData = dsen;
+        dmData = dm;
+        
+        // Hide loading, show content
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        
+        // Process data
+        processData();
+        
+        // Populate filters
+        populateFilters();
+        
+        // Render dashboard
+        renderDashboard();
+        
+        // Initialize export dialog
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+        }
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('loadingState').innerHTML = `
+          <p style="color: #e74c3c;">Error loading data. Please check console for details.</p>
+        `;
+      }
+    }
+    
+    function processData() {
+      // Create lookup from dsen.CSV for enrollment/failure info
+      const dsenLookup = {};
+      dsenData.forEach(row => {
+        const subjId = row.Subject;
+        if (subjId) {
+          dsenLookup[subjId] = row;
+        }
+      });
+      
+      // Process subjects from dm.csv (primary source)
+      allSubjects = dmData.map(row => {
+        const subjId = row.SUBJID || row.USUBJID;
+        const dsenRow = dsenLookup[subjId] || {};
+        
+        // ICF date = screening/enrollment date from dm.csv
+        const icfDate = parseDate(row.RFICDTC) || parseSasDate(row.RFICDTC);
+        
+        // Dosing info from dm.csv
+        const doseStartDate = parseDate(row.RFXSTDTC) || parseSasDate(row.RFXSTDTC);
+        const doseEndDate = parseDate(row.RFXENDTC) || parseSasDate(row.RFXENDTC);
+        const isDosed = !!doseStartDate;
+        const isOngoing = isDosed && (!doseEndDate || doseEndDate >= today);
+        const isDeath = row.DTHFL === 'Y';
+        
+        // Enrolled = has dosing start date OR enrollment flag from dsen
+        const isEnrolled = isDosed || dsenRow.ENRLYN_STD === 'Y';
+        
+        // Screen failure reason from dsen
+        const failureReason = dsenRow.DSEN_DSDECOD_STD || dsenRow.DSEN_DSDECOD || '';
+        
+        // Get cohort/arm from dm.csv
+        const cohort = (row.ARM || '').trim() || 'Unknown';
+        
+        // Site and country info from dm.csv
+        const siteId = row.SITEID || 'Unknown';
+        const country = row.COUNTRY || 'Unknown';
+        
+        return {
+          subject: subjId,
+          enrollDate: icfDate || doseStartDate, // Use ICF date or dose start date
+          icfDate,
+          isEnrolled,
+          failureReason,
+          isDosed,
+          doseStartDate,
+          doseEndDate,
+          isOngoing: isOngoing && !isDeath,
+          isDeath,
+          isOffStudy: isDosed && (!isOngoing || isDeath),
+          cohort,
+          siteId,
+          country
+        };
+      }).filter(s => s.subject); // Include all subjects with ID
+      
+      filteredSubjects = [...allSubjects];
+    }
+    
+    function populateFilters() {
+      // Countries
+      const countries = [...new Set(allSubjects.map(s => s.country))].sort();
+      const countrySelect = document.getElementById('countryFilter');
+      countries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = country;
+        countrySelect.appendChild(option);
+      });
+      
+      // Sites
+      const sites = [...new Set(allSubjects.map(s => s.siteId))].sort();
+      const siteSelect = document.getElementById('siteFilter');
+      sites.forEach(site => {
+        const option = document.createElement('option');
+        option.value = site;
+        option.textContent = site;
+        siteSelect.appendChild(option);
+      });
+    }
+    
+    function applyFilters() {
+      const countryFilter = document.getElementById('countryFilter').value;
+      const siteFilter = document.getElementById('siteFilter').value;
+      
+      filteredSubjects = allSubjects.filter(s => {
+        if (countryFilter !== 'all' && s.country !== countryFilter) return false;
+        if (siteFilter !== 'all' && s.siteId !== siteFilter) return false;
+        return true;
+      });
+      
+      renderDashboard();
+    }
+    
+    function renderDashboard() {
+      const subjects = filteredSubjects;
+      
+      // Calculate metrics based on dm.csv
+      // Screened = has ICF date (RFICDTC)
+      const screened = subjects.filter(s => s.icfDate).length;
+      // Dosed = has first dose date (RFXSTDTC) - this is the Safety Analysis Set
+      const dosed = subjects.filter(s => s.isDosed).length;
+      // Screen Failures = has ICF but never dosed
+      const failed = subjects.filter(s => s.icfDate && !s.isDosed).length;
+      // Enrolled = dosed (in this study context)
+      const enrolled = dosed;
+      
+      // Render all components
+      renderMetrics(screened, enrolled, failed, dosed);
+      renderDispositionFlow(screened, enrolled, failed, dosed);
+      renderScreeningMetrics(subjects, screened, enrolled, failed, dosed);
+      renderCumulativeChart(subjects);
+      renderMonthlyChart(subjects);
+      renderSiteChart(subjects);
+      renderCohortTable(subjects);
+      renderFailureTable(subjects);
+      renderSiteTable(subjects);
+    }
+    
+    function renderScreeningMetrics(subjects, screened, enrolled, failed, dosed) {
+      // Calculate screening conversion rate
+      const conversionRate = screened > 0 ? ((enrolled / screened) * 100).toFixed(1) : 0;
+      const failureRate = screened > 0 ? ((failed / screened) * 100).toFixed(1) : 0;
+      
+      // Calculate time from ICF to first dose
+      const withBothDates = subjects.filter(s => s.icfDate && s.doseStartDate);
+      const daysToFirstDose = withBothDates.map(s => {
+        return Math.round((s.doseStartDate - s.icfDate) / (1000 * 60 * 60 * 24));
+      }).filter(d => d >= 0);
+      
+      const avgDaysToFirstDose = daysToFirstDose.length > 0 
+        ? (daysToFirstDose.reduce((a, b) => a + b, 0) / daysToFirstDose.length).toFixed(1) 
+        : 'N/A';
+      
+      const medianDaysToFirstDose = (() => {
+        if (daysToFirstDose.length === 0) return 'N/A';
+        const sorted = [...daysToFirstDose].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : ((sorted[mid - 1] + sorted[mid]) / 2).toFixed(0);
+      })();
+      
+      // Monthly enrollment rate
+      const dosedSubjects = subjects.filter(s => s.isDosed && s.doseStartDate);
+      const firstDoseDate = dosedSubjects.length > 0 
+        ? Math.min(...dosedSubjects.map(s => s.doseStartDate.getTime()))
+        : null;
+      const monthsActive = firstDoseDate 
+        ? Math.max(1, Math.ceil((today - firstDoseDate) / (1000 * 60 * 60 * 24 * 30.44)))
+        : 1;
+      const enrollmentRate = (dosed / monthsActive).toFixed(1);
+      
+      document.getElementById('screeningMetrics').innerHTML = `
+        <div class="screening-metric success">
+          <div class="screening-metric-value">${conversionRate}%</div>
+          <div class="screening-metric-label">Screening Success Rate</div>
+        </div>
+        <div class="screening-metric warning">
+          <div class="screening-metric-value">${failureRate}%</div>
+          <div class="screening-metric-label">Screen Failure Rate</div>
+        </div>
+        <div class="screening-metric">
+          <div class="screening-metric-value">${avgDaysToFirstDose}</div>
+          <div class="screening-metric-label">Avg Days to First Dose</div>
+        </div>
+        <div class="screening-metric">
+          <div class="screening-metric-value">${medianDaysToFirstDose}</div>
+          <div class="screening-metric-label">Median Days to First Dose</div>
+        </div>
+        <div class="screening-metric">
+          <div class="screening-metric-value">${enrollmentRate}</div>
+          <div class="screening-metric-label">Subjects/Month</div>
+        </div>
+      `;
+      
+      // Progress bar
+      document.getElementById('screeningProgress').innerHTML = `
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>Screening Conversion</span>
+            <span>${enrolled} of ${screened} screened</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${conversionRate}%;">${conversionRate}%</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderMetrics(screened, enrolled, failed, dosed) {
+      document.getElementById('metricsGrid').innerHTML = `
+        <div class="metric-card screened">
+          <div class="metric-value">${screened}</div>
+          <div class="metric-label">Screened</div>
+        </div>
+        <div class="metric-card enrolled">
+          <div class="metric-value">${enrolled}</div>
+          <div class="metric-label">Enrolled</div>
+          <div class="metric-sublabel">${formatPercent(enrolled, screened)} of screened</div>
+        </div>
+        <div class="metric-card failed">
+          <div class="metric-value">${failed}</div>
+          <div class="metric-label">Screen Failures</div>
+          <div class="metric-sublabel">${formatPercent(failed, screened)} of screened</div>
+        </div>
+        <div class="metric-card dosed">
+          <div class="metric-value">${dosed}</div>
+          <div class="metric-label">Dosed</div>
+          <div class="metric-sublabel">${formatPercent(dosed, enrolled)} of enrolled</div>
+        </div>
+      `;
+    }
+    
+    function renderDispositionFlow(screened, enrolled, failed, dosed) {
+      document.getElementById('dispositionFlow').innerHTML = `
+        <div class="flow-box screened">
+          <div class="flow-value">${screened}</div>
+          <div class="flow-label">Screened</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box enrolled">
+          <div class="flow-value">${enrolled}</div>
+          <div class="flow-label">Enrolled</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box dosed">
+          <div class="flow-value">${dosed}</div>
+          <div class="flow-label">Dosed</div>
+        </div>
+        <div class="flow-arrow">|</div>
+        <div class="flow-box failed">
+          <div class="flow-value">${failed}</div>
+          <div class="flow-label">Screen Failures</div>
+        </div>
+      `;
+    }
+    
+    function renderCumulativeChart(subjects) {
+      // Get dosed subjects sorted by first dose date
+      const dosed = subjects.filter(s => s.isDosed && s.doseStartDate)
+        .sort((a, b) => a.doseStartDate - b.doseStartDate);
+      
+      if (dosed.length === 0) return;
+      
+      // Build cumulative data
+      const data = [];
+      dosed.forEach((s, idx) => {
+        data.push({ x: s.doseStartDate, y: idx + 1 });
+      });
+      data.push({ x: today, y: dosed.length });
+      
+      // Destroy existing chart
+      if (charts.cumulative) charts.cumulative.destroy();
+      
+      const ctx = document.getElementById('cumulativeChart').getContext('2d');
+      charts.cumulative = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: 'Cumulative Enrollment',
+            data: data,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 2,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: ctx => formatDate(new Date(ctx[0].parsed.x)),
+                label: ctx => `Total Enrolled: ${ctx.parsed.y}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+              title: { display: true, text: 'Date', font: { weight: 'bold' } }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Subjects Enrolled', font: { weight: 'bold' } }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderMonthlyChart(subjects) {
+      // Get dosed subjects with first dose dates
+      const dosed = subjects.filter(s => s.isDosed && s.doseStartDate);
+      
+      // Count by month
+      const monthlyCounts = {};
+      dosed.forEach(s => {
+        const key = getMonthKey(s.doseStartDate);
+        monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
+      });
+      
+      // Sort months
+      const sortedMonths = Object.keys(monthlyCounts).sort();
+      
+      // Destroy existing chart
+      if (charts.monthly) charts.monthly.destroy();
+      
+      const ctx = document.getElementById('monthlyChart').getContext('2d');
+      charts.monthly = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedMonths.map(m => {
+            const [year, month] = m.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+          }),
+          datasets: [{
+            label: 'Enrolled',
+            data: sortedMonths.map(m => monthlyCounts[m]),
+            backgroundColor: '#3498db',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Month', font: { weight: 'bold' } } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Subjects', font: { weight: 'bold' } }
+            }
+          }
+        }
+      });
+    }
+    
+    function renderSiteChart(subjects) {
+      // Count dosed subjects by site
+      const siteCounts = {};
+      subjects.filter(s => s.isDosed).forEach(s => {
+        siteCounts[s.siteId] = (siteCounts[s.siteId] || 0) + 1;
+      });
+      
+      // Sort by count descending
+      const sorted = Object.entries(siteCounts).sort((a, b) => b[1] - a[1]);
+      
+      const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+      
+      // Destroy existing chart
+      if (charts.site) charts.site.destroy();
+      
+      const ctx = document.getElementById('siteChart').getContext('2d');
+      charts.site = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sorted.map(([site]) => site),
+          datasets: [{
+            label: 'Enrolled',
+            data: sorted.map(([, count]) => count),
+            backgroundColor: sorted.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              title: { display: true, text: 'Subjects Enrolled', font: { weight: 'bold' } }
+            },
+            y: { title: { display: true, text: 'Site', font: { weight: 'bold' } } }
+          }
+        }
+      });
+    }
+    
+    function renderCohortTable(subjects) {
+      const tbody = document.querySelector('#cohortTable tbody');
+      
+      // Get unique cohorts from dosed subjects only
+      const dosedSubjects = subjects.filter(s => s.isDosed);
+      const cohorts = [...new Set(dosedSubjects.map(s => s.cohort))].sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        const numA = parseInt(a) || 0;
+        const numB = parseInt(b) || 0;
+        return numA - numB;
+      });
+      
+      let html = '';
+      let totals = { dosed: 0, ongoing: 0, off: 0 };
+      
+      cohorts.forEach(cohort => {
+        const cohortSubjects = dosedSubjects.filter(s => s.cohort === cohort);
+        const dosed = cohortSubjects.length;
+        const ongoing = cohortSubjects.filter(s => s.isOngoing).length;
+        const off = cohortSubjects.filter(s => s.isOffStudy).length;
+        
+        totals.dosed += dosed;
+        totals.ongoing += ongoing;
+        totals.off += off;
+        
+        html += `
+          <tr>
+            <td style="font-weight: 500;">${cohort}</td>
+            <td class="status-dosed">${dosed}</td>
+            <td class="status-ongoing">${ongoing}</td>
+            <td>${off}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        <tr class="total-row">
+          <td>Total</td>
+          <td>${totals.dosed}</td>
+          <td>${totals.ongoing}</td>
+          <td>${totals.off}</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderFailureTable(subjects) {
+      const tbody = document.querySelector('#failureTable tbody');
+      
+      // Screen failures = has ICF but not dosed
+      const failures = subjects.filter(s => s.icfDate && !s.isDosed);
+      const total = failures.length;
+      
+      // Count by reason
+      const reasons = {};
+      failures.forEach(s => {
+        const reason = s.failureReason || 'Unknown';
+        reasons[reason] = (reasons[reason] || 0) + 1;
+      });
+      
+      // Sort by count descending
+      const sorted = Object.entries(reasons).sort((a, b) => b[1] - a[1]);
+      
+      let html = '';
+      sorted.forEach(([reason, count]) => {
+        html += `
+          <tr>
+            <td>${reason}</td>
+            <td>${count}</td>
+            <td>${formatPercent(count, total)}</td>
+          </tr>
+        `;
+      });
+      
+      if (sorted.length === 0) {
+        html = '<tr><td colspan="3" style="text-align: center; color: #95a5a6;">No screen failures</td></tr>';
+      } else {
+        html += `
+          <tr class="total-row">
+            <td>Total</td>
+            <td>${total}</td>
+            <td>100.0%</td>
+          </tr>
+        `;
+      }
+      
+      tbody.innerHTML = html;
+    }
+    
+    function renderSiteTable(subjects) {
+      const tbody = document.querySelector('#siteTable tbody');
+      
+      // Group by site
+      const siteData = {};
+      subjects.forEach(s => {
+        if (!siteData[s.siteId]) {
+          siteData[s.siteId] = {
+            siteId: s.siteId,
+            country: s.country,
+            screened: 0,
+            enrolled: 0,
+            failed: 0,
+            dosed: 0,
+            ongoing: 0
+          };
+        }
+        siteData[s.siteId].screened++;
+        if (s.isEnrolled) siteData[s.siteId].enrolled++;
+        if (!s.isEnrolled) siteData[s.siteId].failed++;
+        if (s.isDosed) siteData[s.siteId].dosed++;
+        if (s.isOngoing) siteData[s.siteId].ongoing++;
+      });
+      
+      // Sort by enrolled count descending
+      const sorted = Object.values(siteData).sort((a, b) => b.enrolled - a.enrolled);
+      
+      let html = '';
+      let totals = { screened: 0, enrolled: 0, failed: 0, dosed: 0, ongoing: 0 };
+      
+      sorted.forEach(site => {
+        totals.screened += site.screened;
+        totals.enrolled += site.enrolled;
+        totals.failed += site.failed;
+        totals.dosed += site.dosed;
+        totals.ongoing += site.ongoing;
+        
+        html += `
+          <tr>
+            <td style="font-weight: 500;">${site.siteId}</td>
+            <td>${site.country}</td>
+            <td>${site.screened}</td>
+            <td class="status-enrolled">${site.enrolled}</td>
+            <td class="status-failed">${site.failed}</td>
+            <td class="status-dosed">${site.dosed}</td>
+            <td class="status-ongoing">${site.ongoing}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        <tr class="total-row">
+          <td>Total</td>
+          <td></td>
+          <td>${totals.screened}</td>
+          <td>${totals.enrolled}</td>
+          <td>${totals.failed}</td>
+          <td>${totals.dosed}</td>
+          <td>${totals.ongoing}</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

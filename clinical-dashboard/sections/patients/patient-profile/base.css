@@ -1,0 +1,382 @@
+/* ============================================
+   Clinical Dashboard - Base Styles
+   Professional medical theme with clean hierarchy
+   ============================================ */
+
+/* --- CSS Variables --- */
+:root {
+  /* Primary palette - Deep medical blue */
+  --nav-bg: #0f172a;
+  --nav-bg-hover: #1e293b;
+  --nav-border: #334155;
+  --nav-text: #e2e8f0;
+  --nav-text-muted: #94a3b8;
+  --nav-accent: #38bdf8;
+  --nav-accent-glow: rgba(56, 189, 248, 0.15);
+  
+  /* Dropdown */
+  --dropdown-bg: #1e293b;
+  --dropdown-hover: #334155;
+  --dropdown-border: #475569;
+  
+  /* Page content */
+  --page-bg: #f8fafc;
+  --content-bg: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-light: #e2e8f0;
+  
+  /* Spacing */
+  --nav-height: 60px;
+  --nav-padding: 0 24px;
+  --dropdown-width: 260px;
+  
+  /* Typography */
+  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', monospace;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--page-bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* --- Global Navigation Bar --- */
+#global-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: var(--nav-padding);
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+/* Logo / Brand */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 40px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-brand-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--nav-accent) 0%, #0ea5e9 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--nav-bg);
+  font-size: 14px;
+  letter-spacing: -0.5px;
+}
+
+.nav-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.nav-brand-title {
+  color: var(--nav-text);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.3px;
+}
+
+.nav-brand-subtitle {
+  color: var(--nav-text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Navigation Menu */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+/* Nav Item (Layer 1) */
+.nav-item {
+  position: relative;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  color: var(--nav-text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: var(--nav-text);
+  background: var(--nav-bg-hover);
+}
+
+.nav-link.active {
+  color: var(--nav-accent);
+  background: var(--nav-accent-glow);
+}
+
+/* Dropdown Arrow */
+.nav-link .arrow {
+  font-size: 10px;
+  transition: transform var(--transition-fast);
+  opacity: 0.6;
+}
+
+.nav-item:hover .nav-link .arrow {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: var(--dropdown-width);
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 10px;
+  padding: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all var(--transition-normal);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  z-index: 1001;
+}
+
+.nav-item:hover .nav-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Dropdown Items */
+.dropdown-item {
+  display: block;
+  padding: 10px 14px;
+  color: var(--nav-text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+  line-height: 1.4;
+}
+
+.dropdown-item:hover {
+  color: var(--nav-text);
+  background: var(--dropdown-hover);
+  padding-left: 18px;
+}
+
+.dropdown-item.active {
+  color: var(--nav-accent);
+  background: var(--nav-accent-glow);
+}
+
+.dropdown-item .item-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--nav-text-muted);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* Dropdown Divider */
+.dropdown-divider {
+  height: 1px;
+  background: var(--dropdown-border);
+  margin: 8px 0;
+}
+
+/* Dropdown Section Header */
+.dropdown-header {
+  padding: 8px 14px 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--nav-text-muted);
+  opacity: 0.6;
+}
+
+/* --- Page Content Area --- */
+.page-content {
+  margin-top: var(--nav-height);
+  padding: 32px;
+  min-height: calc(100vh - var(--nav-height));
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+/* Content Card */
+.card {
+  background: var(--content-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* --- Local Tab Bar (Patient Profile) --- */
+.local-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-light);
+  overflow-x: auto;
+}
+
+.local-tab {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.local-tab:hover {
+  color: var(--text-primary);
+  background: var(--page-bg);
+  border-color: var(--border-light);
+}
+
+.local-tab.active {
+  color: #0369a1;
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+/* --- Utility Classes --- */
+.text-muted { color: var(--text-secondary); }
+.text-accent { color: var(--nav-accent); }
+.mt-4 { margin-top: 16px; }
+.mb-4 { margin-bottom: 16px; }
+.p-4 { padding: 16px; }
+
+/* Grid layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1200px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .nav-brand-text { display: none; }
+  .nav-link { padding: 10px 12px; font-size: 13px; }
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--page-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--nav-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

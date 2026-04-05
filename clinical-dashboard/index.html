@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinical Trial Dashboard</title>
+  <link rel="stylesheet" href="assets/css/base.css">
+  <style>
+    body {
+      background: #000000;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .page-content {
+      padding-top: 80px;
+      padding-bottom: 40px;
+    }
+
+    .tree-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    .tree-title {
+      text-align: center;
+      color: white;
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+      letter-spacing: 2px;
+    }
+
+    .data-refresh-date {
+      text-align: center;
+      color: #FFD700;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 60px;
+      font-style: italic;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .tree-wrapper {
+      position: relative;
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    /* SVG for tree lines */
+    .tree-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .tree-svg line {
+      stroke: rgba(255, 255, 255, 0.5);
+      stroke-width: 2;
+      transition: all 0.3s ease;
+    }
+
+    /* Root node */
+    .root-node {
+      position: relative;
+      z-index: 10;
+      margin-bottom: 40px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .root-node .node {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      font-size: 18px;
+      padding: 16px 32px;
+      min-width: 250px;
+      max-width: 300px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Branch nodes (main sections) */
+    .branch-level {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .branch-level-1 {
+      /* No specific positioning needed */
+    }
+
+    .branch-nodes {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    /* Node styling */
+    .node {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: relative;
+      z-index: 10;
+      min-width: 220px;
+      max-width: 280px;
+      width: 100%;
+      text-align: center;
+      font-weight: 600;
+      font-size: 14px;
+      color: #2c3e50;
+      border: 2px solid transparent;
+    }
+    
+    /* Ensure node container can contain absolute positioned dropdown */
+    .branch-nodes > .node {
+      position: relative;
+    }
+
+    .node:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      border-color: #00bcd4;
+    }
+
+    .node:active {
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    /* Section colors */
+    .node.study-overview { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+    .node.patients { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+    .node.safety { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+    .node.labs { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); color: white; }
+    .node.operations { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #2c3e50; }
+    .node.admin { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #2c3e50; }
+
+    /* Leaf nodes (sub-pages) */
+    .leaf-nodes {
+      display: flex !important;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      position: relative;
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    .node.expanded .leaf-nodes {
+      max-height: 2000px !important;
+      overflow: visible !important;
+      display: flex !important;
+      margin-top: 12px !important;
+    }
+    
+    .node.expanded .leaf-nodes .datasets-section {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      height: auto !important;
+      min-height: 50px !important;
+    }
+    
+    .node.expanded .leaf-nodes .datasets-list-tree {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    .node.expanded .leaf-nodes .dataset-item-tree {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .leaf-node {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 13px;
+      font-weight: 500;
+      color: #2c3e50;
+      border-left: 3px solid transparent;
+      text-align: left;
+    }
+
+    /* Datasets display in tree dropdown */
+    .datasets-section {
+      margin-top: 16px !important;
+      padding: 16px !important;
+      background: rgba(255, 255, 255, 0.2) !important;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.5) !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: 50px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
+
+    .datasets-title {
+      color: #ffffff !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .datasets-list-tree {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: 20px;
+    }
+
+    .datasets-list-tree::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .datasets-list-tree::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 2px;
+    }
+
+    .datasets-list-tree::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .dataset-item-tree {
+      color: #ffffff !important;
+      font-size: 12px !important;
+      font-family: 'Courier New', monospace !important;
+      padding: 6px 10px !important;
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-radius: 4px;
+      border-left: 3px solid rgba(255, 255, 255, 0.5) !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      margin-bottom: 2px;
+    }
+
+    .leaf-node:hover {
+      background: white;
+      border-left-color: #00bcd4;
+      transform: translateX(5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .node.expanded {
+      border-color: #00bcd4;
+      box-shadow: 0 6px 20px rgba(0, 188, 212, 0.4);
+    }
+
+    /* Expand indicator */
+    .expand-icon {
+      display: inline-block;
+      margin-left: 8px;
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .node.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .tree-wrapper {
+        flex-direction: column;
+        padding-left: 20px;
+      }
+      .root-node {
+        margin-right: 0;
+        margin-bottom: 40px;
+      }
+      .branch-nodes {
+        width: 100%;
+      }
+      .node {
+        min-width: 180px;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-title {
+        font-size: 28px;
+      }
+      .root-node .node {
+        font-size: 16px;
+        padding: 16px 24px;
+        min-width: 240px;
+      }
+      .tree-wrapper {
+        flex-direction: column;
+      }
+    }
+
+    /* Loading animation */
+    .node {
+      animation: fadeInUp 0.6s ease forwards;
+      opacity: 0;
+    }
+
+    .node:nth-child(1) { animation-delay: 0.1s; }
+    .node:nth-child(2) { animation-delay: 0.2s; }
+    .node:nth-child(3) { animation-delay: 0.3s; }
+    .node:nth-child(4) { animation-delay: 0.4s; }
+    .node:nth-child(5) { animation-delay: 0.5s; }
+    .node:nth-child(6) { animation-delay: 0.6s; }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Agreement Modal - Serious Professional Design */
+    .agreement-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.98);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .agreement-modal {
+      background: #0a0a0a;
+      border-radius: 4px;
+      max-width: 950px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px #2a2a2a, 0 20px 80px rgba(0,0,0,0.9);
+      border: 3px solid #333;
+      animation: slideDown 0.5s ease-out;
+      position: relative;
+    }
+
+    .agreement-modal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #dc3545 100%);
+      animation: warningPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes warningPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-40px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+      padding: 32px 40px;
+      border-bottom: 3px solid #dc3545;
+      position: relative;
+    }
+
+    .modal-header::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(220, 53, 69, 0.3);
+    }
+
+    .modal-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-family: 'Arial Black', 'Arial Bold', sans-serif;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .modal-header .subtitle {
+      font-size: 0.95rem;
+      color: #cccccc;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .warning-badge {
+      display: inline-block;
+      background: #dc3545;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      border: 1px solid #b02a37;
+    }
+
+    .modal-content {
+      padding: 30px;
+    }
+
+    .disclaimer-section {
+      margin-bottom: 28px;
+    }
+
+    .disclaimer-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #dc3545;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: 'Arial Black', 'Arial Bold', sans-serif;
+      border-bottom: 2px solid #333;
+      padding-bottom: 12px;
+    }
+
+    .disclaimer-content {
+      font-size: 0.95rem;
+      line-height: 1.9;
+      color: #d0d0d0;
+      font-weight: 400;
+    }
+
+    .disclaimer-content p {
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .disclaimer-content ul {
+      margin: 16px 0 0 28px;
+      list-style: none;
+    }
+
+    .disclaimer-content li {
+      margin: 12px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .disclaimer-content li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: #dc3545;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .disclaimer-content strong {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .highlight-box {
+      background: rgba(220, 53, 69, 0.15);
+      border: 2px solid #dc3545;
+      border-left: 6px solid #dc3545;
+      padding: 20px 24px;
+      margin-top: 24px;
+      border-radius: 0 4px 4px 0;
+      font-weight: 600;
+      color: #ffcccc;
+      box-shadow: 0 0 20px rgba(220, 53, 69, 0.2);
+    }
+
+    .highlight-box strong {
+      color: #ff6b6b;
+      font-size: 1.05rem;
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px 28px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      border: 3px solid #333;
+      margin: 28px 0;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .checkbox-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #333;
+    }
+
+    .checkbox-wrapper:has(input:checked) {
+      border-color: #28a745;
+      background: rgba(40, 167, 69, 0.08);
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.15);
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 28px;
+      height: 28px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: #28a745;
+      flex-shrink: 0;
+      border: 2px solid #555;
+    }
+
+    .checkbox-wrapper label {
+      font-size: 1rem;
+      color: #e0e0e0;
+      cursor: pointer;
+      line-height: 1.8;
+      font-weight: 500;
+    }
+
+    .checkbox-wrapper label strong {
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 16px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #28a745 0%, #1e7e34 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+      border: 1px solid #1e7e34;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+      background: linear-gradient(180deg, #34ce57 0%, #28a745 100%);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #2a2a2a;
+      color: #666;
+      cursor: not-allowed;
+      box-shadow: none;
+      border-color: #333;
+    }
+
+    .btn-secondary {
+      background: #2a2a2a;
+      color: #e0e0e0;
+      border: 2px solid #555;
+      font-weight: 600;
+    }
+
+    .btn-secondary:hover {
+      background: #333;
+      border-color: #666;
+      color: #ffffff;
+    }
+
+    .info-section {
+      background: #1a1a1a;
+      border-radius: 4px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      border: 2px solid #333;
+      border-left: 4px solid #dc3545;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #2a2a2a;
+      align-items: center;
+    }
+
+    .info-item:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-size: 0.9rem;
+      color: #999;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 1rem;
+      color: #ffffff;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .agreement-modal::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .agreement-modal::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    .agreement-modal::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+
+    .agreement-modal::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Information Section Styles */
+    .info-section {
+      margin-top: 100px;
+      padding: 60px 20px;
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 30px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .info-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .info-card-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .info-card-title {
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .info-card-content {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 14px;
+      line-height: 1.8;
+      margin: 0;
+    }
+
+    .info-card-content strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .warning-text {
+      color: #ffc107;
+      font-weight: 600;
+    }
+
+    .notice-box {
+      background: rgba(255, 193, 7, 0.1);
+      border: 2px solid rgba(255, 193, 7, 0.3);
+      border-radius: 12px;
+      padding: 30px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      backdrop-filter: blur(10px);
+    }
+
+    .notice-icon {
+      font-size: 36px;
+      flex-shrink: 0;
+    }
+
+    .notice-content {
+      flex: 1;
+    }
+
+    .notice-content h4 {
+      color: #ffc107;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .notice-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .notice-content li {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .notice-content li::before {
+      content: "•";
+      color: #ffc107;
+      font-weight: bold;
+      position: absolute;
+      left: 0;
+      font-size: 20px;
+    }
+
+    .notice-content li strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Datasets list styling */
+    .datasets-list {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .datasets-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .datasets-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .datasets-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    .datasets-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .dataset-item {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      text-align: center;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .info-section {
+        margin-top: 60px;
+        padding: 40px 15px;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .info-card {
+        padding: 24px;
+      }
+
+      .notice-box {
+        flex-direction: column;
+        padding: 24px;
+      }
+
+      .notice-icon {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Agreement Modal Overlay -->
+  <div id="agreementOverlay" class="agreement-overlay">
+    <div class="agreement-modal">
+      <div class="modal-header">
+        <div class="warning-badge">⚠️ Confidential & Restricted Access</div>
+        <h1>User Agreement Required</h1>
+        <p class="subtitle">Clinical Trial Dashboard | Study BH-30643</p>
+      </div>
+      
+      <div class="modal-content">
+        <!-- Info Section -->
+        <div class="info-section">
+          <div class="info-item">
+            <span class="info-label">Study:</span>
+            <span class="info-value">BH-30643</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Dashboard Status:</span>
+            <span class="info-value">Draft v0.8</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Access Level:</span>
+            <span class="info-value">Internal Use Only</span>
+          </div>
+        </div>
+        
+        <!-- Disclaimer -->
+        <section class="disclaimer-section">
+          <h2 class="disclaimer-title">
+            <span>🔒</span>
+            Important Disclaimer & Terms of Use
+          </h2>
+          <div class="disclaimer-content">
+            <p><strong>This dashboard is intended solely for internal quick data review purposes.</strong></p>
+            <ul>
+              <li><strong>No Sharing:</strong> Sharing, reposting, or distributing any content, screenshots, or data from this dashboard to external parties or platforms without prior written authorization is strictly prohibited.</li>
+              <li><strong>Preliminary Data:</strong> All data displayed is preliminary and subject to change prior to database lock. Do not use for official regulatory submissions, publications, or external communications.</li>
+              <li><strong>Not Validated:</strong> Visualizations and calculations have not been formally validated. For official analyses, refer to validated statistical outputs from the Biostatistics team.</li>
+              <li><strong>Confidential:</strong> Contains confidential patient-level clinical trial data protected under applicable data privacy regulations and company policies.</li>
+              <li><strong>Authorized Users Only:</strong> Access is restricted to authorized team members with signed confidentiality agreements.</li>
+            </ul>
+            <div class="highlight-box">
+              <strong>Compliance Notice:</strong> By accessing this dashboard, you agree to comply with company data confidentiality policies, Good Clinical Practice (GCP) guidelines, and applicable regulatory requirements. Violations may result in disciplinary action and/or legal consequences.
+            </div>
+          </div>
+        </section>
+        
+        <!-- Acknowledgment Checkbox -->
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="acknowledgeCheckbox">
+          <label for="acknowledgeCheckbox">
+            <strong>I acknowledge and agree that:</strong> I have read and understood the disclaimer above. I am an authorized user and will use this dashboard only for legitimate internal business purposes. I will not share, redistribute, screenshot, or use the data for any official reporting, publication, or external communication without proper authorization from the study team and management. I understand that all data is preliminary and subject to change.
+          </label>
+        </div>
+        
+        
+        <!-- Buttons -->
+        <div class="button-group">
+          <button id="loginBtn" class="btn btn-primary" disabled>
+            <span>✅</span>
+            <span>Proceed</span>
+          </button>
+          <button id="declineBtn" class="btn btn-secondary">
+            <span>❌</span>
+            <span>Decline</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header id="global-nav" style="display: none;"></header>
+  
+  <main class="page-content" style="display: none;">
+    <div class="tree-container">
+      <h1 class="tree-title">Clinical Trial Dashboard</h1>
+      <div id="dataRefreshDate" class="data-refresh-date">Loading data refresh date...</div>
+      
+      <div class="tree-wrapper">
+        <svg class="tree-svg" id="treeSvg"></svg>
+        
+        <!-- Root Node -->
+        <div class="root-node">
+          <div class="node">Clinical Trial Dashboard</div>
+        </div>
+
+        <!-- Level 1: Main Sections -->
+        <div class="branch-level branch-level-1">
+          <div class="branch-nodes" id="mainSections"></div>
+        </div>
+      </div>
+      
+      <!-- Information Section -->
+      <div class="info-section">
+        <div class="info-grid">
+          <!-- Intended Use -->
+          <div class="info-card">
+            <div class="info-card-icon">🎯</div>
+            <h3 class="info-card-title">Intended Use</h3>
+            <p class="info-card-content">
+              This dashboard is designed for <strong>internal quick data review purposes</strong> only. 
+              It supports team discussions, safety monitoring, and operational planning. 
+              <strong>Not for regulatory submission or external communication.</strong>
+            </p>
+          </div>
+          
+          <!-- Access Control -->
+          <div class="info-card">
+            <div class="info-card-icon">👥</div>
+            <h3 class="info-card-title">Access & Authorization</h3>
+            <p class="info-card-content">
+              <strong>Authorized Users:</strong> Biostatistics, Drug Safety, Medical Affairs, and designated project team members with signed confidentiality agreements.
+              <br><br>
+              <strong>Access Level:</strong> Internal Use Only
+            </p>
+          </div>
+          
+          <!-- Data Quality -->
+          <div class="info-card">
+            <div class="info-card-icon">📊</div>
+            <h3 class="info-card-title">Data Quality & Source</h3>
+            <p class="info-card-content">
+              <strong>Data Source:</strong> Electronic Data Capture (EDC) system export
+              <br><br>
+              <strong>Data Status:</strong> <span class="warning-text">Preliminary</span> - Data may contain unresolved queries, 
+              pending medical coding, and incomplete SDV. Subject to change until database lock.
+              <br><br>
+              <strong>Validation:</strong> Visualizations and calculations have not been formally validated.
+              <br><br>
+              <strong>Note:</strong> To view datasets used by each section, expand the dropdown menus in the tree structure above.
+            </p>
+          </div>
+          
+          <!-- Last Update -->
+          <div class="info-card">
+            <div class="info-card-icon">🔄</div>
+            <h3 class="info-card-title">Data Currency</h3>
+            <p class="info-card-content">
+              <strong>Data Cutoff Date:</strong> December 15, 2025
+              <br><br>
+              <strong>Last Dashboard Update:</strong> December 17, 2025
+              <br><br>
+              <strong>Update Frequency:</strong> Weekly (every Monday) or on-demand for urgent safety reviews
+            </p>
+          </div>
+        </div>
+        
+        <!-- Important Notice -->
+        <div class="notice-box">
+          <div class="notice-icon">⚠️</div>
+          <div class="notice-content">
+            <h4>Important Reminders</h4>
+            <ul>
+              <li>All data is <strong>preliminary</strong> and subject to change prior to database lock</li>
+              <li>Do not share, screenshot, or distribute dashboard content without authorization</li>
+              <li>For official analyses, refer to validated statistical outputs from the Biostatistics team</li>
+              <li>For questions or data issues, contact: <strong>biostat-dashboard@company.com</strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <script src="assets/js/nav.js"></script>
+  <script>
+    // Navigation structure (excluding efficacy and pkpd as per user request)
+    const TREE_STRUCTURE = {
+      'study-overview': {
+        label: 'Study Overview',
+        href: 'sections/study-overview/summary.html',
+        color: 'study-overview',
+        items: [
+          { label: 'Study Summary', href: 'sections/study-overview/summary.html' },
+          { label: 'Demographics', href: 'sections/study-overview/demographics.html' },
+          { label: 'Enrollment & Disposition', href: 'sections/study-overview/enrollment.html' },
+          { label: 'Dose Cohorts Overview', href: 'sections/study-overview/dose-cohorts.html' },
+          { label: 'ICF & Screening', href: 'sections/study-overview/icf-screening.html' },
+          { label: 'EOT / EOS Details', href: 'sections/study-overview/eot-eos.html' }
+        ]
+      },
+      'patients': {
+        label: 'Patient Profiles',
+        href: 'sections/patients/patient-list.html',
+        color: 'patients',
+        items: [
+          { label: 'Patient List', href: 'sections/patients/patient-list.html' },
+          { label: 'Summary', href: 'sections/patients/patient-profile/summary.html' },
+          { label: 'Dosing History', href: 'sections/patients/patient-profile/dosing-history.html' },
+          { label: 'Visit Compliance', href: 'sections/patients/patient-profile/visit-compliance.html' },
+          { label: 'AE TEAE', href: 'sections/patients/patient-profile/ae-teae.html' },
+          { label: 'CM Timeline', href: 'sections/patients/patient-profile/cm-timeline.html' },
+          { label: 'Prior Cancer Tx', href: 'sections/patients/patient-profile/cm-prior-tx.html' },
+          { label: 'Vitals', href: 'sections/patients/patient-profile/vitals.html' },
+          { label: 'ECG / QTcF', href: 'sections/patients/patient-profile/ecg-qtcf.html' },
+          { label: 'Labs', href: 'sections/patients/patient-profile/labs.html' },          { label: 'Dose & AE & Lab', href: 'sections/patients/patient-profile/dose-ae-lab.html' },
+          { label: 'Dose & AE & Lab (absolute)', href: 'sections/patients/patient-profile/dose-ae-lab-absolute.html' }
+        ]
+      },
+      'safety': {
+        label: 'Safety',
+        href: 'sections/safety/dashboard.html',
+        color: 'safety',
+        items: [
+          { label: 'Dashboard', href: 'sections/safety/dashboard.html' },
+          { label: 'AE Detail Listing', href: 'sections/safety/ae-detail.html' },
+          { label: 'TEAE Overview', href: 'sections/safety/index.html' },
+          { label: 'TEAE Related vs Non-related', href: 'sections/safety/teae-related-nonrelated.html' },
+          { label: 'TEAE Table', href: 'sections/safety/teae-table.html' },
+          { label: 'SAE & AESI', href: 'sections/safety/index.html#sae' },
+          { label: 'Lab Safety', href: 'sections/safety/index.html#lab' },
+          { label: 'Vital Signs Summary', href: 'sections/safety/index.html#vitals' },
+          { label: 'ECG / QTcF Summary', href: 'sections/safety/index.html#ecg' },
+          { label: 'Bilirubin - CTCAE', href: 'sections/safety/bilirubin.html' },
+          { label: 'Max Bilirubin by Treatment', href: 'sections/safety/max-bilirubin-treatment.html' },
+          { label: 'DILI', href: 'sections/safety/dili.html' }
+        ]
+      },
+      'labs': {
+        label: 'Labs',
+        href: 'sections/labs/normalized.html',
+        color: 'labs',
+        items: [
+          { label: 'Lab Normalized (ULN/LLN)', href: 'sections/labs/normalized.html' },
+          { label: 'Lab Normalized - By Patient', href: 'sections/labs/lab-normalized.html' },
+          { label: 'CTCAE Grade Summary Table', href: 'sections/labs/ctcae-grade-summary.html' }
+        ]
+      },
+      'operations': {
+        label: 'Operations',
+        href: 'sections/operations/index.html',
+        color: 'operations',
+        items: [
+          { label: 'Enrollment Dashboard', href: 'sections/operations/index.html' },
+          { label: 'Visit Compliance', href: 'sections/operations/index.html#visits' },
+          { label: 'Data Status & Queries', href: 'sections/operations/index.html#data' },
+          { label: 'Protocol Deviations', href: 'sections/operations/index.html#deviations' },
+          { label: 'Queries by Plots', href: 'sections/operations/queries-plots.html' },
+          { label: 'Queries by List', href: 'sections/operations/queries-list.html' }
+        ]
+      },
+      'admin': {
+        label: 'Admin',
+        href: 'sections/admin/index.html',
+        color: 'admin',
+        items: [
+          { label: 'User & Roles', href: 'sections/admin/index.html' }
+        ]
+      }
+    };
+
+    function drawTreeLines() {
+      const svg = document.getElementById('treeSvg');
+      const rootNode = document.querySelector('.root-node .node');
+      const container = document.getElementById('mainSections');
+      const branchNodes = container.querySelectorAll('.node');
+      
+      // Clear existing lines
+      svg.innerHTML = '';
+      
+      if (!rootNode || branchNodes.length === 0) return;
+      
+      const rootRect = rootNode.getBoundingClientRect();
+      const treeWrapper = document.querySelector('.tree-wrapper');
+      const wrapperRect = treeWrapper.getBoundingClientRect();
+      
+      // Root node bottom center (for vertical layout)
+      const rootX = rootRect.left + rootRect.width / 2 - wrapperRect.left;
+      const rootY = rootRect.bottom - wrapperRect.top;
+      
+      branchNodes.forEach((node) => {
+        const nodeRect = node.getBoundingClientRect();
+        // Branch node top center (for vertical layout)
+        const nodeX = nodeRect.left + nodeRect.width / 2 - wrapperRect.left;
+        const nodeY = nodeRect.top - wrapperRect.top;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', rootX);
+        line.setAttribute('y1', rootY);
+        line.setAttribute('x2', nodeX);
+        line.setAttribute('y2', nodeY);
+        svg.appendChild(line);
+      });
+    }
+
+    // Map pages to their datasets (defined outside function for reuse)
+    const PAGE_DATASETS_MAP = {
+        // Admin (if any pages use datasets)
+        'sections/admin/index.html': [],
+        // Study Overview
+        'sections/study-overview/summary.html': ['dm.csv', 'dmmr.csv', 'dsic.csv', 'dsen.csv', 'dset.csv', 'dses.csv', 'mhcan.csv', 'rsecog1.csv', 'cmpc.csv', 'cmpc2.csv', 'cmpc3.csv', 'cmpc4.csv', 'cmpc5.csv', 'cmpc6.csv'],
+        'sections/study-overview/demographics.html': ['vs.csv', 'dmmr.csv', 'dm.csv'],
+        'sections/study-overview/enrollment.html': ['dm.csv', 'dsen.csv', 'dmmr.csv'],
+        'sections/study-overview/dose-cohorts.html': ['dm.csv', 'ecsd.csv'],
+        'sections/study-overview/icf-screening.html': ['dm.csv', 'dsic.csv'],
+        'sections/study-overview/eot-eos.html': ['dm.csv', 'dset.csv', 'dses.csv'],
+        
+        // Patient Profiles
+        'sections/patients/patient-list.html': ['dm.csv', 'subj.csv'],
+        'sections/patients/patient-profile/summary.html': ['dmmr.csv', 'dsic.csv', 'dsen.csv', 'dset.csv', 'dses.csv', 'mhcan.csv', 'rsecog1.csv', 'cmpc.csv', 'cmpc2.csv', 'cmpc3.csv', 'cmpc4.csv', 'cmpc5.csv', 'cmpc6.csv'],
+        'sections/patients/patient-profile/dosing-history.html': ['ecsd.csv', 'ecad.csv', 'ecmd.csv'],
+        'sections/patients/patient-profile/visit-compliance.html': ['vis.csv'],
+        'sections/patients/patient-profile/ae-teae.html': ['ae.csv', 'vis.csv', 'dset.csv'],
+        'sections/patients/patient-profile/cm-timeline.html': ['cm.csv', 'vis.csv'],
+        'sections/patients/patient-profile/cm-prior-tx.html': ['cmpc.csv', 'cmpc2.csv', 'cmpc3.csv', 'cmpc4.csv', 'cmpc5.csv', 'cmpc6.csv'],
+        'sections/patients/patient-profile/vitals.html': ['vs.csv'],
+        'sections/patients/patient-profile/ecg-qtcf.html': ['ecg.csv', 'Export_ECG_new.csv', 'ecclin.csv'],
+        'sections/ECG/index.html': ['Export_ECG_new.csv', 'ecg.csv'],
+        'sections/ECG/listing.html': ['Export_ECG_new.csv', 'ecg.csv'],
+        'sections/ECG/individual.html': ['Export_ECG_new.csv', 'ecg.csv'],
+        'sections/patients/patient-profile/labs.html': ['lab.csv'],        'sections/patients/patient-profile/dose-ae-lab.html': ['lab.csv', 'lblc.csv', 'ecclin.csv', 'ecsd.csv', 'ecad.csv', 'ecmd.csv', 'ae.csv', 'cm.csv'],
+        'sections/patients/patient-profile/dose-ae-lab-absolute.html': ['lab.csv', 'lblc.csv', 'ecclin.csv', 'ecsd.csv', 'ecad.csv', 'ecmd.csv', 'ae.csv'],
+        
+        // Safety
+        'sections/safety/dashboard.html': ['ae.csv', 'dm.csv'],
+        'sections/safety/ae-detail.html': ['ae.csv', 'dm.csv'],
+        'sections/safety/index.html': ['ae.csv', 'dsen.csv'],
+        'sections/safety/teae-table.html': ['ae.csv', 'dsen.csv', 'dmmr.csv'],
+        'sections/safety/bilirubin.html': ['ae.csv', 'lblc.csv', 'lab.csv', 'dm.csv', 'dose_change.csv'],
+        'sections/safety/max-bilirubin-treatment.html': ['lab.csv', 'lblh.csv', 'dm.csv'],
+        'sections/safety/dili.html': ['lab.csv', 'lblh.csv', 'dm.csv', 'dsen.csv'],
+        
+        // Labs
+        'sections/labs/normalized.html': ['lab.csv', 'lblh.csv', 'dm.csv'],
+        'sections/labs/ctcae-grade-summary.html': ['lab.csv', 'lblh.csv', 'dm.csv', 'dsen.csv'],
+        
+        // Operations
+        'sections/operations/index.html': ['dm.csv', 'vis.csv', 'dsen.csv'],
+        'sections/operations/queries-plots.html': ['dm.csv'],
+        'sections/operations/queries-list.html': ['dm.csv']
+    };
+
+    // Get datasets used by all pages in a section
+    function getSectionDatasets(section) {
+      const datasets = new Set();
+      
+      // Add datasets from main page
+      if (section.href) {
+        const mainHref = section.href.split('#')[0]; // Remove anchor if present
+        if (PAGE_DATASETS_MAP[mainHref]) {
+          PAGE_DATASETS_MAP[mainHref].forEach(ds => datasets.add(ds));
+        }
+      }
+      
+      // Add datasets from all sub-pages
+      if (section.items) {
+        section.items.forEach(item => {
+          if (item.href) {
+            // Remove anchor/hash from href for matching
+            const hrefWithoutHash = item.href.split('#')[0];
+            if (PAGE_DATASETS_MAP[hrefWithoutHash]) {
+              PAGE_DATASETS_MAP[hrefWithoutHash].forEach(ds => datasets.add(ds));
+            }
+          }
+        });
+      }
+      
+      return Array.from(datasets).sort();
+    }
+
+    function renderTree() {
+      const container = document.getElementById('mainSections');
+      
+      // Clear container
+      container.innerHTML = '';
+      
+      // Create branch nodes
+      const sections = Object.keys(TREE_STRUCTURE);
+      
+      sections.forEach((key) => {
+        const section = TREE_STRUCTURE[key];
+        
+        // Create main section node
+        const nodeDiv = document.createElement('div');
+        nodeDiv.className = `node ${section.color}`;
+        nodeDiv.innerHTML = `${section.label}<span class="expand-icon">▼</span>`;
+        
+        // Create leaf nodes container
+        const leafContainer = document.createElement('div');
+        leafContainer.className = 'leaf-nodes';
+        
+        // Add datasets section - simple list (no page links)
+        const datasetsSection = document.createElement('div');
+        datasetsSection.className = 'datasets-section';
+        datasetsSection.style.cssText = `
+          display: block !important;
+          margin-top: 0 !important;
+          padding: 20px 24px !important;
+          background: #000000 !important;
+          border-radius: 8px !important;
+          border: 2px solid rgba(255, 255, 255, 0.3) !important;
+          min-width: 400px !important;
+          width: 100% !important;
+          max-width: 500px !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+          position: relative !important;
+          z-index: 10 !important;
+          box-sizing: border-box !important;
+        `;
+        
+        const datasetsTitle = document.createElement('div');
+        datasetsTitle.textContent = 'Datasets Used:';
+        datasetsTitle.style.cssText = `
+          color: #ffffff !important;
+          font-size: 14px !important;
+          font-weight: 700 !important;
+          margin-bottom: 12px !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+          padding-bottom: 8px !important;
+        `;
+        datasetsSection.appendChild(datasetsTitle);
+        
+        const datasetsList = document.createElement('div');
+        datasetsList.style.cssText = `
+          display: block !important;
+        `;
+        
+        // Get and display datasets for this section
+        const sectionDatasets = getSectionDatasets(section);
+        
+        if (sectionDatasets.length > 0) {
+          sectionDatasets.forEach(dataset => {
+            const item = document.createElement('div');
+            item.textContent = dataset;
+            item.style.cssText = `
+              color: #ffffff !important;
+              font-size: 13px !important;
+              font-family: 'Courier New', monospace !important;
+              padding: 6px 0 !important;
+              display: block !important;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            `;
+            datasetsList.appendChild(item);
+          });
+        } else {
+          const noData = document.createElement('div');
+          noData.textContent = 'No datasets found';
+          noData.style.cssText = `
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-size: 13px !important;
+            padding: 6px 0 !important;
+          `;
+          datasetsList.appendChild(noData);
+        }
+        
+        datasetsSection.appendChild(datasetsList);
+        leafContainer.appendChild(datasetsSection);
+        
+        // Click to navigate to main page
+        nodeDiv.onclick = (e) => {
+          // If clicking on expand icon, toggle expand
+          if (e.target.classList.contains('expand-icon') || e.target.closest('.expand-icon')) {
+            e.stopPropagation();
+            // Close all other expanded nodes first
+            const allNodes = document.querySelectorAll('.node.expanded');
+            allNodes.forEach(node => {
+              if (node !== nodeDiv) {
+                node.classList.remove('expanded');
+              }
+            });
+            // Toggle current node
+            nodeDiv.classList.toggle('expanded');
+            return;
+          }
+          // Otherwise navigate to main page
+          window.location.href = section.href;
+        };
+        
+        // Add expand button functionality
+        const expandIcon = nodeDiv.querySelector('.expand-icon');
+        if (expandIcon) {
+          expandIcon.style.cursor = 'pointer';
+          expandIcon.onclick = (e) => {
+            e.stopPropagation();
+            // Close all other expanded nodes first
+            const allNodes = document.querySelectorAll('.node.expanded');
+            allNodes.forEach(node => {
+              if (node !== nodeDiv) {
+                node.classList.remove('expanded');
+              }
+            });
+            // Toggle current node
+            nodeDiv.classList.toggle('expanded');
+          };
+        }
+        
+        nodeDiv.appendChild(leafContainer);
+        container.appendChild(nodeDiv);
+        
+        // Verify structure after appending
+        console.log('Node structure for', section.label, ':', {
+          nodeDiv: nodeDiv,
+          leafContainer: leafContainer,
+          datasetsSection: leafContainer.querySelector('.datasets-section'),
+          hasDatasets: !!leafContainer.querySelector('.datasets-section')
+        });
+      });
+      
+      // Draw lines after nodes are rendered
+      setTimeout(() => {
+        drawTreeLines();
+      }, 300);
+    }
+
+    // Clear all data on browser close for security
+    function clearAllData() {
+      // Clear agreement data from localStorage
+      localStorage.removeItem('dashboard_agreement_accepted');
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+    }
+
+    // Use sessionStorage to detect browser close vs refresh/navigation
+    // sessionStorage persists during refresh and page navigation, but clears on browser close
+    const storedSessionId = sessionStorage.getItem('session_id');
+    
+    if (!storedSessionId) {
+      // New session (browser was closed), clear authentication
+      localStorage.removeItem('dashboard_agreement_accepted');
+      // Set new session ID
+      sessionStorage.setItem('session_id', Date.now().toString());
+    } else {
+      // Same session (refresh or navigation from another page), keep authentication
+      // Just update session ID timestamp
+      sessionStorage.setItem('session_id', Date.now().toString());
+    }
+    
+    // Note: We don't clear data on beforeunload for navigation
+    // because that would clear data when navigating between pages in the same session
+    // We only clear when:
+    // 1. Browser is closed (detected by missing session_id on next load)
+    // 2. Session expires (3 hours, checked in checkAgreement())
+
+    // Authentication & Agreement Logic
+    const agreementOverlay = document.getElementById('agreementOverlay');
+    const checkbox = document.getElementById('acknowledgeCheckbox');
+    const loginBtn = document.getElementById('loginBtn');
+    const declineBtn = document.getElementById('declineBtn');
+    const pageContent = document.querySelector('.page-content');
+    const globalNav = document.getElementById('global-nav');
+
+    // Session duration
+    const SESSION_DURATION = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+
+    // Check if user has already agreed (using localStorage - persists across refreshes)
+    function checkAgreement() {
+      // Check authentication status and timestamp
+      const authData = localStorage.getItem('dashboard_agreement_accepted');
+      if (authData) {
+        try {
+          const { timestamp } = JSON.parse(authData);
+          const now = Date.now();
+          const elapsed = now - timestamp;
+          
+          // Check if session is still valid (within 3 hours)
+          if (elapsed < SESSION_DURATION) {
+            // Session is valid, hide modal and show content
+            agreementOverlay.classList.add('hidden');
+            pageContent.style.display = 'block';
+            globalNav.style.display = 'block';
+            return true;
+          } else {
+            // Session expired (more than 3 hours), require re-agreement
+            localStorage.removeItem('dashboard_agreement_accepted');
+          }
+        } catch (e) {
+          // Invalid data format, require re-agreement
+          localStorage.removeItem('dashboard_agreement_accepted');
+        }
+      }
+      
+      // User hasn't agreed or session expired, show modal and hide content
+      agreementOverlay.classList.remove('hidden');
+      pageContent.style.display = 'none';
+      globalNav.style.display = 'none';
+      return false;
+    }
+
+    // Update button state when checkbox changes
+    if (checkbox) {
+      checkbox.addEventListener('change', function() {
+        if (loginBtn) {
+          loginBtn.disabled = !this.checked;
+        }
+      });
+    }
+
+    // Handle login button click
+    if (loginBtn) {
+      loginBtn.addEventListener('click', function() {
+        if (!checkbox || !checkbox.checked) return;
+
+        // Store acknowledgment with timestamp in localStorage
+        const timestamp = Date.now();
+        localStorage.setItem('dashboard_agreement_accepted', JSON.stringify({
+          timestamp: timestamp
+        }));
+        
+        // Hide modal and show content
+        agreementOverlay.classList.add('hidden');
+        pageContent.style.display = 'block';
+        globalNav.style.display = 'block';
+        
+        // Initialize navigation and tree
+        renderNav('', '', '');
+        setTimeout(renderTree, 100);
+      });
+    }
+
+    // Handle decline button click
+    if (declineBtn) {
+      declineBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to decline? You will not be able to access the dashboard.')) {
+          window.location.href = 'about:blank';
+        }
+      });
+    }
+
+    // Function to get the most recent data refresh date from data folder
+    async function getDataRefreshDate() {
+      const dataDir = 'data/';
+      const refreshDateFile = `${dataDir}refresh-date.json`;
+
+      function formatDate(date) {
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const year = date.getFullYear();
+        return `${month}/${day}/${year}`;
+      }
+
+      async function readRefreshDateFile() {
+        try {
+          const response = await fetch(refreshDateFile);
+          if (!response.ok) return null;
+          const data = await response.json();
+          if (data.formattedDate) return data.formattedDate;
+          if (data.refreshDate) {
+            const date = new Date(data.refreshDate);
+            if (!Number.isNaN(date.getTime())) return formatDate(date);
+          }
+          return null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      async function listDataFiles() {
+        const response = await fetch(dataDir);
+        if (!response.ok) return [];
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a'));
+        return links
+          .map(link => link.getAttribute('href'))
+          .filter(href => href && !href.endsWith('/') && !href.startsWith('?') && href !== '../')
+          .map(href => href.split('#')[0].split('?')[0])
+          .filter(href => /\.(csv|json|txt)$/i.test(href));
+      }
+
+      async function getLastModified(filePath) {
+        try {
+          const response = await fetch(filePath, { method: 'HEAD' });
+          if (!response.ok) return null;
+          const lastModified = response.headers.get('last-modified');
+          return lastModified ? new Date(lastModified) : null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      try {
+        const refreshDate = await readRefreshDateFile();
+        if (refreshDate) return refreshDate;
+
+        const files = await listDataFiles();
+        if (!files.length) return null;
+
+        const dates = await Promise.all(
+          files.map(file => getLastModified(`${dataDir}${file}`))
+        );
+        const validDates = dates.filter(date => date && !Number.isNaN(date.getTime()));
+        if (!validDates.length) return null;
+
+        const latestDate = validDates.sort((a, b) => b - a)[0];
+        return formatDate(latestDate);
+      } catch (error) {
+        console.debug('Could not determine data refresh date from data folder:', error);
+        return null;
+      }
+    }
+
+    // Function to update data refresh date display
+    async function updateDataRefreshDate() {
+      const refreshDateElement = document.getElementById('dataRefreshDate');
+      if (!refreshDateElement) return;
+
+      try {
+        const formattedDate = await getDataRefreshDate();
+        if (formattedDate) {
+          refreshDateElement.textContent = `Data refreshed on ${formattedDate}`;
+        } else {
+          refreshDateElement.textContent = 'Data refresh date not available';
+        }
+      } catch (error) {
+        console.error('Error getting data refresh date:', error);
+        refreshDateElement.textContent = 'Unable to determine data refresh date';
+      }
+    }
+
+    // Initialize function
+    function initializeDashboard() {
+      const hasAgreed = checkAgreement();
+      
+      if (hasAgreed) {
+        // User has agreed, show navigation and tree
+        renderNav('', '', '');
+        
+        // Update data refresh date
+        updateDataRefreshDate();
+        
+        // Render tree - ensure DOM is ready
+        const renderTreeWithDelay = () => {
+          setTimeout(() => {
+            if (document.getElementById('mainSections')) {
+              renderTree();
+            } else {
+              // Retry if container not ready
+              setTimeout(renderTreeWithDelay, 100);
+            }
+          }, 300);
+        };
+        
+        renderTreeWithDelay();
+      }
+    }
+    
+    // Wait for auth config and DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initializeDashboard, 200);
+      });
+    } else {
+      // DOM already ready
+      setTimeout(initializeDashboard, 200);
+    }
+    
+    // Recalculate on resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        drawTreeLines();
+      }, 250);
+    });
+  </script>
+</body>
+</html>

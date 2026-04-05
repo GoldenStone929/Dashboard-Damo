@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTCAE Labs (All Patients)</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script src="../../assets/js/labs-config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    .ctcae-container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .controls-panel {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      color: #2C3E50;
+      font-size: 14px;
+    }
+
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 200px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .chart-container {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 750px;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2C3E50;
+      margin-bottom: 5px;
+    }
+
+    .chart-subtitle {
+      font-size: 14px;
+      color: #7F8C8D;
+      margin-bottom: 15px;
+    }
+
+    .chart-note {
+      font-size: 12px;
+      color: #a65b00;
+      margin-bottom: 10px;
+    }
+
+    .legend-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #34495E;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .info-panel {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-panel h4 {
+      margin: 0 0 10px 0;
+      color: #1565c0;
+    }
+
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #34495E;
+    }
+
+    .info-panel li {
+      margin-bottom: 5px;
+    }
+
+    .stats-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #7F8C8D;
+      margin-top: 5px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      padding: 10px 20px;
+      border: 1px solid #3498db;
+      background: white;
+      color: #3498db;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      background: #3498db;
+      color: white;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination .page-info {
+      font-size: 14px;
+      color: #34495E;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #34495E;
+    }
+
+    /* Patient Subplots Section */
+    .patient-subplots-section {
+      margin-top: 30px;
+      border-top: 2px solid #dee2e6;
+      padding-top: 20px;
+    }
+
+    .patient-subplots-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .patient-subplots-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2C3E50;
+    }
+
+    .patient-subplots-count {
+      font-size: 14px;
+      color: #7F8C8D;
+      background: #f8f9fa;
+      padding: 6px 12px;
+      border-radius: 4px;
+    }
+
+    .patient-subplot-container {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .patient-subplot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .patient-subplot-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2C3E50;
+    }
+
+    .patient-subplot-arm {
+      font-size: 12px;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    .patient-subplot-wrapper {
+      height: 280px;
+      position: relative;
+    }
+
+    .patient-subplots-empty {
+      text-align: center;
+      padding: 40px;
+      color: #7F8C8D;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <main class="page-content">
+    <div class="ctcae-container">
+      <h1>CTCAE Labs (All Patients)</h1>
+
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading lab data...</div>
+      </div>
+
+      <div class="info-panel">
+        <h4>One-sided Normalization (ULN/LLN)</h4>
+        <ul>
+          <li><strong>Value Source:</strong> Standard (SI) values first, then Local Lab values as fallback</li>
+          <li><strong>Y-Axis:</strong> Normalized ratio (abnormal &gt; 1, normal &lt;= 1)</li>
+          <li><strong>Increase analytes:</strong> Use Value / ULN (ALT, AST, ALP, BILI, etc.)</li>
+          <li><strong>Decrease analytes:</strong> Use LLN / Value (PLAT, NEUT, HGB, etc.)</li>
+          <li><strong>Bidirectional:</strong> Use ULN or LLN based on which side is abnormal</li>
+          <li><strong>X-Axis:</strong> Study Day (Day 0 = C0D1 or first screening visit)</li>
+          <li><strong>Hardcoded:</strong> Included and shown as triangles (override same day)</li>
+          <li><strong>CTCAE Lines:</strong> Only shown for ULN-multiple analytes (e.g., ALT/AST/ALP/GGT/BILI/CREAT/LIPASE/AMYLASE/LDH/APTT/PT/PTT)</li>
+          <li><strong>Deduplication:</strong> One value per patient per day (highest ratio kept)</li>
+          <li><strong>Exclusion:</strong> Patients whose ALL visits are normal (ratio &lt;= 1) are excluded by default</li>
+        </ul>
+      </div>
+
+      <div class="stats-panel" id="statsPanel">
+        <div class="stat-card">
+          <div class="stat-value" id="statAnalytes">-</div>
+          <div class="stat-label">Patients (Selected Analyte)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statSubjects">-</div>
+          <div class="stat-label">Patients Shown</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statDosingGroups">-</div>
+          <div class="stat-label">Missing Study Day</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statDataPoints">-</div>
+          <div class="stat-label">Missing ULN/LLN or Value</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statExcluded">-</div>
+          <div class="stat-label">Excluded (All Normal)</div>
+        </div>
+      </div>
+
+      <div class="controls-panel">
+        <div class="control-group">
+          <label for="analyteSelect">Analyte</label>
+          <select id="analyteSelect">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="armFilter">Dosing Group Filter</label>
+          <select id="armFilter">
+            <option value="all">All Groups</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="sortBy">Sort Patients By</label>
+          <select id="sortBy">
+            <option value="dose">Dose Group</option>
+            <option value="subject">Subject (Patient ID)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="yAxisScale">Y-Axis Scale</label>
+          <select id="yAxisScale">
+            <option value="linear">Linear</option>
+            <option value="log">Log</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showNormal">
+          <label for="showNormal">Include Patients All Normal (Ratio &lt;= 1)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showGrade2Only">
+          <label for="showGrade2Only">Show Grade ≥2 Only (Ratio ≥ 2)</label>
+        </div>
+      </div>
+
+      <div class="chart-container" id="chartExportBlock">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 20px;">
+          <div style="flex: 1;">
+            <div class="chart-title" id="chartTitle">Select an analyte</div>
+            <div class="chart-subtitle" id="chartSubtitle">One-sided Normalization (Ratio &lt;= 1 = Normal)</div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <div id="chartFilterInfo" style="padding: 10px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #475569; display: none; font-style: italic;"></div>
+            <button class="export-btn" onclick="showBlockExportDialog('chartExportBlock', getCurrentAnalyteName())">Export</button>
+          </div>
+        </div>
+        <div class="chart-note" id="chartNote" style="display:none;"></div>
+        <div class="legend-container" id="legendContainer"></div>
+        <div class="chart-wrapper">
+          <canvas id="ctcaeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Patient Subplots Section -->
+      <div class="patient-subplots-section" id="patientSubplotsSection">
+        <div class="patient-subplots-header">
+          <div class="patient-subplots-title">Individual Patient Plots</div>
+          <div class="patient-subplots-count" id="patientSubplotsCount">0 patients</div>
+        </div>
+        <div id="patientSubplotsContainer">
+          <div class="patient-subplots-empty">Select an analyte to view individual patient plots</div>
+        </div>
+      </div>
+
+      <div class="pagination">
+        <button id="prevAnalyte" disabled>&larr; Previous Analyte</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button id="nextAnalyte" disabled>Next Analyte &rarr;</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'ctcae', '../../');
+    }
+
+    const state = {
+      labData: [],
+      lblhData: [],  // Use lblh.CSV like index.html
+      dmData: [],
+      processedData: [],
+      uniqueAnalytes: [],
+      uniqueArms: [],
+      baselineDates: {},
+      armLookup: {},
+      currentAnalyteIndex: 0,
+      chart: null,
+      patientCharts: []  // Store individual patient subplot charts
+    };
+
+    const ARM_COLORS = [
+      '#E41A1C', '#377EB8', '#4DAF4A', '#984EA3',
+      '#FF7F00', '#A65628', '#F781BF', '#999999',
+      '#66C2A5', '#FC8D62', '#8DA0CB', '#E78AC3'
+    ];
+
+    const ANALYTE_NAME_MAP = {
+      'Alanine Aminotransferase; ALT': 'ALT',
+      'Aspartate Aminotransferase; AST': 'AST',
+      'Alkaline Phosphatase; ALP': 'ALP',
+      'Bilirubin; BILI': 'BILI',
+      'GGT; GGT': 'GGT',
+      'Lactate Dehydrogenase; LDH': 'LDH',
+      'Creatinine; CREAT': 'CREAT',
+      'Urea Nitrogen; UREAN': 'UREAN',
+      'Urate; URATE': 'URATE',
+      'Albumin; ALB': 'ALB',
+      'Protein; PROT': 'PROT',
+      'Potassium; K': 'K',
+      'Sodium; SODIUM': 'SODIUM',
+      'Calcium; CA': 'CA',
+      'Magnesium; MG': 'MG',
+      'Phosphate; PHOS': 'PHOS',
+      'Chloride; CL': 'CL',
+      'Bicarbonate; BICARB': 'BICARB',
+      'Carbon Dioxide; CO2': 'CO2',
+      'Glucose; GLUC': 'GLUC',
+      'Amylase; AMYLASE': 'AMYLASE',
+      'Lipase; LIPASET': 'LIPASE',
+      'Lipase; LIPASE': 'LIPASE',
+      'Cholesterol; CHOL': 'CHOL',
+      'Triglycerides; TRIG': 'TRIG',
+      'Activated Partial Thromboplastin Time; APTT': 'APTT',
+      'Prothrombin Intl. Normalized Ratio; INR': 'INR',
+      'Prothrombin Time; PT': 'PT',
+      'Partial Thromboplastin Time; PTT': 'PTT',
+      'Fibrinogen; FIB': 'FIB',
+      'Leukocytes; WBC': 'WBC',
+      'Erythrocytes; RBC': 'RBC',
+      'Hemoglobin; HGB': 'HGB',
+      'Hematocrit; HCT': 'HCT',
+      'Platelets; PLAT': 'PLAT',
+      'Neutrophils; NEUT': 'NEUT',
+      'Lymphocytes; LYM': 'LYM',
+      'Monocytes; MONO': 'MONO',
+      'Eosinophils; EOS': 'EOS',
+      'Basophils; BASO': 'BASO',
+      'CD4; CD4': 'CD4'
+    };
+
+    function getAnalyteShortName(fullName) {
+      if (ANALYTE_NAME_MAP[fullName]) return ANALYTE_NAME_MAP[fullName];
+      if (fullName.includes(';')) {
+        return fullName.split(';').pop().trim();
+      }
+      return fullName;
+    }
+
+    function parseSASDate(dateStr) {
+      if (!dateStr || dateStr.trim() === '') return null;
+      const match1 = dateStr.match(/^(\d{2})([A-Z]{3})(\d{4})/i);
+      if (match1) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+                         JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        const day = parseInt(match1[1]);
+        const month = months[match1[2].toUpperCase()];
+        const year = parseInt(match1[3]);
+        if (month !== undefined) {
+          return new Date(year, month, day);
+        }
+      }
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+      return null;
+    }
+
+    function getBaselineStatus(analyte, baselineValue, stdLow, stdHigh) {
+      const shortName = getAnalyteShortName(analyte);
+      if (baselineValue == null) return 'NormalBaseline';
+
+      if (['ALT', 'AST', 'ALP', 'BILI', 'GGT', 'CREAT', 'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'CHOL', 'TRIG', 'URATE', 'LDH'].includes(shortName)) {
+        if (stdHigh == null) return 'NormalBaseline';
+        return baselineValue > stdHigh ? 'AbnormalBaseline' : 'NormalBaseline';
+      }
+
+      if (['NEUT', 'PLAT', 'WBC', 'LYM', 'HGB', 'CD4', 'MG', 'PHOS', 'ALB', 'FIB'].includes(shortName)) {
+        if (stdLow == null) return 'NormalBaseline';
+        return baselineValue < stdLow ? 'AbnormalBaseline' : 'NormalBaseline';
+      }
+
+      if (stdLow != null && stdHigh != null) {
+        return (baselineValue >= stdLow && baselineValue <= stdHigh) ? 'NormalBaseline' : 'AbnormalBaseline';
+      }
+      return 'NormalBaseline';
+    }
+
+    function getCTCAEGrades(analyte, baselineValue, stdLow, stdHigh, stdUnit = null) {
+      const shortName = getAnalyteShortName(analyte);
+      const baselineStatus = getBaselineStatus(analyte, baselineValue, stdLow, stdHigh);
+      let grades = { grades: [], direction: null, term: null, note: null };
+
+      if (shortName === 'ALT' || shortName === 'AST') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 3.0 * stdHigh },
+            { grade: 'Grade2', low: 3.0 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+            { grade: 'Grade2', low: 3.0 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = `${shortName} increased`;
+      } else if (shortName === 'ALP') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+            { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+            { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'ALP increased';
+      } else if (shortName === 'GGT') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+            { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+            { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'GGT increased';
+      } else if (shortName === 'BILI') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+            { grade: 'Grade2', low: 1.5 * stdHigh, high: 3.0 * stdHigh },
+            { grade: 'Grade3', low: 3.0 * stdHigh, high: 10.0 * stdHigh },
+            { grade: 'Grade4', low: 10.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: baselineValue, high: 1.5 * baselineValue },
+            { grade: 'Grade2', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+            { grade: 'Grade3', low: 3.0 * baselineValue, high: 10.0 * baselineValue },
+            { grade: 'Grade4', low: 10.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'Blood bilirubin increased';
+      } else if (shortName === 'CREAT') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 3.0 * stdHigh },
+          { grade: 'Grade3', low: 3.0 * stdHigh, high: 6.0 * stdHigh },
+          { grade: 'Grade4', low: 6.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Creatinine increased';
+      } else if (shortName === 'PLAT') {
+        grades.grades = [
+          { grade: 'Grade1', low: 75, high: stdLow },
+          { grade: 'Grade2', low: 50, high: 75 },
+          { grade: 'Grade3', low: 25, high: 50 },
+          { grade: 'Grade4', low: 0, high: 25 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Platelet count decreased';
+      } else if (shortName === 'NEUT') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.5, high: stdLow },
+          { grade: 'Grade2', low: 1.0, high: 1.5 },
+          { grade: 'Grade3', low: 0.5, high: 1.0 },
+          { grade: 'Grade4', low: 0, high: 0.5 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Neutrophil count decreased';
+      } else if (shortName === 'WBC') {
+        grades.grades = [
+          { grade: 'Grade1', low: 3.0, high: stdLow },
+          { grade: 'Grade2', low: 2.0, high: 3.0 },
+          { grade: 'Grade3', low: 1.0, high: 2.0 },
+          { grade: 'Grade4', low: 0, high: 1.0 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'White blood cell decreased';
+      } else if (shortName === 'LYM') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.8, high: stdLow },
+          { grade: 'Grade2', low: 0.5, high: 0.8 },
+          { grade: 'Grade3', low: 0.2, high: 0.5 },
+          { grade: 'Grade4', low: 0, high: 0.2 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Lymphocyte count decreased';
+      } else if (shortName === 'HGB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 100, high: stdLow },
+          { grade: 'Grade2', low: 80, high: 100 },
+          { grade: 'Grade3', low: 0, high: 80 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Anemia';
+        grades.note = 'G4 is clinical (life-threatening), not a numeric threshold';
+      } else if (shortName === 'K') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 3.0, high: stdLow },
+          { grade: 'Grade2_low', low: 2.5, high: 3.0 },
+          { grade: 'Grade3_low', low: 0, high: 2.5 },
+          { grade: 'Grade1_high', low: stdHigh, high: 5.5 },
+          { grade: 'Grade2_high', low: 5.5, high: 6.0 },
+          { grade: 'Grade3_high', low: 6.0, high: 7.0 },
+          { grade: 'Grade4_high', low: 7.0, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypokalemia';
+        grades.highTerm = 'Hyperkalemia';
+      } else if (shortName === 'SODIUM') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 130, high: stdLow },
+          { grade: 'Grade2_low', low: 120, high: 130 },
+          { grade: 'Grade3_low', low: 0, high: 120 },
+          { grade: 'Grade1_high', low: stdHigh, high: 150 },
+          { grade: 'Grade2_high', low: 150, high: 155 },
+          { grade: 'Grade3_high', low: 155, high: 160 },
+          { grade: 'Grade4_high', low: 160, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hyponatremia';
+        grades.highTerm = 'Hypernatremia';
+      } else if (shortName === 'CA') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 2.0, high: stdLow },
+          { grade: 'Grade2_low', low: 1.75, high: 2.0 },
+          { grade: 'Grade3_low', low: 1.5, high: 1.75 },
+          { grade: 'Grade4_low', low: 0, high: 1.5 },
+          { grade: 'Grade1_high', low: stdHigh, high: 2.88 },
+          { grade: 'Grade2_high', low: 2.88, high: 3.13 },
+          { grade: 'Grade3_high', low: 3.13, high: 3.38 },
+          { grade: 'Grade4_high', low: 3.38, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypocalcemia';
+        grades.highTerm = 'Hypercalcemia';
+      } else if (shortName === 'MG') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.5, high: stdLow },
+          { grade: 'Grade2', low: 0.4, high: 0.5 },
+          { grade: 'Grade3', low: 0.3, high: 0.4 },
+          { grade: 'Grade4', low: 0, high: 0.3 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypomagnesemia';
+      } else if (shortName === 'PHOS') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.8, high: stdLow },
+          { grade: 'Grade2', low: 0.6, high: 0.8 },
+          { grade: 'Grade3', low: 0.3, high: 0.6 },
+          { grade: 'Grade4', low: 0, high: 0.3 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypophosphatemia';
+      } else if (shortName === 'GLUC') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 3.0, high: stdLow },
+          { grade: 'Grade2_low', low: 2.2, high: 3.0 },
+          { grade: 'Grade3_low', low: 0, high: 2.2 },
+          { grade: 'Grade1_high', low: stdHigh, high: 8.9 },
+          { grade: 'Grade2_high', low: 8.9, high: 13.9 },
+          { grade: 'Grade3_high', low: 13.9, high: 27.8 },
+          { grade: 'Grade4_high', low: 27.8, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypoglycemia';
+        grades.highTerm = 'Hyperglycemia';
+      } else if (shortName === 'LIPASE' || shortName === 'AMYLASE') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 2.0 * stdHigh },
+          { grade: 'Grade3', low: 2.0 * stdHigh, high: 5.0 * stdHigh },
+          { grade: 'Grade4', low: 5.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = `${shortName} increased`;
+      } else if (shortName === 'INR') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.2, high: 1.5 },
+          { grade: 'Grade2', low: 1.5, high: 2.5 },
+          { grade: 'Grade3', low: 2.5, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'INR increased';
+      } else if (shortName === 'APTT' || shortName === 'PT' || shortName === 'PTT') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 2.5 * stdHigh },
+          { grade: 'Grade3', low: 2.5 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = `${shortName} prolonged`;
+      } else if (shortName === 'FIB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.0, high: stdLow },
+          { grade: 'Grade2', low: 0.75, high: 1.0 },
+          { grade: 'Grade3', low: 0.5, high: 0.75 },
+          { grade: 'Grade4', low: 0, high: 0.5 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Fibrinogen decreased';
+      } else if (shortName === 'ALB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 30, high: stdLow },
+          { grade: 'Grade2', low: 20, high: 30 },
+          { grade: 'Grade3', low: 0, high: 20 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypoalbuminemia';
+      } else if (shortName === 'LDH') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+          { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+          { grade: 'Grade3', low: 5.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'LDH increased';
+        grades.note = 'No formal CTCAE grading; thresholds are commonly used clinical reference';
+      } else if (shortName === 'CHOL') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 7.75 },
+          { grade: 'Grade2', low: 7.75, high: 12.92 },
+          { grade: 'Grade3', low: 12.92, high: 15.5 },
+          { grade: 'Grade4', low: 15.5, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Cholesterol high';
+      } else if (shortName === 'TRIG') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.71, high: 3.42 },
+          { grade: 'Grade2', low: 3.42, high: 5.7 },
+          { grade: 'Grade3', low: 5.7, high: 11.4 },
+          { grade: 'Grade4', low: 11.4, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Hypertriglyceridemia';
+      } else if (shortName === 'URATE') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 595 },
+          { grade: 'Grade3', low: 595, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Hyperuricemia';
+      } else if (shortName === 'CD4') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.5, high: stdLow },
+          { grade: 'Grade2', low: 0.2, high: 0.5 },
+          { grade: 'Grade3', low: 0.05, high: 0.2 },
+          { grade: 'Grade4', low: 0, high: 0.05 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'CD4 lymphocytes decreased';
+      } else {
+        grades.note = `CTCAE v5.0 does not provide quantitative grading criteria for: ${shortName}`;
+      }
+
+      return grades;
+    }
+
+    // Get discrete grade label (Normal, Grade1, Grade2, etc.)
+    function getGradeLabel(value, grades, stdLow, stdHigh, direction) {
+      if (direction === 'decrease') {
+        if (stdLow != null && value >= stdLow) return 'Normal';
+      } else if (direction === 'increase') {
+        if (stdHigh != null && value <= stdHigh) return 'Normal';
+      } else if (direction === 'bidirectional') {
+        if (stdLow != null && stdHigh != null && value >= stdLow && value <= stdHigh) return 'Normal';
+      }
+
+      for (const g of grades) {
+        const gradeClean = g.grade.replace(/_low|_high/, '');
+        if (direction === 'decrease') {
+          if (value < g.high && value >= g.low) return gradeClean;
+        } else if (direction === 'increase') {
+          if (value > g.low && value <= g.high) return gradeClean;
+        } else if (direction === 'bidirectional') {
+          if (g.grade.includes('_low') && value < stdLow) {
+            if (value < g.high && value >= g.low) return gradeClean;
+          } else if (g.grade.includes('_high') && value > stdHigh) {
+            if (value > g.low && value <= g.high) return gradeClean;
+          }
+        }
+      }
+      return 'Normal';
+    }
+
+    // Calculate CONTINUOUS grade value (e.g., 2.37 instead of 2)
+    // For "increase" analytes: interpolate within each grade's range
+    // For "decrease" analytes: interpolate within each grade's range (inverted)
+    function getContinuousGradeValue(value, grades, stdLow, stdHigh, direction) {
+      // For "increase" direction (ALT, AST, BILI, etc.)
+      if (direction === 'increase') {
+        // Normal range: value <= ULN => grade 0 to 1
+        if (value <= stdHigh) {
+          // Within normal range: 0 to 1
+          if (stdLow != null && stdLow < stdHigh) {
+            return Math.max(0, (value - stdLow) / (stdHigh - stdLow));
+          }
+          return 0; // Default to 0 if no LLN
+        }
+        
+        // Find which grade range the value falls into
+        for (let i = 0; i < grades.length; i++) {
+          const g = grades[i];
+          const gradeNum = parseInt(g.grade.replace(/Grade|_low|_high/g, ''), 10);
+          
+          if (value > g.low && (g.high === Infinity || value <= g.high)) {
+            // Value is in this grade's range
+            if (g.high === Infinity) {
+              // Highest grade - cap at grade + 0.99
+              return Math.min(gradeNum + 0.99, gradeNum + (value - g.low) / g.low);
+            }
+            // Interpolate within the grade range
+            const rangeSize = g.high - g.low;
+            const position = (value - g.low) / rangeSize;
+            return gradeNum + position;
+          }
+        }
+        return 0; // Fallback
+      }
+      
+      // For "decrease" direction (PLAT, NEUT, HGB, etc.)
+      if (direction === 'decrease') {
+        // Normal range: value >= LLN => grade 0 to 1
+        if (value >= stdLow) {
+          // Within normal range: 0 to 1
+          if (stdHigh != null && stdHigh > stdLow) {
+            return Math.max(0, Math.min(1, (stdHigh - value) / (stdHigh - stdLow)));
+          }
+          return 0;
+        }
+        
+        // Find which grade range the value falls into (for decrease, lower value = higher grade)
+        for (let i = 0; i < grades.length; i++) {
+          const g = grades[i];
+          const gradeNum = parseInt(g.grade.replace(/Grade|_low|_high/g, ''), 10);
+          
+          if (value < g.high && value >= g.low) {
+            // Value is in this grade's range
+            if (g.low === 0) {
+              // Lowest grade - cap at grade + 0.99
+              return Math.min(gradeNum + 0.99, gradeNum + (g.high - value) / g.high);
+            }
+            // Interpolate within the grade range (inverted for decrease)
+            const rangeSize = g.high - g.low;
+            const position = (g.high - value) / rangeSize;
+            return gradeNum + position;
+          }
+        }
+        return 0; // Fallback
+      }
+      
+      // For "bidirectional" direction (K, SODIUM, CA, GLUC)
+      if (direction === 'bidirectional') {
+        // Normal range
+        if (value >= stdLow && value <= stdHigh) {
+          return 0;
+        }
+        
+        // Low side (hypo-)
+        if (value < stdLow) {
+          const lowGrades = grades.filter(g => g.grade.includes('_low'));
+          for (const g of lowGrades) {
+            const gradeNum = parseInt(g.grade.replace(/Grade|_low|_high/g, ''), 10);
+            if (value < g.high && value >= g.low) {
+              if (g.low === 0) {
+                return Math.min(gradeNum + 0.99, gradeNum + (g.high - value) / g.high);
+              }
+              const rangeSize = g.high - g.low;
+              const position = (g.high - value) / rangeSize;
+              return gradeNum + position;
+            }
+          }
+        }
+        
+        // High side (hyper-)
+        if (value > stdHigh) {
+          const highGrades = grades.filter(g => g.grade.includes('_high'));
+          for (const g of highGrades) {
+            const gradeNum = parseInt(g.grade.replace(/Grade|_low|_high/g, ''), 10);
+            if (value > g.low && (g.high === Infinity || value <= g.high)) {
+              if (g.high === Infinity) {
+                return Math.min(gradeNum + 0.99, gradeNum + (value - g.low) / g.low);
+              }
+              const rangeSize = g.high - g.low;
+              const position = (value - g.low) / rangeSize;
+              return gradeNum + position;
+            }
+          }
+        }
+        
+        return 0; // Fallback
+      }
+      
+      return 0;
+    }
+
+    async function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data),
+          error: (error) => reject(error)
+        });
+      });
+    }
+
+    // Following index.html pattern for data processing
+    function processData() {
+      const { labData, lblhData, dmData } = state;
+
+      // Step 1: Standardize Folder naming
+      labData.forEach(row => {
+        if (row.Folder === 'DSET') row.Folder = 'End of treatment';
+      });
+      lblhData.forEach(row => {
+        if (row.Folder === 'DSET') row.Folder = 'End of treatment';
+      });
+
+      // Step 2: Parse LBDAT_INT in lblh
+      lblhData.forEach(row => {
+        row.LBDAT_INT_POSIX = parseSASDate(row.LBDAT_INT);
+      });
+
+      // Step 3: Calculate baseline dates per subject (C0D1 = day 0, or first SCRN)
+      const baselineDates = {};
+      const subjectVisits = {};
+
+      lblhData.forEach(row => {
+        if (!row.Subject || !row.LBDAT_INT_POSIX) return;
+        if (!subjectVisits[row.Subject]) subjectVisits[row.Subject] = [];
+        subjectVisits[row.Subject].push({
+          folder: row.Folder,
+          date: row.LBDAT_INT_POSIX
+        });
+      });
+
+      Object.keys(subjectVisits).forEach(subject => {
+        const visits = subjectVisits[subject].sort((a, b) => a.date - b.date);
+        const c0d1 = visits.find(v => v.folder === 'C0D1');
+        const scrn = visits.find(v => v.folder === 'SCRN');
+        baselineDates[subject] = c0d1 ? c0d1.date : (scrn ? scrn.date : visits[0]?.date);
+      });
+
+      // Step 4: Calculate StudyDay for lblh
+      const lblhStudyDays = {};
+      lblhData.forEach(row => {
+        if (!row.Subject || !row.LBDAT_INT_POSIX || !baselineDates[row.Subject]) return;
+        const key = `${row.Subject}|${row.Folder}|${row.AnalyteName || ''}`;
+        const baseline = baselineDates[row.Subject];
+        lblhStudyDays[key] = Math.round((row.LBDAT_INT_POSIX - baseline) / (1000 * 60 * 60 * 24));
+      });
+
+      // Step 5: Create ARM lookup from dm data
+      const armLookup = {};
+      dmData.forEach(row => {
+        const subjid = (row.SUBJID || row.Subject || '').trim();
+        const arm = (row.ARM || '').trim();
+        if (subjid) armLookup[subjid] = arm || 'Unknown';
+      });
+
+      state.baselineDates = baselineDates;
+      state.armLookup = armLookup;
+
+      // Step 6: Process lab data
+      const processed = labData.map(row => {
+        const subject = (row.Subject || '').trim();
+        const folder = row.Folder || '';
+        const analyteName = row.AnalyteName || '';
+
+        // Get StudyDay from lblh lookup (same pattern as index.html)
+        const key = `${subject}|${folder}|${analyteName}`;
+        const keyNoAnalyte = `${subject}|${folder}|`;
+        let studyDay = lblhStudyDays[key];
+        if (studyDay === undefined) studyDay = lblhStudyDays[keyNoAnalyte];
+
+        // If still no StudyDay, try to calculate from RecordDate
+        if (studyDay === undefined && row.RecordDate && baselineDates[subject]) {
+          const recordDate = parseSASDate(row.RecordDate);
+          if (recordDate) {
+            studyDay = Math.round((recordDate - baselineDates[subject]) / (1000 * 60 * 60 * 24));
+          }
+        }
+
+        const stdValue = parseFloat(row.StdValue);
+        const stdLow = parseFloat(row.StdLow);
+        const stdHigh = parseFloat(row.StdHigh);
+        const stdUnits = (row.StdUnits || '').trim();
+
+        const labValue = parseFloat(row.NumericValue);
+        const labLow = parseFloat(row.LabLow);
+        const labHigh = parseFloat(row.LabHigh);
+        const labUnits = (row.LabUnits || '').trim();
+
+        return {
+          Subject: subject,
+          Folder: folder === 'DSET' ? 'End of treatment' : folder,
+          AnalyteName: analyteName,
+          StdValue: isNaN(stdValue) ? null : stdValue,
+          StdLow: isNaN(stdLow) ? null : stdLow,
+          StdHigh: isNaN(stdHigh) ? null : stdHigh,
+          StdUnits: stdUnits,
+          LabValue: isNaN(labValue) ? null : labValue,
+          LabLow: isNaN(labLow) ? null : labLow,
+          LabHigh: isNaN(labHigh) ? null : labHigh,
+          LabUnits: labUnits,
+          StudyDay: studyDay,
+          ARM: armLookup[subject] || 'Unknown'
+        };
+      }).filter(row => row.Subject && row.AnalyteName);
+
+      state.processedData = processed;
+
+      // Include hardcoded analytes if available
+      const processedAnalytes = processed.map(r => r.AnalyteName);
+      const hardcodedAnalytes = (typeof LABS_CONFIG !== 'undefined' && LABS_CONFIG.getHardcodedAnalytes)
+        ? LABS_CONFIG.getHardcodedAnalytes()
+        : [];
+      state.uniqueAnalytes = [...new Set([...processedAnalytes, ...hardcodedAnalytes])].sort();
+      state.uniqueArms = [...new Set(processed.map(r => r.ARM))].sort();
+
+      // Stat cards are updated per analyte in renderChart
+    }
+
+    // One-sided normalization (no CTCAE grading yet)
+    // Uses Standard bundle first, then Lab bundle as fallback (same as index.html)
+    // For "increase" analytes: use Value / ULN (High)
+    // For "decrease" analytes: use LLN (Low) / Value
+    // For "bidirectional" analytes: use ULN or LLN based on which side is abnormal
+    function getNormalizedValue(value, low, high, direction) {
+      if (direction === 'increase') {
+        if (high == null || !isFinite(high) || high <= 0) return null;
+        return value / high;
+      }
+      if (direction === 'decrease') {
+        if (low == null || !isFinite(low)) return null;
+        if (!isFinite(value) || value === 0) return null;
+        return low / value;
+      }
+      if (direction === 'bidirectional') {
+        if (low == null || !isFinite(low) || high == null || !isFinite(high) || high <= 0) return null;
+        if (!isFinite(value) || value === 0) return null;
+        if (value < low) return low / value;
+        if (value > high) return value / high;
+        return value / high; // Normal range stays <= 1
+      }
+      return null;
+    }
+
+    function getMedian(values) {
+      if (!values || values.length === 0) return null;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 === 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+      }
+      return sorted[mid];
+    }
+
+    const ULN_MULTIPLIER_ANALYTES = new Set([
+      'ALT', 'AST', 'ALP', 'GGT', 'BILI', 'CREAT', 'LIPASE', 'AMYLASE', 'LDH',
+      'APTT', 'PT', 'PTT'
+    ]);
+
+    function buildGradeLines(analyteName, data) {
+      if (!data || data.length === 0) return [];
+
+      const shortName = getAnalyteShortName(analyteName);
+      if (!ULN_MULTIPLIER_ANALYTES.has(shortName)) return [];
+
+      const lowValues = data.map(r => r.Low).filter(v => Number.isFinite(v));
+      const highValues = data.map(r => r.High).filter(v => Number.isFinite(v));
+      const refLow = getMedian(lowValues);
+      const refHigh = getMedian(highValues);
+
+      const gradeColors = {
+        'Grade1': '#fbbf24',
+        'Grade2': '#f97316',
+        'Grade3': '#ef4444',
+        'Grade4': '#991b1b'
+      };
+
+      const gradesInfo = getCTCAEGrades(analyteName, null, refLow, refHigh, null);
+      const direction = gradesInfo.direction;
+      if (!direction || !gradesInfo.grades || direction !== 'increase') return [];
+
+      const lines = [];
+      gradesInfo.grades.forEach(g => {
+        const gradeClean = g.grade.replace(/_low|_high/, '');
+        let ratio = null;
+        let label = gradeClean;
+
+        if (direction === 'increase') {
+          if (!Number.isFinite(refHigh) || !Number.isFinite(g.low) || refHigh <= 0 || g.low <= 0) return;
+          ratio = g.low / refHigh;
+        } else if (direction === 'decrease') {
+          if (!Number.isFinite(refLow) || !Number.isFinite(g.low) || refLow <= 0 || g.low <= 0) return;
+          ratio = refLow / g.low;
+        } else if (direction === 'bidirectional') {
+          if (g.grade.includes('_low')) {
+            if (!Number.isFinite(refLow) || !Number.isFinite(g.low) || refLow <= 0 || g.low <= 0) return;
+            ratio = refLow / g.low;
+            label = `${gradeClean} (Low)`;
+          } else if (g.grade.includes('_high')) {
+            if (!Number.isFinite(refHigh) || !Number.isFinite(g.low) || refHigh <= 0 || g.low <= 0) return;
+            ratio = g.low / refHigh;
+            label = `${gradeClean} (High)`;
+          }
+        }
+
+        if (!Number.isFinite(ratio) || ratio <= 0) return;
+        if (Math.abs(ratio - 1) < 1e-6) return; // Ratio=1 already shown
+
+        lines.push({
+          value: ratio,
+          label,
+          color: gradeColors[gradeClean] || '#888'
+        });
+      });
+
+      // Remove near-duplicate lines
+      const unique = [];
+      lines.sort((a, b) => a.value - b.value);
+      lines.forEach(line => {
+        const exists = unique.find(u => Math.abs(u.value - line.value) < 0.01 && u.label === line.label);
+        if (!exists) unique.push(line);
+      });
+      return unique;
+    }
+
+    function getHardcodedNormalizedData(analyteName, baselineDates, armLookup, direction) {
+      if (typeof LABS_CONFIG === 'undefined' || !LABS_CONFIG.hardcodedPatients) return [];
+
+      const results = [];
+      const parseHardcodedDate = LABS_CONFIG.parseHardcodedDate || function(dateStr) {
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+                         JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        const match = String(dateStr || '').match(/^(\d{2})([A-Z]{3})(\d{4})/i);
+        if (!match) return null;
+        const day = parseInt(match[1], 10);
+        const month = months[match[2].toUpperCase()];
+        const year = parseInt(match[3], 10);
+        if (month === undefined) return null;
+        return new Date(year, month, day);
+      };
+
+      Object.entries(LABS_CONFIG.hardcodedPatients).forEach(([patientId, patientData]) => {
+        const ranges = patientData.ranges ? patientData.ranges[analyteName] : null;
+        if (!ranges) return;
+
+        const low = ranges.low !== undefined ? ranges.low : null;
+        const high = ranges.high !== undefined ? ranges.high : null;
+        const units = (ranges.units || '').trim();
+
+        (patientData.data || [])
+          .filter(d => d.analyte === analyteName)
+          .forEach(d => {
+            const recordDate = parseHardcodedDate(d.date);
+            if (!recordDate) return;
+
+            let studyDay = null;
+            if (baselineDates && baselineDates[patientId]) {
+              studyDay = Math.round((recordDate - baselineDates[patientId]) / (1000 * 60 * 60 * 24));
+            }
+            if (studyDay === null || studyDay === undefined) return;
+
+            const value = d.value;
+            if (value === null || !isFinite(value)) return;
+
+            const normValue = getNormalizedValue(value, low, high, direction);
+            if (normValue === null || !isFinite(normValue)) return;
+
+            let normStatus = 'Normal';
+            if (direction === 'increase' && high != null && isFinite(high) && value > high) normStatus = 'High';
+            if (direction === 'decrease' && low != null && isFinite(low) && value < low) normStatus = 'Low';
+            if (direction === 'bidirectional') {
+              if (low != null && isFinite(low) && value < low) normStatus = 'Low';
+              else if (high != null && isFinite(high) && value > high) normStatus = 'High';
+            }
+
+            results.push({
+              Subject: patientId,
+              Folder: 'Hardcoded',
+              AnalyteName: analyteName,
+              Value: value,
+              Low: low,
+              High: high,
+              Units: units,
+              UseStandard: false,
+              IsHardcoded: true,
+              NormValue: normValue,
+              NormStatus: normStatus,
+              Direction: direction,
+              StudyDay: studyDay,
+              ARM: (armLookup && armLookup[patientId]) || 'Unknown'
+            });
+          });
+      });
+
+      return results;
+    }
+
+    function getAnalyteNormalizedData(analyteName, includeNormalRange = false) {
+      // Step 1: Get all rows for this analyte (before any StudyDay filtering)
+      const allRows = state.processedData.filter(r => r.AnalyteName === analyteName);
+      const allSubjects = new Set(allRows.map(r => r.Subject));
+      const totalPatientsProcessed = allSubjects.size;
+
+      // Step 2: Filter rows with valid StudyDay
+      let labdata = allRows.filter(r => r.StudyDay !== null && r.StudyDay !== undefined);
+      const subjectsWithStudyDay = new Set(labdata.map(r => r.Subject));
+      const missingStudyDay = totalPatientsProcessed - subjectsWithStudyDay.size;
+
+      // Get direction for this analyte (increase/decrease/bidirectional)
+      const testGrades = getCTCAEGrades(analyteName, null, null, null);
+      const direction = testGrades.direction;
+      
+      if (!direction) {
+        // No direction mapping for this analyte
+        return { 
+          data: [], 
+          hasData: false, 
+          noDirection: true, 
+          stats: { 
+            totalPatients: totalPatientsProcessed, 
+            shown: 0, 
+            excluded: 0,
+            missingStudyDay,
+            missingRange: 0
+          } 
+        };
+      }
+
+      // Step 2: For each row, determine data source (Std bundle first, then Lab bundle)
+      // Same logic as index.html, but only require the range needed for the direction
+      labdata = labdata.map(row => {
+        // Check Standard bundle completeness
+        const hasStdValue = row.StdValue !== null && isFinite(row.StdValue);
+        const hasStdLow = row.StdLow !== null && isFinite(row.StdLow);
+        const hasStdHigh = row.StdHigh !== null && isFinite(row.StdHigh) && row.StdHigh > 0;
+        
+        // Check Lab bundle completeness
+        const hasLabValue = row.LabValue !== null && isFinite(row.LabValue);
+        const hasLabLow = row.LabLow !== null && isFinite(row.LabLow);
+        const hasLabHigh = row.LabHigh !== null && isFinite(row.LabHigh) && row.LabHigh > 0;
+        
+        let value = null, low = null, high = null, units = '', useStandard = false;
+        
+        // Determine which bundle to use based on direction requirements
+        if (direction === 'increase') {
+          // For "increase" analytes: need Value + ULN (High)
+          if (hasStdValue && hasStdHigh) {
+            value = row.StdValue;
+            low = row.StdLow;  // Optional for increase
+            high = row.StdHigh;
+            units = row.StdUnits || '';
+            useStandard = true;
+          } else if (hasLabValue && hasLabHigh) {
+            value = row.LabValue;
+            low = row.LabLow;  // Optional for increase
+            high = row.LabHigh;
+            units = row.LabUnits || '';
+            useStandard = false;
+          }
+        } else if (direction === 'decrease') {
+          // For "decrease" analytes: need Value + LLN (Low)
+          if (hasStdValue && hasStdLow) {
+            value = row.StdValue;
+            low = row.StdLow;
+            high = row.StdHigh;  // Optional for decrease
+            units = row.StdUnits || '';
+            useStandard = true;
+          } else if (hasLabValue && hasLabLow) {
+            value = row.LabValue;
+            low = row.LabLow;
+            high = row.LabHigh;  // Optional for decrease
+            units = row.LabUnits || '';
+            useStandard = false;
+          }
+        } else if (direction === 'bidirectional') {
+          // For "bidirectional" analytes: need Value + LLN + ULN
+          if (hasStdValue && hasStdLow && hasStdHigh) {
+            value = row.StdValue;
+            low = row.StdLow;
+            high = row.StdHigh;
+            units = row.StdUnits || '';
+            useStandard = true;
+          } else if (hasLabValue && hasLabLow && hasLabHigh) {
+            value = row.LabValue;
+            low = row.LabLow;
+            high = row.LabHigh;
+            units = row.LabUnits || '';
+            useStandard = false;
+          }
+        }
+        
+        // Skip if no valid data source found
+        if (value === null) return null;
+
+        // Calculate one-sided normalized value
+        const normValue = getNormalizedValue(value, low, high, direction);
+        if (normValue === null || !isFinite(normValue)) return null;
+
+        // Normal/Abnormal label
+        let normStatus = 'Normal';
+        if (direction === 'increase' && high != null && value > high) normStatus = 'High';
+        if (direction === 'decrease' && low != null && value < low) normStatus = 'Low';
+        if (direction === 'bidirectional') {
+          if (low != null && value < low) normStatus = 'Low';
+          else if (high != null && value > high) normStatus = 'High';
+        }
+        
+        return {
+          ...row,
+          Value: value,
+          Low: low,
+          High: high,
+          Units: units,
+          UseStandard: useStandard,
+          IsHardcoded: false,
+          NormValue: normValue,
+          NormStatus: normStatus,
+          Direction: direction
+        };
+      }).filter(Boolean);
+
+      const subjectsWithValidData = new Set(labdata.map(r => r.Subject));
+      const missingRange = subjectsWithStudyDay.size - subjectsWithValidData.size;
+
+      // Step 3: Merge hardcoded data (if any)
+      let hardcodedData = [];
+      if (typeof LABS_CONFIG !== 'undefined' && LABS_CONFIG.hardcodedPatients) {
+        hardcodedData = getHardcodedNormalizedData(analyteName, state.baselineDates || {}, state.armLookup || {}, direction)
+          .filter(r => r.StudyDay !== null && r.StudyDay !== undefined && isFinite(r.NormValue));
+
+        // Remove any regular data points that conflict with hardcoded data (same Subject + StudyDay)
+        if (hardcodedData.length > 0) {
+          const hardcodedKeys = new Set(hardcodedData.map(r => `${r.Subject}|${r.StudyDay}`));
+          labdata = labdata.filter(r => !hardcodedKeys.has(`${r.Subject}|${r.StudyDay}`));
+        }
+      }
+
+      labdata = [...labdata, ...hardcodedData];
+
+      // Update total patient count to include hardcoded-only subjects
+      const hardcodedSubjects = new Set(hardcodedData.map(r => r.Subject));
+      const totalPatients = new Set([...allSubjects, ...hardcodedSubjects]).size;
+
+      // Step 4: Deduplicate - one value per Subject + StudyDay, keep highest ratio
+      const dedupMap = {};
+      labdata.forEach(row => {
+        const key = `${row.Subject}|${row.StudyDay}`;
+        if (!dedupMap[key] || row.NormValue > dedupMap[key].NormValue) {
+          dedupMap[key] = row;
+        }
+      });
+      labdata = Object.values(dedupMap);
+
+      const noValidData = labdata.length === 0;
+
+      // Step 5: Calculate subjects before exclusion
+      // Step 6: Exclude patients whose ALL visits are within normal range (NormValue <= 1)
+      let excludedSubjects = new Set();
+      if (!includeNormalRange) {
+        const subjectStatus = {};
+        labdata.forEach(row => {
+          if (!subjectStatus[row.Subject]) subjectStatus[row.Subject] = { allNormal: true };
+          // Consider "normal" if ratio <= 1
+          if (row.NormValue > 1) {
+            subjectStatus[row.Subject].allNormal = false;
+          }
+        });
+        
+        const subjectsToKeep = Object.keys(subjectStatus).filter(s => !subjectStatus[s].allNormal);
+        excludedSubjects = new Set(Object.keys(subjectStatus).filter(s => subjectStatus[s].allNormal));
+        labdata = labdata.filter(row => subjectsToKeep.includes(row.Subject));
+      }
+
+      const shownSubjects = new Set(labdata.map(r => r.Subject));
+
+      if (labdata.length === 0) {
+        return {
+          data: [],
+          hasData: false,
+          allNormal: true,
+          noValidData,
+          stats: { 
+            totalPatients, 
+            shown: 0, 
+            excluded: excludedSubjects.size,
+            missingStudyDay,
+            missingRange
+          }
+        };
+      }
+
+      // Step 7: Sort by Subject then StudyDay
+      labdata.sort((a, b) => {
+        if (a.Subject !== b.Subject) return a.Subject.localeCompare(b.Subject);
+        return a.StudyDay - b.StudyDay;
+      });
+
+      return {
+        data: labdata,
+        hasData: true,
+        stats: {
+          totalPatients,
+          shown: shownSubjects.size,
+          excluded: excludedSubjects.size,
+          missingStudyDay,
+          missingRange
+        }
+      };
+    }
+
+    function updateAnalyteDropdown() {
+      const select = document.getElementById('analyteSelect');
+      select.innerHTML = state.uniqueAnalytes.map((analyte, i) =>
+        `<option value="${analyte}" ${i === 0 ? 'selected' : ''}>${analyte}</option>`
+      ).join('');
+    }
+
+    function updateArmFilter() {
+      const select = document.getElementById('armFilter');
+      select.innerHTML = '<option value="all">All Groups</option>' +
+        state.uniqueArms.map(arm => `<option value="${arm}">${arm}</option>`).join('');
+    }
+
+    function updatePagination() {
+      const current = state.currentAnalyteIndex + 1;
+      const total = state.uniqueAnalytes.length;
+      document.getElementById('pageInfo').textContent = `${current} / ${total}`;
+      document.getElementById('prevAnalyte').disabled = current <= 1;
+      document.getElementById('nextAnalyte').disabled = current >= total;
+    }
+
+    function goToAnalyte(index) {
+      if (index < 0 || index >= state.uniqueAnalytes.length) return;
+      state.currentAnalyteIndex = index;
+      const analyte = state.uniqueAnalytes[index];
+      document.getElementById('analyteSelect').value = analyte;
+      renderChart(analyte);
+      updatePagination();
+    }
+
+    function renderChart(analyteName) {
+      const includeNormalRange = document.getElementById('showNormal').checked;
+      const armFilter = document.getElementById('armFilter').value;
+      const yAxisScale = document.getElementById('yAxisScale')?.value || 'linear';
+      const isLogScale = yAxisScale === 'log';
+
+      let { data, hasData, allNormal, noValidData, noDirection, stats } = getAnalyteNormalizedData(analyteName, includeNormalRange);
+
+      if (armFilter !== 'all') {
+        data = data.filter(r => r.ARM === armFilter);
+      }
+
+      // Filter to show patients who have at least one point >= Grade 2 (ratio >= 2)
+      const showGrade2Only = document.getElementById('showGrade2Only').checked;
+      if (showGrade2Only) {
+        // Find patients who have at least one data point with NormValue >= 2
+        const patientsWithGrade2 = new Set();
+        data.forEach(r => {
+          if (r.NormValue >= 2) {
+            patientsWithGrade2.add(r.Subject);
+          }
+        });
+        // Keep all data for those patients
+        data = data.filter(r => patientsWithGrade2.has(r.Subject));
+      }
+
+      // Update stats panel (per analyte)
+      const shownSubjects = new Set(data.map(r => r.Subject));
+      document.getElementById('statAnalytes').textContent = (stats && stats.totalPatients != null) ? stats.totalPatients : 0;
+      document.getElementById('statSubjects').textContent = shownSubjects.size;
+      document.getElementById('statDosingGroups').textContent = (stats && stats.missingStudyDay != null) ? stats.missingStudyDay : 0;
+      document.getElementById('statDataPoints').textContent = (stats && stats.missingRange != null) ? stats.missingRange : 0;
+      document.getElementById('statExcluded').textContent = (stats && stats.excluded != null) ? stats.excluded : 0;
+
+      document.getElementById('chartTitle').textContent = analyteName;
+      const chartNoteEl = document.getElementById('chartNote');
+      if (chartNoteEl) {
+        if (stats && stats.missingRange > 0) {
+          chartNoteEl.textContent = `Missing ULN/LLN or value for ${stats.missingRange} patients — normalization skipped for those records.`;
+          chartNoteEl.style.display = 'block';
+        } else {
+          chartNoteEl.textContent = '';
+          chartNoteEl.style.display = 'none';
+        }
+      }
+
+      if (!hasData || data.length === 0) {
+        let message = 'No normalized data available';
+        if (allNormal) message = 'No patients outside normal range';
+        if (noValidData) message = 'No valid data with required ULN/LLN';
+        if (noDirection) message = 'No direction mapping available';
+        document.getElementById('chartSubtitle').textContent = message;
+        document.getElementById('legendContainer').innerHTML = '';
+        if (chartNoteEl) {
+          chartNoteEl.textContent = '';
+          chartNoteEl.style.display = 'none';
+        }
+        if (state.chart) {
+          state.chart.destroy();
+          state.chart = null;
+        }
+        return;
+      }
+
+      // Get direction from first data point
+      const direction = data[0]?.Direction || 'increase';
+      const units = data[0]?.Units || '';
+      document.getElementById('chartSubtitle').textContent = 
+        `One-sided Normalization (ratio <= 1 = normal) | ${direction} direction | Units: ${units}`;
+
+      // Update filter info box with clinical footnote
+      const filterInfoBox = document.getElementById('chartFilterInfo');
+      if (filterInfoBox && stats) {
+        filterInfoBox.style.display = 'block';
+        
+        // Get short analyte name for footnote
+        const analyteShort = analyteName.split(';')[1]?.trim() || analyteName.split(';')[0]?.trim() || analyteName;
+        
+        // Determine ULN or LLN based on direction
+        const refType = direction === 'decrease' ? 'LLN' : 'ULN';
+        const abnormalType = direction === 'decrease' ? 'decrease' : 'elevation';
+        
+        // Build clinical footnote based on filter state (bold key terms)
+        let footnote = '';
+        if (showGrade2Only) {
+          footnote = `${shownSubjects.size} patients shown with ${analyteShort} ${abnormalType} <strong>≥ Grade 2 (Ratio ≥ 2)</strong> at any time during therapy`;
+        } else if (includeNormalRange) {
+          footnote = `${shownSubjects.size} patients shown (<strong>all patients with ${analyteShort} data</strong>)`;
+        } else {
+          footnote = `${shownSubjects.size} patients shown with ${analyteShort} <strong>abnormality</strong> at any time during therapy`;
+        }
+        
+        // Add ARM filter info if applicable
+        if (armFilter !== 'all') {
+          footnote += ` (${armFilter} only)`;
+        }
+        
+        filterInfoBox.innerHTML = footnote;
+      } else if (filterInfoBox) {
+        filterInfoBox.style.display = 'none';
+      }
+
+      const armsInData = [...new Set(data.map(r => r.ARM))].sort();
+      const armColorMap = {};
+      armsInData.forEach((arm, i) => {
+        armColorMap[arm] = ARM_COLORS[i % ARM_COLORS.length];
+      });
+
+      const legendHtml = armsInData.map(arm => `
+        <div class="legend-item">
+          <div class="legend-dot" style="background: ${armColorMap[arm]}"></div>
+          <span>${arm}</span>
+        </div>
+      `).join('');
+
+      // Add point style legend (Standard / Local Lab / Hardcoded)
+      const hasLocalLab = data.some(r => !r.UseStandard && !r.IsHardcoded);
+      const hasStandard = data.some(r => r.UseStandard && !r.IsHardcoded);
+      const hasHardcoded = data.some(r => r.IsHardcoded);
+
+      let pointStyleLegend = '';
+      if (hasStandard || hasLocalLab || hasHardcoded) {
+        pointStyleLegend = `
+          <div style="border-left: 2px solid #dee2e6; padding-left: 15px; margin-left: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
+            <span style="font-weight: 600; color: #2C3E50;">Point Style:</span>
+            ${hasStandard ? `<div class="legend-item"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #666;"></span><span>Standard (SI Units)</span></div>` : ''}
+            ${hasLocalLab ? `<div class="legend-item"><span style="display: inline-block; width: 10px; height: 10px; background: #666;"></span><span>Local Lab Units</span></div>` : ''}
+            ${hasHardcoded ? `<div class="legend-item"><span style="display: inline-block; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #666;"></span><span>Hardcoded (Manual)</span></div>` : ''}
+          </div>
+        `;
+      }
+
+      document.getElementById('legendContainer').innerHTML = legendHtml + pointStyleLegend;
+
+      const subjects = [...new Set(data.map(r => r.Subject))];
+      const sortBy = document.getElementById('sortBy').value;
+      if (sortBy === 'subject') {
+        subjects.sort((a, b) => a.localeCompare(b));
+      } else {
+        subjects.sort((a, b) => {
+          const armA = data.find(r => r.Subject === a)?.ARM || 'Unknown';
+          const armB = data.find(r => r.Subject === b)?.ARM || 'Unknown';
+          if (armA !== armB) return armA.localeCompare(armB);
+          return a.localeCompare(b);
+        });
+      }
+
+      const datasets = [];
+      let yOffset = 0;
+      const allNormValues = data.map(r => r.NormValue);
+      const dataMin = Math.min(...allNormValues);
+      const dataMax = Math.max(...allNormValues);
+
+      if (isLogScale && dataMin <= 0) {
+        yOffset = Math.abs(dataMin) + 0.1;
+      }
+
+      subjects.forEach(subject => {
+        const subjectData = data.filter(r => r.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+        const arm = subjectData[0]?.ARM || 'Unknown';
+        const color = armColorMap[arm];
+        datasets.push({
+          type: 'line',
+          label: `${subject} (${arm})`,
+          data: subjectData.map(r => ({
+            x: r.StudyDay,
+            y: r.NormValue + yOffset,
+            folder: r.Folder,
+            normStatus: r.NormStatus,
+            originalY: r.NormValue,
+            rawValue: r.Value,
+            units: r.Units,
+            low: r.Low,
+            high: r.High,
+            useStandard: r.UseStandard,
+            isHardcoded: r.IsHardcoded || false
+          })),
+          borderColor: color,
+          backgroundColor: color,
+          borderWidth: 1,
+          pointRadius: 6,
+          // Different point styles: triangle for Hardcoded, circle for Standard, rect for Local Lab
+          pointStyle: subjectData.map(r => {
+            if (r.IsHardcoded) return 'triangle';
+            return r.UseStandard ? 'circle' : 'rect';
+          }),
+          pointBackgroundColor: color,
+          pointBorderColor: color,
+          fill: false,
+          tension: 0,
+          showLine: true,
+          clip: false  // Don't clip data points at edges
+        });
+      });
+
+      if (state.chart) {
+        state.chart.destroy();
+      }
+
+      const gradeLines = buildGradeLines(analyteName, data);
+
+      // Calculate Y-axis range based on data and CTCAE grade lines
+      const maxNorm = Math.max(...allNormValues, 1);
+      const maxGradeLine = gradeLines.length > 0 ? Math.max(...gradeLines.map(l => l.value)) : 1;
+      let yMin = 0;
+      let yMax = Math.max(1.2, maxNorm * 1.1, maxGradeLine * 1.1);
+
+      if (isLogScale) {
+        if (dataMin <= 0) {
+          yMin = 0.01;
+        } else {
+          yMin = dataMin * 0.5;
+        }
+        const maxWithOffset = Math.max(maxNorm, maxGradeLine) + yOffset;
+        yMax = Math.max(maxWithOffset, 1 + yOffset) * 2;
+      }
+
+      // Calculate X-axis max: max study day + 14, rounded up to nearest 10
+      const allStudyDays = data.map(r => r.StudyDay);
+      const maxStudyDay = Math.max(...allStudyDays, 0);
+      const xMax = Math.ceil((maxStudyDay + 14) / 10) * 10;
+
+      const ctx = document.getElementById('ctcaeChart').getContext('2d');
+      state.chart = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'point', intersect: true },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.raw;
+                  const labelParts = context.dataset.label.split(' ');
+                  const subject = labelParts[0];
+                  const displayValue = (point.originalY !== undefined) ? point.originalY : point.y;
+                  return [
+                    `Subject: ${subject}`,
+                    `Dosing Group: ${context.dataset.label.replace(subject + ' ', '').replace(/[()]/g, '')}`,
+                    `Visit: ${point.folder}`,
+                    `Study Day: ${point.x}`,
+                    `Normalized Value: ${displayValue.toFixed(2)}`,
+                    `Status: ${point.normStatus}`,
+                    `Raw Value: ${point.rawValue.toFixed(2)} ${point.units}`,
+                    point.high ? `ULN: ${point.high.toFixed(2)}` : '',
+                    point.low ? `LLN: ${point.low.toFixed(2)}` : '',
+                    `Data Source: ${point.isHardcoded ? 'Hardcoded (Manual)' : (point.useStandard ? 'Standard (SI)' : 'Local Lab')}`
+                  ].filter(Boolean);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: -30,
+              max: xMax,
+              title: {
+                display: true,
+                text: 'Study Day (Day 0 = C0D1)',
+                font: { size: 14 }
+              },
+              ticks: {
+                stepSize: 30,
+                font: { size: 12 }
+              },
+              grid: { color: '#e0e0e0' }
+            },
+            y: {
+              type: isLogScale ? 'logarithmic' : 'linear',
+              min: yMin,
+              max: yMax,
+              title: {
+                display: true,
+                text: 'Normalized Value (ULN/LLN)',
+                font: { size: 14 }
+              },
+              ticks: {
+                font: { size: 12 }
+              },
+              grid: { display: true, color: '#f0f0f0' }
+            }
+          }
+        },
+        plugins: [{
+          id: 'referenceLines',
+          beforeDraw: (chart) => {
+            const ctx = chart.ctx;
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+            const x1 = xAxis.getPixelForValue(-30);
+            const x2 = xAxis.getPixelForValue(xMax);
+
+            ctx.save();
+
+            // Horizontal line at ratio = 1 (normal/abnormal boundary)
+            const y1 = yAxis.getPixelForValue(1 + yOffset);
+            ctx.beginPath();
+            ctx.strokeStyle = '#4CAF50';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1;
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y1);
+            ctx.stroke();
+
+            // CTCAE grade lines (normalized ratios)
+            if (gradeLines && gradeLines.length > 0) {
+              ctx.setLineDash([5, 5]);
+              ctx.lineWidth = 1;
+              ctx.font = '12px Arial';
+              ctx.textAlign = 'right';
+              ctx.textBaseline = 'bottom';
+
+              gradeLines.forEach(line => {
+                const lineValue = line.value + yOffset;
+                if (lineValue < yAxis.min || lineValue > yAxis.max) return;
+                const y = yAxis.getPixelForValue(lineValue);
+                ctx.beginPath();
+                ctx.strokeStyle = line.color;
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
+                ctx.stroke();
+                ctx.fillStyle = line.color;
+                ctx.fillText(line.label, x2 - 6, y - 4);
+              });
+            }
+
+            // Vertical line at Day 0 (C0D1)
+            ctx.beginPath();
+            ctx.strokeStyle = 'red';
+            ctx.setLineDash([2, 2]);
+            ctx.lineWidth = 2;
+            const x0 = xAxis.getPixelForValue(0);
+            ctx.moveTo(x0, chart.chartArea.top);
+            ctx.lineTo(x0, chart.chartArea.bottom);
+            ctx.stroke();
+
+            // Add "C0D1" label (right side of line, dark blue)
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#1a237e';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('C0D1', x0 + 4, chart.chartArea.top + 8);
+
+            ctx.restore();
+          }
+        }]
+      });
+
+      // Render patient subplots with the same filtered data
+      renderPatientSubplots(data, armColorMap, gradeLines, yOffset, isLogScale);
+    }
+
+    // Render individual patient subplots
+    function renderPatientSubplots(data, armColorMap, gradeLines, yOffset, isLogScale) {
+      const container = document.getElementById('patientSubplotsContainer');
+      const countEl = document.getElementById('patientSubplotsCount');
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="patient-subplots-empty">No data available for individual plots</div>';
+        countEl.textContent = '0 patients';
+        return;
+      }
+
+      // Get unique subjects and sort by maximum value (descending)
+      let subjects = [...new Set(data.map(r => r.Subject))];
+      
+      // Calculate max value for each subject
+      const subjectMaxValues = {};
+      subjects.forEach(subject => {
+        const subjectData = data.filter(r => r.Subject === subject);
+        subjectMaxValues[subject] = Math.max(...subjectData.map(r => r.NormValue));
+      });
+      
+      // Sort by max value descending (highest first)
+      subjects.sort((a, b) => subjectMaxValues[b] - subjectMaxValues[a]);
+
+      countEl.textContent = `${subjects.length} patient${subjects.length !== 1 ? 's' : ''}`;
+
+      // Calculate global Y-axis range for consistent scaling
+      const allNormValues = data.map(r => r.NormValue);
+      const dataMin = Math.min(...allNormValues);
+      const maxNorm = Math.max(...allNormValues, 1);
+      
+      let yMin = 0;
+      let yMax = Math.max(1.2, maxNorm * 1.1);
+      
+      if (isLogScale) {
+        yMin = dataMin <= 0 ? 0.01 : dataMin * 0.5;
+        yMax = Math.max(maxNorm + yOffset, 1 + yOffset) * 1.5;
+      }
+
+      // Calculate X-axis range
+      const allStudyDays = data.map(r => r.StudyDay);
+      const xMax = Math.ceil((Math.max(...allStudyDays, 0) + 14) / 10) * 10;
+
+      // Destroy existing subplot charts
+      if (state.patientCharts) {
+        state.patientCharts.forEach(chart => chart.destroy());
+      }
+      state.patientCharts = [];
+
+      // Build HTML for all patient subplots
+      let html = '';
+      subjects.forEach((subject, idx) => {
+        const subjectData = data.filter(r => r.Subject === subject);
+        const arm = subjectData[0]?.ARM || 'Unknown';
+        const color = armColorMap[arm] || '#666';
+        const maxValue = subjectMaxValues[subject].toFixed(2);
+        
+        html += `
+          <div class="patient-subplot-container">
+            <div class="patient-subplot-header">
+              <div class="patient-subplot-title">${subject} <span style="font-weight: normal; color: #7F8C8D;">(Max: ${maxValue})</span></div>
+              <div class="patient-subplot-arm" style="background: ${color}">${arm}</div>
+            </div>
+            <div class="patient-subplot-wrapper">
+              <canvas id="patientChart_${idx}"></canvas>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      // Create charts for each patient
+      subjects.forEach((subject, idx) => {
+        const subjectData = data.filter(r => r.Subject === subject).sort((a, b) => a.StudyDay - b.StudyDay);
+        const arm = subjectData[0]?.ARM || 'Unknown';
+        const color = armColorMap[arm] || '#666';
+
+        const ctx = document.getElementById(`patientChart_${idx}`).getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              type: 'line',
+              label: subject,
+              data: subjectData.map(r => ({
+                x: r.StudyDay,
+                y: r.NormValue + yOffset,
+                originalY: r.NormValue,
+                folder: r.Folder,
+                normStatus: r.NormStatus,
+                rawValue: r.Value,
+                units: r.Units,
+                low: r.Low,
+                high: r.High
+              })),
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: 2,
+              pointRadius: 5,
+              pointStyle: subjectData.map(r => r.IsHardcoded ? 'triangle' : (r.UseStandard ? 'circle' : 'rect')),
+              fill: false,
+              tension: 0,
+              showLine: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const point = context.raw;
+                    const displayValue = point.originalY !== undefined ? point.originalY : point.y;
+                    return [
+                      `Day ${point.x}: ${displayValue.toFixed(2)}`,
+                      `Visit: ${point.folder}`,
+                      `Raw: ${point.rawValue?.toFixed(2) || 'N/A'} ${point.units || ''}`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                type: 'linear',
+                min: -30,
+                max: xMax,
+                title: { display: false },
+                ticks: { font: { size: 10 }, stepSize: 30 },
+                grid: { color: '#f0f0f0' }
+              },
+              y: {
+                type: isLogScale ? 'logarithmic' : 'linear',
+                min: yMin,
+                max: yMax,
+                title: { display: false },
+                ticks: { font: { size: 10 } },
+                grid: { color: '#f0f0f0' }
+              }
+            }
+          },
+          plugins: [{
+            id: 'subplotZones',
+            beforeDraw: (chart) => {
+              const ctx = chart.ctx;
+              const yAxis = chart.scales.y;
+              const chartArea = chart.chartArea;
+              const offsetVal = yOffset || 0;
+
+              ctx.save();
+
+              // Normal range shading
+              const y0 = yAxis.getPixelForValue(0 + offsetVal);
+              const y1 = yAxis.getPixelForValue(1 + offsetVal);
+              if (y0 > chartArea.top && y1 < chartArea.bottom) {
+                ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+                ctx.fillRect(chartArea.left, Math.max(y1, chartArea.top), chartArea.right - chartArea.left, Math.min(y0, chartArea.bottom) - Math.max(y1, chartArea.top));
+              }
+
+              // Reference line at ratio = 1
+              if (y1 >= chartArea.top && y1 <= chartArea.bottom) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#4CAF50';
+                ctx.setLineDash([3, 3]);
+                ctx.lineWidth = 1;
+                ctx.moveTo(chartArea.left, y1);
+                ctx.lineTo(chartArea.right, y1);
+                ctx.stroke();
+              }
+
+              // CTCAE reference lines (if available)
+              if (gradeLines && gradeLines.length > 0) {
+                ctx.setLineDash([4, 2]);
+                ctx.lineWidth = 1;
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                
+                gradeLines.forEach(line => {
+                  const lineValue = line.value + offsetVal;
+                  const yPos = yAxis.getPixelForValue(lineValue);
+                  if (yPos >= chartArea.top && yPos <= chartArea.bottom) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = line.color;
+                    ctx.moveTo(chartArea.left, yPos);
+                    ctx.lineTo(chartArea.right, yPos);
+                    ctx.stroke();
+                  }
+                });
+              }
+
+              ctx.restore();
+            }
+          }]
+        });
+
+        state.patientCharts.push(chart);
+      });
+    }
+
+    // Helper function for export button
+    function getCurrentAnalyteName() {
+      return state.uniqueAnalytes[state.currentAnalyteIndex] || 'CTCAE_Labs';
+    }
+
+    async function init() {
+      try {
+        // Initialize block export dialog (auto-adjusts width/height)
+        if (typeof initBlockExportDialog === 'function') {
+          initBlockExportDialog();
+          setBlockExportPrefix('CTCAE_Labs');
+        }
+
+        // Load lblh.CSV (same as index.html) instead of lblc.CSV
+        const [labData, lblhData, dmData] = await Promise.all([
+          loadCSV('../../data/lab.CSV'),
+          loadCSV('../../data/lblh.CSV'),
+          loadCSV('../../data/dm.CSV').catch(() => [])
+        ]);
+        state.labData = labData;
+        state.lblhData = lblhData;
+        state.dmData = dmData;
+
+        processData();
+        updateAnalyteDropdown();
+        updateArmFilter();
+        updatePagination();
+
+        if (state.uniqueAnalytes.length > 0) {
+          renderChart(state.uniqueAnalytes[0]);
+        }
+
+        document.getElementById('analyteSelect').addEventListener('change', (e) => {
+          state.currentAnalyteIndex = state.uniqueAnalytes.indexOf(e.target.value);
+          renderChart(e.target.value);
+          updatePagination();
+        });
+        document.getElementById('armFilter').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('sortBy').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('yAxisScale').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('showNormal').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('showGrade2Only').addEventListener('change', () => {
+          renderChart(state.uniqueAnalytes[state.currentAnalyteIndex]);
+        });
+        document.getElementById('prevAnalyte').addEventListener('click', () => {
+          goToAnalyte(state.currentAnalyteIndex - 1);
+        });
+        document.getElementById('nextAnalyte').addEventListener('click', () => {
+          goToAnalyte(state.currentAnalyteIndex + 1);
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('chartTitle').textContent = 'Error Loading Data';
+        document.getElementById('chartSubtitle').textContent = error.message;
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

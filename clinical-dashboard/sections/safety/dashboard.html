@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adverse Events Dashboard - Phase 1 Safety Analysis</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f5f5;
+      color: #2c3e50;
+      line-height: 1.6;
+      padding: 20px;
+      font-size: 14px;
+    }
+    
+    .container { max-width: 1900px; margin: 0 auto; }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 15px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e8ecef;
+    }
+    
+    h1 { 
+      font-size: 2rem; 
+      color: #1a1a1a; 
+      font-weight: 700; 
+      margin: 0 0 6px 0;
+      letter-spacing: -0.02em;
+    }
+    .subtitle { 
+      color: #6c757d; 
+      font-size: 0.95rem; 
+      font-weight: 400;
+      margin: 0;
+    }
+    
+    .header-badges {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .big-n-badge {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 6px rgba(52, 152, 219, 0.25);
+      letter-spacing: 0.02em;
+    }
+    
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      background: #000000;
+      padding: 6px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    
+    .tab-btn {
+      padding: 14px 24px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .tab-btn:hover { 
+      background: #333333; 
+      color: #ffffff; 
+    }
+    
+    .tab-btn.active { 
+      background: #ffffff;
+      color: #000000; 
+      box-shadow: 0 2px 6px rgba(255, 255, 255, 0.3);
+      font-weight: 700;
+    }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Summary Cards */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    
+    .summary-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .summary-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+      border-color: #3498db;
+    }
+    
+    .summary-card .number {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #3498db;
+      line-height: 1.2;
+    }
+    
+    .summary-card .number.danger { color: #dc3545; }
+    .summary-card .number.warning { color: #fd7e14; }
+    .summary-card .number.success { color: #28a745; }
+    .summary-card .number.purple { color: #6f42c1; }
+    
+    .summary-card .pct {
+      font-size: 0.8rem;
+      color: #6c757d;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    
+    .summary-card .label {
+      font-size: 0.75rem;
+      color: #495057;
+      margin-top: 6px;
+      line-height: 1.3;
+      font-weight: 500;
+    }
+    
+    /* Section Headers */
+    .section-header {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin: 24px 0 16px;
+      padding: 12px 0 10px;
+      border-bottom: 2px solid #3498db;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.01em;
+    }
+    
+    .section-header .icon { 
+      font-size: 1.2rem; 
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+    }
+    
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .charts-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+    .charts-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .charts-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    
+    .chart-card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+    }
+    
+    .chart-card.clickable { 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+    }
+    .chart-card.clickable:hover { 
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+      border-color: #3498db;
+      transform: translateY(-2px);
+    }
+    
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 10px;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+    
+    .chart-container { position: relative; height: 160px; }
+    .chart-container.tall { height: 260px; }
+    .chart-container.short { height: 140px; }
+    
+    /* Tables */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    
+    .table-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    
+    .data-table th {
+      background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+      color: white;
+      padding: 12px 14px;
+      text-align: center;
+      font-weight: 600;
+      border: 1px solid #2c3e50;
+      white-space: nowrap;
+      font-size: 0.85rem;
+      letter-spacing: 0.01em;
+    }
+    
+    .data-table th:first-child { text-align: left; }
+    .data-table th.header-group { 
+      background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+    }
+    
+    .data-table td {
+      padding: 10px 14px;
+      border: 1px solid #e9ecef;
+      text-align: center;
+      font-size: 0.875rem;
+    }
+    
+    .data-table td:first-child { 
+      text-align: left; 
+      font-weight: 500; 
+      color: #2c3e50;
+    }
+    .data-table tr:nth-child(even) { background: #f8f9fa; }
+    .data-table tr:hover { 
+      background: #e3f2fd; 
+      transition: background 0.15s ease;
+    }
+    .data-table tr.total-row { 
+      background: #e9ecef; 
+      font-weight: 600; 
+      color: #1a1a1a;
+    }
+    .data-table tr.any-ae-row { 
+      background: #fff3cd; 
+      font-weight: 600; 
+      color: #856404;
+    }
+    .data-table tr.clickable { 
+      cursor: pointer; 
+      transition: all 0.15s ease;
+    }
+    .data-table tr.clickable:hover {
+      transform: scale(1.01);
+    }
+    
+    /* Detail Panel */
+    .detail-panel {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    
+    .detail-title { 
+      font-size: 1rem; 
+      font-weight: 600; 
+      color: #1a1a1a; 
+      letter-spacing: -0.01em;
+    }
+    
+    .detail-close {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(220, 53, 69, 0.25);
+    }
+    
+    .detail-close:hover {
+      background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+      box-shadow: 0 4px 8px rgba(220, 53, 69, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    
+    .detail-table th {
+      background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      border-bottom: 2px solid #2c3e50;
+    }
+    
+    .detail-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 0.8rem;
+    }
+    
+    .detail-table tr:hover { 
+      background: #f8f9fa; 
+      transition: background 0.15s ease;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      margin-right: 2px;
+    }
+    
+    .badge-serious { background: #fee; color: #c00; }
+    .badge-related { background: #fef3e6; color: #e67e22; }
+    .badge-dlt { background: #f3e5f5; color: #8e44ad; }
+    .badge-grade3 { background: #ffeaa7; color: #d35400; }
+    .badge-grade4 { background: #fab1a0; color: #c0392b; }
+    .badge-grade5 { background: #e74c3c; color: white; }
+    
+    /* Collapsible */
+    .collapsible-header {
+      background: #000000;
+      color: #ffffff;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 500;
+    }
+    
+    .collapsible-header:hover { 
+      background: #1a1a1a; 
+    }
+    .collapsible-header .toggle { 
+      font-size: 0.8rem; 
+      color: #ffffff; 
+    }
+    .collapsible-content { display: none; padding: 0 0 10px 0; }
+    .collapsible-content.open { display: block; }
+    
+    /* Footnotes */
+    .footnotes {
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 16px;
+      font-size: 0.75rem;
+      color: #000000;
+      border-left: 4px solid #3498db;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .footnotes p { 
+      margin: 4px 0; 
+      line-height: 1.6;
+      color: #000000;
+    }
+    
+    .footnotes p strong {
+      color: #000000;
+      font-weight: 600;
+    }
+    
+    /* Loading / Error */
+    .loading { text-align: center; padding: 60px 20px; color: #7f8c8d; }
+    
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .error-msg {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c00;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .hidden { display: none; }
+    
+    /* Two column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    
+    @media (max-width: 1200px) {
+      .charts-grid.cols-5, .charts-grid.cols-4 { grid-template-columns: repeat(3, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+    
+    @media (max-width: 768px) {
+      .charts-grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  <main class="page-content">
+    <div class="container">
+      <header>
+      <div>
+        <h1>Adverse Events Dashboard</h1>
+        <p class="subtitle">Phase 1 Safety Analysis Set • TEAE/TRAE Analysis</p>
+      </div>
+      <div class="header-badges">
+        <span class="big-n-badge" id="bigNBadge">N = -</span>
+      </div>
+    </header>
+    
+    <div id="loadingState" class="loading">
+      <div class="loading-spinner"></div>
+      Loading AE data...
+    </div>
+    
+    <div id="errorState" class="error-msg hidden"></div>
+    
+    <div id="mainContent" class="hidden">
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="overview">Overview</button>
+        <button class="tab-btn" data-tab="teae-trae">TEAE/TRAE Summary</button>
+        <button class="tab-btn" data-tab="by-pt">By Preferred Term</button>
+        <button class="tab-btn" data-tab="serious">Serious AE</button>
+        <button class="tab-btn" data-tab="grade3">Grade ≥3</button>
+        <button class="tab-btn" data-tab="dlt">DLT</button>
+        <button class="tab-btn" data-tab="deaths">Deaths</button>
+        <button class="tab-btn" data-tab="listing">AE Listing</button>
+      </div>
+      
+      <!-- Detail Panel (global) -->
+      <div class="detail-panel hidden" id="detailPanel">
+        <div class="detail-header">
+          <div class="detail-title" id="detailTitle">Detail Listing</div>
+          <button class="detail-close" onclick="hideDetail()">✕ Close</button>
+        </div>
+        <div style="max-height: 280px; overflow-y: auto;">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Dose</th>
+                <th>Preferred Term</th>
+                <th>Grade</th>
+                <th>Serious</th>
+                <th>Relatedness</th>
+                <th>Outcome</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+              </tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- TAB: Overview -->
+      <div class="tab-content active" id="tab-overview">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+          <button class="export-btn" onclick="showBlockExportDialog('tab-overview', 'Safety_Dashboard_Overview')" style="background:#dc3545;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Export</button>
+        </div>
+        <!-- Summary Cards -->
+        <div class="summary-row" id="summaryCards">
+          <div class="summary-card" data-filter="all">
+            <div class="number" id="statTotalAE">-</div>
+            <div class="pct" id="statTotalAEPct">-</div>
+            <div class="label">Total AE Events</div>
+          </div>
+          <div class="summary-card" data-filter="subjects">
+            <div class="number" id="statSubjectsAE">-</div>
+            <div class="pct" id="statSubjectsAEPct">-</div>
+            <div class="label">Subjects with AE</div>
+          </div>
+          <div class="summary-card" data-filter="teae">
+            <div class="number purple" id="statTEAE">-</div>
+            <div class="pct" id="statTEAEPct">-</div>
+            <div class="label">TEAE (Subjects)</div>
+          </div>
+          <div class="summary-card" data-filter="trae">
+            <div class="number warning" id="statTRAE">-</div>
+            <div class="pct" id="statTRAEPct">-</div>
+            <div class="label">TRAE (Subjects)</div>
+          </div>
+          <div class="summary-card" data-filter="serious">
+            <div class="number danger" id="statSAE">-</div>
+            <div class="pct" id="statSAEPct">-</div>
+            <div class="label">Serious AE</div>
+          </div>
+          <div class="summary-card" data-filter="grade3">
+            <div class="number danger" id="statGrade3">-</div>
+            <div class="pct" id="statGrade3Pct">-</div>
+            <div class="label">Grade ≥3</div>
+          </div>
+          <div class="summary-card" data-filter="dlt">
+            <div class="number danger" id="statDLT">-</div>
+            <div class="pct" id="statDLTPct">-</div>
+            <div class="label">DLT Events</div>
+          </div>
+          <div class="summary-card" data-filter="deaths">
+            <div class="number danger" id="statDeaths">-</div>
+            <div class="pct" id="statDeathsPct">-</div>
+            <div class="label">Grade 5 (Death)</div>
+          </div>
+        </div>
+        
+        <!-- Proportion Charts -->
+        <div class="section-header"><span class="icon">📊</span> Proportion Overview</div>
+        <div class="charts-grid cols-5">
+          <div class="chart-card clickable" data-filter="serious">
+            <div class="chart-title">Serious vs Non-Serious</div>
+            <div class="chart-container short"><canvas id="chartSerious"></canvas></div>
+          </div>
+          <div class="chart-card clickable" data-filter="trae">
+            <div class="chart-title">Related vs Unrelated</div>
+            <div class="chart-container short"><canvas id="chartRelated"></canvas></div>
+          </div>
+          <div class="chart-card clickable" data-filter="grade3">
+            <div class="chart-title">Grade ≥3 vs Grade 1-2</div>
+            <div class="chart-container short"><canvas id="chartHighGrade"></canvas></div>
+          </div>
+          <div class="chart-card clickable">
+            <div class="chart-title">Outcome Distribution</div>
+            <div class="chart-container short"><canvas id="chartOutcome"></canvas></div>
+          </div>
+          <div class="chart-card clickable">
+            <div class="chart-title">Action Taken</div>
+            <div class="chart-container short"><canvas id="chartAction"></canvas></div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">📈</span> Grade & Relationship</div>
+        <div class="charts-grid cols-4">
+          <div class="chart-card">
+            <div class="chart-title">All AE by Grade</div>
+            <div class="chart-container short"><canvas id="chartGradeAll"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">TRAE by Grade</div>
+            <div class="chart-container short"><canvas id="chartGradeTRAE"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Relationship Level</div>
+            <div class="chart-container short"><canvas id="chartRelLevel"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Recovered vs Ongoing</div>
+            <div class="chart-container short"><canvas id="chartRecovered"></canvas></div>
+          </div>
+        </div>
+        
+        <!-- Dose Cohort Summary -->
+        <div class="section-header"><span class="icon">💊</span> Summary by Dose Cohort</div>
+        <div class="table-container">
+          <table class="data-table" id="doseOverviewTable">
+            <thead>
+              <tr class="header-group">
+                <th rowspan="2">Dose Cohort</th>
+                <th rowspan="2">N</th>
+                <th colspan="2">TEAE</th>
+                <th colspan="6">TRAE</th>
+                <th rowspan="2">Serious</th>
+                <th rowspan="2">DLT</th>
+              </tr>
+              <tr>
+                <th>Any</th>
+                <th>G≥3</th>
+                <th>Any</th>
+                <th>G1</th>
+                <th>G2</th>
+                <th>G3</th>
+                <th>G4</th>
+                <th>G5</th>
+              </tr>
+            </thead>
+            <tbody id="doseOverviewBody"></tbody>
+          </table>
+        </div>
+        
+        <!-- Top AE Terms -->
+        <div class="section-header"><span class="icon">📋</span> Most Frequent Adverse Events</div>
+        <div class="two-col">
+          <div class="table-container">
+            <div class="chart-title">Top 15 TEAE by Preferred Term</div>
+            <div class="chart-container tall"><canvas id="chartTopTEAE"></canvas></div>
+          </div>
+          <div class="table-container">
+            <div class="chart-title">Top 15 TRAE by Preferred Term</div>
+            <div class="chart-container tall"><canvas id="chartTopTRAE"></canvas></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- TAB: TEAE/TRAE Summary -->
+      <div class="tab-content" id="tab-teae-trae">
+        <div class="section-header"><span class="icon">📊</span> TEAE vs TRAE Comparison</div>
+        <div class="charts-grid cols-4">
+          <div class="chart-card">
+            <div class="chart-title">Events: TEAE vs TRAE</div>
+            <div class="chart-container"><canvas id="chartTeaeVsTraeEvents"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Subjects: TEAE vs TRAE</div>
+            <div class="chart-container"><canvas id="chartTeaeVsTraeSubj"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Serious: TEAE vs TRAE</div>
+            <div class="chart-container"><canvas id="chartSeriousTeaeTrae"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Grade≥3: TEAE vs TRAE</div>
+            <div class="chart-container"><canvas id="chartGrade3TeaeTrae"></canvas></div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">💊</span> TEAE/TRAE by Dose Cohort</div>
+        <div id="teaeTraeByDose"></div>
+      </div>
+      
+      <!-- TAB: By Preferred Term -->
+      <div class="tab-content" id="tab-by-pt">
+        <div class="section-header"><span class="icon">📋</span> All TEAE/TRAE by Preferred Term</div>
+        <div id="ptTablesContainer"></div>
+      </div>
+      
+      <!-- TAB: Serious -->
+      <div class="tab-content" id="tab-serious">
+        <div class="section-header"><span class="icon">⚠️</span> Serious Adverse Events Overview</div>
+        <div class="summary-row" style="max-width: 600px;">
+          <div class="summary-card" data-filter="serious">
+            <div class="number danger" id="seriousTotal">-</div>
+            <div class="label">Serious AE Events</div>
+          </div>
+          <div class="summary-card" data-filter="serious">
+            <div class="number danger" id="seriousSubjects">-</div>
+            <div class="label">Subjects with SAE</div>
+          </div>
+          <div class="summary-card" data-filter="serious-trae">
+            <div class="number warning" id="seriousTRAE">-</div>
+            <div class="label">Serious TRAE</div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">📋</span> Serious TEAE/TRAE by Preferred Term</div>
+        <div id="seriousTablesContainer"></div>
+      </div>
+      
+      <!-- TAB: Grade ≥3 -->
+      <div class="tab-content" id="tab-grade3">
+        <div class="section-header"><span class="icon">🔴</span> Grade ≥3 Adverse Events Overview</div>
+        <div class="summary-row" style="max-width: 800px;">
+          <div class="summary-card" data-filter="grade3">
+            <div class="number danger" id="grade3Total">-</div>
+            <div class="label">Grade ≥3 Events</div>
+          </div>
+          <div class="summary-card" data-filter="grade3">
+            <div class="number danger" id="grade3Subjects">-</div>
+            <div class="label">Subjects with G≥3</div>
+          </div>
+          <div class="summary-card" data-filter="grade3-trae">
+            <div class="number warning" id="grade3TRAE">-</div>
+            <div class="label">Grade ≥3 TRAE</div>
+          </div>
+          <div class="summary-card" data-filter="grade4">
+            <div class="number" id="grade4Total">-</div>
+            <div class="label">Grade 4</div>
+          </div>
+          <div class="summary-card" data-filter="deaths">
+            <div class="number danger" id="grade5Total">-</div>
+            <div class="label">Grade 5 (Death)</div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">📋</span> Grade ≥3 TEAE/TRAE by Preferred Term</div>
+        <div id="grade3TablesContainer"></div>
+      </div>
+      
+      <!-- TAB: DLT -->
+      <div class="tab-content" id="tab-dlt">
+        <div class="section-header"><span class="icon">⚡</span> Dose Limiting Toxicity (DLT) Summary</div>
+        <div class="summary-row" style="max-width: 500px;">
+          <div class="summary-card" data-filter="dlt">
+            <div class="number danger" id="dltTotal">-</div>
+            <div class="label">DLT Events</div>
+          </div>
+          <div class="summary-card" data-filter="dlt">
+            <div class="number danger" id="dltSubjects">-</div>
+            <div class="label">Subjects with DLT</div>
+          </div>
+          <div class="summary-card" style="cursor: default;">
+            <div class="number" id="dltRate">-</div>
+            <div class="label">Overall DLT Rate</div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">💊</span> DLT Rate by Dose Cohort</div>
+        <div class="table-container">
+          <table class="data-table" id="dltRateTable">
+            <thead>
+              <tr>
+                <th>Dose Cohort</th>
+                <th>N (Evaluable)</th>
+                <th>n (Subjects with DLT)</th>
+                <th>DLT Events</th>
+                <th>DLT Rate</th>
+                <th>n/N</th>
+              </tr>
+            </thead>
+            <tbody id="dltRateBody"></tbody>
+          </table>
+        </div>
+        
+        <div class="section-header"><span class="icon">📋</span> DLT Details</div>
+        <div class="table-container">
+          <table class="data-table" id="dltDetailTable">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Dose</th>
+                <th>Preferred Term</th>
+                <th>Grade</th>
+                <th>Relatedness</th>
+                <th>Start Date</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="dltDetailBody"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- TAB: Deaths -->
+      <div class="tab-content" id="tab-deaths">
+        <div class="section-header"><span class="icon">☠️</span> Death Summary (Grade 5 AE)</div>
+        <div class="summary-row" style="max-width: 400px;">
+          <div class="summary-card" data-filter="deaths">
+            <div class="number danger" id="deathTotal">-</div>
+            <div class="label">Total Deaths</div>
+          </div>
+          <div class="summary-card" data-filter="deaths-trae">
+            <div class="number warning" id="deathTRAE">-</div>
+            <div class="label">Treatment-Related Deaths</div>
+          </div>
+        </div>
+        
+        <div class="section-header"><span class="icon">📋</span> Death Details</div>
+        <div class="table-container">
+          <table class="data-table" id="deathDetailTable">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Dose</th>
+                <th>Preferred Term (Cause)</th>
+                <th>Relatedness</th>
+                <th>Serious</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+              </tr>
+            </thead>
+            <tbody id="deathDetailBody"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- TAB: Listing -->
+      <div class="tab-content" id="tab-listing">
+        <div class="section-header"><span class="icon">📋</span> Complete AE Listing</div>
+        <div class="table-container" style="max-height: 600px; overflow-y: auto;">
+          <table class="data-table" id="aeListingTable">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Dose</th>
+                <th>Preferred Term</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Grade</th>
+                <th>Serious</th>
+                <th>Relatedness</th>
+                <th>Outcome</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="aeListingBody"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Footnotes -->
+      <div class="footnotes">
+        <p><strong>Definitions:</strong></p>
+        <p>• <strong>Safety Analysis Set:</strong> All subjects who received at least one dose (RFXSTDTC non-empty)</p>
+        <p>• <strong>TEAE:</strong> Treatment-Emergent Adverse Event (all AEs occurring after first dose)</p>
+        <p>• <strong>TRAE:</strong> Treatment-Related AE (AEREL_STD = 'POSSIBLY RELATED' or 'RELATED')</p>
+        <p>• <strong>Serious AE:</strong> AESER_STD = 'Y'</p>
+        <p>• <strong>DLT:</strong> Dose Limiting Toxicity (AEDLT_1_STD = 'Y')</p>
+        <p>• <strong>CTCAE Grade:</strong> 1=Mild, 2=Moderate, 3=Severe, 4=Life-threatening, 5=Death</p>
+        <p>• N = number of subjects in each dose group; n = subjects with at least one event; % = (n/N) × 100</p>
+        <p>• Each subject counted once per Preferred Term regardless of number of occurrences</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================
+// GLOBAL DATA & COLORS
+// ============================================
+
+let AE_DATA = [];
+let DM_DATA = [];
+let STATS = {};
+let BIG_N = 0;
+let N_PER_DOSE = {};
+
+const COLORS = {
+  primary: ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'],
+  grades: ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#8e44ad'],
+  teaeTrae: ['#9b59b6', '#f39c12'],
+  binary: ['#e74c3c', '#2ecc71'],
+  pastel: ['#a8e6cf', '#dcedc1', '#ffd3a5', '#ffaaa5', '#ff8b94', '#a0ced9', '#adf7b6']
+};
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function loadCSV(filename) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(filename, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (err) => reject(err)
+    });
+  });
+}
+
+function isYes(val) {
+  if (!val) return false;
+  const v = String(val).toLowerCase().trim();
+  return ['y', 'yes', '1', 'true'].includes(v);
+}
+
+function isTRAE(relVal) {
+  if (!relVal) return false;
+  const v = String(relVal).toUpperCase().trim();
+  return v === 'POSSIBLY RELATED' || v === 'RELATED';
+}
+
+function getGrade(val) {
+  if (!val) return 0;
+  const match = String(val).match(/\d+/);
+  return match ? parseInt(match[0]) : 0;
+}
+
+function getDoseNumeric(arm) {
+  const val = parseFloat(String(arm).replace(/[^0-9.]/g, ''));
+  return isNaN(val) ? 0 : val;
+}
+
+function formatNPct(n, N) {
+  if (N === 0) return '0';
+  const pct = ((n / N) * 100).toFixed(1);
+  return `${n} (${pct}%)`;
+}
+
+function formatPct(n, N) {
+  if (N === 0) return '0%';
+  return ((n / N) * 100).toFixed(1) + '%';
+}
+
+function truncate(str, len = 35) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '...' : str;
+}
+
+function parseDate(dateStr) {
+  if (!dateStr || String(dateStr).trim() === '') return '';
+  return String(dateStr).substring(0, 9);
+}
+
+// ============================================
+// DATA ANALYSIS
+// ============================================
+
+function analyzeData() {
+  const stats = {
+    totalEvents: AE_DATA.length,
+    subjectsWithAE: new Set(),
+    
+    teaeSubjects: new Set(),
+    traeSubjects: new Set(),
+    traeEvents: 0,
+    
+    seriousEvents: 0,
+    seriousSubjects: new Set(),
+    seriousTRAE: 0,
+    
+    grades: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    gradesTRAE: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    grade3PlusEvents: 0,
+    grade3PlusSubjects: new Set(),
+    grade3PlusTRAE: 0,
+    
+    dltEvents: 0,
+    dltSubjects: new Set(),
+    
+    deathEvents: 0,
+    deathSubjects: new Set(),
+    deathTRAE: 0,
+    
+    related: 0,
+    unrelated: 0,
+    relLevels: {},
+    
+    outcomes: {},
+    actions: {},
+    
+    recovered: 0,
+    ongoing: 0,
+    
+    byDose: {},
+    teaeTerms: {},
+    traeTerms: {},
+    
+    records: {
+      all: [],
+      trae: [],
+      serious: [],
+      grade3: [],
+      dlt: [],
+      deaths: []
+    }
+  };
+  
+  AE_DATA.forEach(row => {
+    const subject = row.Subject;
+    const pt = row.AETERM_pt || row.AETERM || 'Unknown';
+    const grade = getGrade(row.AETOXGR_STD || row.AETOXGR);
+    const isSerious = isYes(row.AESER_STD || row.AESER);
+    const isTreatmentRelated = isTRAE(row.AEREL_STD || row.AEREL);
+    const relLevel = String(row.AEREL_STD || row.AEREL || 'Unknown').trim();
+    const outcome = String(row.AEOUT_STD || row.AEOUT || '').toLowerCase();
+    const action = row.AEACN_STD || row.AEACN || 'Unknown';
+    const dose = row.ARM || 'Unknown Dose';
+    const isDLT = isYes(row.AEDLT_1_STD || row.AEDLT_1);
+    
+    const record = {
+      subject, pt, grade, isSerious, isTreatmentRelated, relLevel, isDLT,
+      outcome: row.AEOUT_STD || row.AEOUT || '',
+      action: action,
+      startDate: parseDate(row.AESTDAT_INT),
+      endDate: parseDate(row.AEENDAT_INT) || (outcome.includes('ongoing') ? 'Ongoing' : ''),
+      dose
+    };
+    
+    stats.records.all.push(record);
+    stats.subjectsWithAE.add(subject);
+    stats.teaeSubjects.add(subject);
+    stats.teaeTerms[pt] = (stats.teaeTerms[pt] || 0) + 1;
+    
+    // TRAE
+    if (isTreatmentRelated) {
+      stats.traeEvents++;
+      stats.traeSubjects.add(subject);
+      stats.records.trae.push(record);
+      stats.traeTerms[pt] = (stats.traeTerms[pt] || 0) + 1;
+      stats.related++;
+      if (grade >= 1 && grade <= 5) stats.gradesTRAE[grade]++;
+      if (grade >= 3) stats.grade3PlusTRAE++;
+    } else {
+      stats.unrelated++;
+    }
+    
+    // Serious
+    if (isSerious) {
+      stats.seriousEvents++;
+      stats.seriousSubjects.add(subject);
+      stats.records.serious.push(record);
+      if (isTreatmentRelated) stats.seriousTRAE++;
+    }
+    
+    // Grade
+    if (grade >= 1 && grade <= 5) stats.grades[grade]++;
+    if (grade >= 3) {
+      stats.grade3PlusEvents++;
+      stats.grade3PlusSubjects.add(subject);
+      stats.records.grade3.push(record);
+    }
+    
+    // Deaths (Grade 5)
+    if (grade === 5) {
+      stats.deathEvents++;
+      stats.deathSubjects.add(subject);
+      stats.records.deaths.push(record);
+      if (isTreatmentRelated) stats.deathTRAE++;
+    }
+    
+    // DLT
+    if (isDLT) {
+      stats.dltEvents++;
+      stats.dltSubjects.add(subject);
+      stats.records.dlt.push(record);
+    }
+    
+    // Outcome
+    if (outcome.includes('recover') && !outcome.includes('not')) {
+      stats.recovered++;
+    } else if (outcome.includes('ongoing') || outcome.includes('not resolved')) {
+      stats.ongoing++;
+    }
+    
+    const outcomeVal = row.AEOUT_STD || row.AEOUT || 'Unknown';
+    stats.outcomes[outcomeVal] = (stats.outcomes[outcomeVal] || 0) + 1;
+    stats.actions[action] = (stats.actions[action] || 0) + 1;
+    stats.relLevels[relLevel] = (stats.relLevels[relLevel] || 0) + 1;
+    
+    // By Dose
+    if (!stats.byDose[dose]) {
+      stats.byDose[dose] = {
+        subjects: new Set(),
+        teaeAny: new Set(),
+        teaeG3: new Set(),
+        traeAny: new Set(),
+        traeG1: new Set(),
+        traeG2: new Set(),
+        traeG3: new Set(),
+        traeG4: new Set(),
+        traeG5: new Set(),
+        serious: new Set(),
+        dlt: new Set(),
+        ptData: {}
+      };
+    }
+    
+    const bd = stats.byDose[dose];
+    bd.subjects.add(subject);
+    bd.teaeAny.add(subject);
+    if (grade >= 3) bd.teaeG3.add(subject);
+    if (isTreatmentRelated) {
+      bd.traeAny.add(subject);
+      if (grade === 1) bd.traeG1.add(subject);
+      if (grade === 2) bd.traeG2.add(subject);
+      if (grade === 3) bd.traeG3.add(subject);
+      if (grade === 4) bd.traeG4.add(subject);
+      if (grade === 5) bd.traeG5.add(subject);
+    }
+    if (isSerious) bd.serious.add(subject);
+    if (isDLT) bd.dlt.add(subject);
+    
+    // PT data for this dose
+    if (!bd.ptData[pt]) {
+      bd.ptData[pt] = {
+        teaeAny: new Set(),
+        teaeG3: new Set(),
+        traeAny: new Set(),
+        traeG1: new Set(),
+        traeG2: new Set(),
+        traeG3: new Set(),
+        traeG4: new Set(),
+        traeG5: new Set()
+      };
+    }
+    const ptd = bd.ptData[pt];
+    ptd.teaeAny.add(subject);
+    if (grade >= 3) ptd.teaeG3.add(subject);
+    if (isTreatmentRelated) {
+      ptd.traeAny.add(subject);
+      if (grade === 1) ptd.traeG1.add(subject);
+      if (grade === 2) ptd.traeG2.add(subject);
+      if (grade === 3) ptd.traeG3.add(subject);
+      if (grade === 4) ptd.traeG4.add(subject);
+      if (grade === 5) ptd.traeG5.add(subject);
+    }
+  });
+  
+  // Convert Sets to counts for summary
+  stats.subjectsWithAE = stats.subjectsWithAE.size;
+  stats.teaeSubjects = stats.teaeSubjects.size;
+  stats.traeSubjects = stats.traeSubjects.size;
+  stats.seriousSubjects = stats.seriousSubjects.size;
+  stats.grade3PlusSubjects = stats.grade3PlusSubjects.size;
+  stats.dltSubjects = stats.dltSubjects.size;
+  stats.deathSubjects = stats.deathSubjects.size;
+  
+  return stats;
+}
+
+// ============================================
+// CHART CREATION
+// ============================================
+
+function createDonut(canvasId, labels, data, colors) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  
+  const total = data.reduce((a, b) => a + b, 0);
+  
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels.map((l, i) => `${l}: ${data[i]} (${total > 0 ? ((data[i]/total)*100).toFixed(1) : 0}%)`),
+      datasets: [{
+        data: data,
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '50%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { padding: 6, usePointStyle: true, font: { size: 9 } }
+        }
+      }
+    }
+  });
+}
+
+function createBar(canvasId, labels, data, color) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: color,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { display: false } },
+        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+}
+
+// ============================================
+// RENDER FUNCTIONS
+// ============================================
+
+function renderOverview() {
+  const s = STATS;
+  
+  // Summary cards
+  document.getElementById('statTotalAE').textContent = s.totalEvents;
+  document.getElementById('statSubjectsAE').textContent = s.subjectsWithAE;
+  document.getElementById('statSubjectsAEPct').textContent = formatPct(s.subjectsWithAE, BIG_N);
+  document.getElementById('statTEAE').textContent = s.teaeSubjects;
+  document.getElementById('statTEAEPct').textContent = formatPct(s.teaeSubjects, BIG_N);
+  document.getElementById('statTRAE').textContent = s.traeSubjects;
+  document.getElementById('statTRAEPct').textContent = formatPct(s.traeSubjects, BIG_N);
+  document.getElementById('statSAE').textContent = s.seriousEvents;
+  document.getElementById('statSAEPct').textContent = `${s.seriousSubjects} subj`;
+  document.getElementById('statGrade3').textContent = s.grade3PlusEvents;
+  document.getElementById('statGrade3Pct').textContent = `${s.grade3PlusSubjects} subj`;
+  document.getElementById('statDLT').textContent = s.dltEvents;
+  document.getElementById('statDLTPct').textContent = `${s.dltSubjects} subj`;
+  document.getElementById('statDeaths').textContent = s.deathEvents;
+  document.getElementById('statDeathsPct').textContent = `${s.deathSubjects} subj`;
+  
+  // Charts
+  createDonut('chartSerious', ['Serious', 'Non-Serious'], [s.seriousEvents, s.totalEvents - s.seriousEvents], COLORS.binary);
+  createDonut('chartRelated', ['Related', 'Unrelated'], [s.related, s.unrelated], ['#e74c3c', '#3498db']);
+  
+  const lowGrade = s.grades[1] + s.grades[2];
+  const highGrade = s.grades[3] + s.grades[4] + s.grades[5];
+  createDonut('chartHighGrade', ['Grade ≥3', 'Grade 1-2'], [highGrade, lowGrade], ['#e74c3c', '#3498db']);
+  
+  const outcomeLabels = Object.keys(s.outcomes).slice(0, 5);
+  createDonut('chartOutcome', outcomeLabels, outcomeLabels.map(k => s.outcomes[k]), COLORS.pastel);
+  
+  const actionLabels = Object.keys(s.actions).slice(0, 5);
+  createDonut('chartAction', actionLabels, actionLabels.map(k => s.actions[k]), COLORS.primary);
+  
+  createDonut('chartGradeAll', ['G1', 'G2', 'G3', 'G4', 'G5'],
+    [s.grades[1], s.grades[2], s.grades[3], s.grades[4], s.grades[5]], COLORS.grades);
+  createDonut('chartGradeTRAE', ['G1', 'G2', 'G3', 'G4', 'G5'],
+    [s.gradesTRAE[1], s.gradesTRAE[2], s.gradesTRAE[3], s.gradesTRAE[4], s.gradesTRAE[5]], COLORS.grades);
+  
+  // Relationship Level chart - color by meaning:
+  // Related/Possibly Related = bright warm (red/orange), Not Related/Unlikely = cool (blue/green)
+  const REL_COLOR_MAP = {
+    'RELATED': '#e74c3c',            // red
+    'POSSIBLY RELATED': '#f39c12',   // orange
+    'NOT RELATED': '#3498db',        // blue
+    'UNLIKELY RELATED': '#2ecc71',   // green
+    'Unknown': '#95a5a6'             // gray
+  };
+  const relLabels = Object.keys(s.relLevels).slice(0, 5);
+  const relColors = relLabels.map(label => REL_COLOR_MAP[label.toUpperCase()] || REL_COLOR_MAP[label] || '#95a5a6');
+  createDonut('chartRelLevel', relLabels, relLabels.map(k => s.relLevels[k]), relColors);
+  
+  createDonut('chartRecovered', ['Recovered', 'Ongoing', 'Other'], 
+    [s.recovered, s.ongoing, s.totalEvents - s.recovered - s.ongoing], ['#2ecc71', '#f39c12', '#95a5a6']);
+  
+  // Dose overview table
+  renderDoseOverviewTable();
+  
+  // Top AE charts
+  const teaeTop = Object.entries(s.teaeTerms).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  createBar('chartTopTEAE', teaeTop.map(([k]) => truncate(k)), teaeTop.map(([, v]) => v), '#9b59b6');
+  
+  const traeTop = Object.entries(s.traeTerms).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  createBar('chartTopTRAE', traeTop.map(([k]) => truncate(k)), traeTop.map(([, v]) => v), '#f39c12');
+}
+
+function renderDoseOverviewTable() {
+  const tbody = document.getElementById('doseOverviewBody');
+  tbody.innerHTML = '';
+  
+  const doses = Object.keys(STATS.byDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  // Totals accumulators
+  let totals = {
+    teaeAny: new Set(), teaeG3: new Set(), traeAny: new Set(),
+    traeG1: new Set(), traeG2: new Set(), traeG3: new Set(), traeG4: new Set(), traeG5: new Set(),
+    serious: new Set(), dlt: new Set()
+  };
+  
+  doses.forEach(dose => {
+    const d = STATS.byDose[dose];
+    const N = N_PER_DOSE[dose] || d.subjects.size;
+    
+    // Accumulate totals
+    d.teaeAny.forEach(s => totals.teaeAny.add(s));
+    d.teaeG3.forEach(s => totals.teaeG3.add(s));
+    d.traeAny.forEach(s => totals.traeAny.add(s));
+    d.traeG1.forEach(s => totals.traeG1.add(s));
+    d.traeG2.forEach(s => totals.traeG2.add(s));
+    d.traeG3.forEach(s => totals.traeG3.add(s));
+    d.traeG4.forEach(s => totals.traeG4.add(s));
+    d.traeG5.forEach(s => totals.traeG5.add(s));
+    d.serious.forEach(s => totals.serious.add(s));
+    d.dlt.forEach(s => totals.dlt.add(s));
+    
+    const row = document.createElement('tr');
+    row.className = 'clickable';
+    row.onclick = () => showDoseDetail(dose);
+    row.innerHTML = `
+      <td>${dose}</td>
+      <td>${N}</td>
+      <td>${formatNPct(d.teaeAny.size, N)}</td>
+      <td>${formatNPct(d.teaeG3.size, N)}</td>
+      <td>${formatNPct(d.traeAny.size, N)}</td>
+      <td>${formatNPct(d.traeG1.size, N)}</td>
+      <td>${formatNPct(d.traeG2.size, N)}</td>
+      <td>${formatNPct(d.traeG3.size, N)}</td>
+      <td>${formatNPct(d.traeG4.size, N)}</td>
+      <td>${formatNPct(d.traeG5.size, N)}</td>
+      <td>${formatNPct(d.serious.size, N)}</td>
+      <td>${formatNPct(d.dlt.size, N)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  
+  // Total row
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `
+    <td>Total</td>
+    <td>${BIG_N}</td>
+    <td>${formatNPct(totals.teaeAny.size, BIG_N)}</td>
+    <td>${formatNPct(totals.teaeG3.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeAny.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeG1.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeG2.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeG3.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeG4.size, BIG_N)}</td>
+    <td>${formatNPct(totals.traeG5.size, BIG_N)}</td>
+    <td>${formatNPct(totals.serious.size, BIG_N)}</td>
+    <td>${formatNPct(totals.dlt.size, BIG_N)}</td>
+  `;
+  tbody.appendChild(totalRow);
+}
+
+function renderTeaeTraeTab() {
+  // Comparison charts
+  createDonut('chartTeaeVsTraeEvents', ['TEAE Only', 'TRAE'], 
+    [STATS.totalEvents - STATS.traeEvents, STATS.traeEvents], COLORS.teaeTrae);
+  createDonut('chartTeaeVsTraeSubj', ['TEAE Only', 'TRAE'], 
+    [STATS.teaeSubjects - STATS.traeSubjects, STATS.traeSubjects], COLORS.teaeTrae);
+  createDonut('chartSeriousTeaeTrae', ['Serious TEAE', 'Serious TRAE'], 
+    [STATS.seriousEvents - STATS.seriousTRAE, STATS.seriousTRAE], COLORS.teaeTrae);
+  createDonut('chartGrade3TeaeTrae', ['G≥3 TEAE', 'G≥3 TRAE'], 
+    [STATS.grade3PlusEvents - STATS.grade3PlusTRAE, STATS.grade3PlusTRAE], COLORS.teaeTrae);
+  
+  // By dose tables
+  const container = document.getElementById('teaeTraeByDose');
+  container.innerHTML = '';
+  
+  const doses = Object.keys(STATS.byDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  doses.forEach(dose => {
+    const d = STATS.byDose[dose];
+    const N = N_PER_DOSE[dose] || d.subjects.size;
+    
+    const html = `
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>${dose} (N=${N})</span>
+        <span class="toggle">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div class="table-container" style="margin:0;">
+          ${createDosePTTable(d, N)}
+        </div>
+      </div>
+    `;
+    container.innerHTML += html;
+  });
+}
+
+function createDosePTTable(doseData, N, filterType = 'all') {
+  const pts = Object.keys(doseData.ptData).sort();
+  
+  let rows = `
+    <tr class="any-ae-row">
+      <td>Any Adverse Event</td>
+      <td>${formatNPct(doseData.teaeAny.size, N)}</td>
+      <td>${formatNPct(doseData.teaeG3.size, N)}</td>
+      <td>${formatNPct(doseData.traeAny.size, N)}</td>
+      <td>${formatNPct(doseData.traeG1.size, N)}</td>
+      <td>${formatNPct(doseData.traeG2.size, N)}</td>
+      <td>${formatNPct(doseData.traeG3.size, N)}</td>
+      <td>${formatNPct(doseData.traeG4.size, N)}</td>
+      <td>${formatNPct(doseData.traeG5.size, N)}</td>
+    </tr>
+  `;
+  
+  pts.forEach(pt => {
+    const p = doseData.ptData[pt];
+    
+    // Apply filter
+    if (filterType === 'grade3' && p.teaeG3.size === 0) return;
+    if (filterType === 'serious') {
+      // For serious, we'd need additional tracking - skip for now if not implemented
+    }
+    
+    rows += `
+      <tr>
+        <td>${truncate(pt, 50)}</td>
+        <td>${formatNPct(p.teaeAny.size, N)}</td>
+        <td>${formatNPct(p.teaeG3.size, N)}</td>
+        <td>${formatNPct(p.traeAny.size, N)}</td>
+        <td>${formatNPct(p.traeG1.size, N)}</td>
+        <td>${formatNPct(p.traeG2.size, N)}</td>
+        <td>${formatNPct(p.traeG3.size, N)}</td>
+        <td>${formatNPct(p.traeG4.size, N)}</td>
+        <td>${formatNPct(p.traeG5.size, N)}</td>
+      </tr>
+    `;
+  });
+  
+  return `
+    <table class="data-table">
+      <thead>
+        <tr class="header-group">
+          <th rowspan="2">Preferred Term</th>
+          <th colspan="2">TEAE</th>
+          <th colspan="6">TRAE</th>
+        </tr>
+        <tr>
+          <th>Any</th>
+          <th>G≥3</th>
+          <th>Any</th>
+          <th>G1</th>
+          <th>G2</th>
+          <th>G3</th>
+          <th>G4</th>
+          <th>G5</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderPTTab() {
+  const container = document.getElementById('ptTablesContainer');
+  container.innerHTML = '';
+  
+  const doses = Object.keys(STATS.byDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  doses.forEach(dose => {
+    const d = STATS.byDose[dose];
+    const N = N_PER_DOSE[dose] || d.subjects.size;
+    
+    container.innerHTML += `
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>${dose} (N=${N})</span>
+        <span class="toggle">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div class="table-container" style="margin:0;">
+          ${createDosePTTable(d, N)}
+        </div>
+      </div>
+    `;
+  });
+  
+  // Total
+  container.innerHTML += `
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <span><strong>Total (N=${BIG_N})</strong></span>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="collapsible-content">
+      <div class="table-container" style="margin:0;">
+        ${createTotalPTTable()}
+      </div>
+    </div>
+  `;
+}
+
+function createTotalPTTable() {
+  // Aggregate all PTs across doses
+  const allPTs = {};
+  
+  Object.values(STATS.byDose).forEach(d => {
+    Object.entries(d.ptData).forEach(([pt, data]) => {
+      if (!allPTs[pt]) {
+        allPTs[pt] = {
+          teaeAny: new Set(), teaeG3: new Set(), traeAny: new Set(),
+          traeG1: new Set(), traeG2: new Set(), traeG3: new Set(), traeG4: new Set(), traeG5: new Set()
+        };
+      }
+      data.teaeAny.forEach(s => allPTs[pt].teaeAny.add(s));
+      data.teaeG3.forEach(s => allPTs[pt].teaeG3.add(s));
+      data.traeAny.forEach(s => allPTs[pt].traeAny.add(s));
+      data.traeG1.forEach(s => allPTs[pt].traeG1.add(s));
+      data.traeG2.forEach(s => allPTs[pt].traeG2.add(s));
+      data.traeG3.forEach(s => allPTs[pt].traeG3.add(s));
+      data.traeG4.forEach(s => allPTs[pt].traeG4.add(s));
+      data.traeG5.forEach(s => allPTs[pt].traeG5.add(s));
+    });
+  });
+  
+  // Calculate totals
+  let totals = {
+    teaeAny: new Set(), teaeG3: new Set(), traeAny: new Set(),
+    traeG1: new Set(), traeG2: new Set(), traeG3: new Set(), traeG4: new Set(), traeG5: new Set()
+  };
+  
+  Object.values(allPTs).forEach(p => {
+    p.teaeAny.forEach(s => totals.teaeAny.add(s));
+    p.teaeG3.forEach(s => totals.teaeG3.add(s));
+    p.traeAny.forEach(s => totals.traeAny.add(s));
+    p.traeG1.forEach(s => totals.traeG1.add(s));
+    p.traeG2.forEach(s => totals.traeG2.add(s));
+    p.traeG3.forEach(s => totals.traeG3.add(s));
+    p.traeG4.forEach(s => totals.traeG4.add(s));
+    p.traeG5.forEach(s => totals.traeG5.add(s));
+  });
+  
+  let rows = `
+    <tr class="any-ae-row">
+      <td>Any Adverse Event</td>
+      <td>${formatNPct(totals.teaeAny.size, BIG_N)}</td>
+      <td>${formatNPct(totals.teaeG3.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeAny.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeG1.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeG2.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeG3.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeG4.size, BIG_N)}</td>
+      <td>${formatNPct(totals.traeG5.size, BIG_N)}</td>
+    </tr>
+  `;
+  
+  Object.keys(allPTs).sort().forEach(pt => {
+    const p = allPTs[pt];
+    rows += `
+      <tr>
+        <td>${truncate(pt, 50)}</td>
+        <td>${formatNPct(p.teaeAny.size, BIG_N)}</td>
+        <td>${formatNPct(p.teaeG3.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeAny.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeG1.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeG2.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeG3.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeG4.size, BIG_N)}</td>
+        <td>${formatNPct(p.traeG5.size, BIG_N)}</td>
+      </tr>
+    `;
+  });
+  
+  return `
+    <table class="data-table">
+      <thead>
+        <tr class="header-group">
+          <th rowspan="2">Preferred Term</th>
+          <th colspan="2">TEAE</th>
+          <th colspan="6">TRAE</th>
+        </tr>
+        <tr>
+          <th>Any</th>
+          <th>G≥3</th>
+          <th>Any</th>
+          <th>G1</th>
+          <th>G2</th>
+          <th>G3</th>
+          <th>G4</th>
+          <th>G5</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderSeriousTab() {
+  document.getElementById('seriousTotal').textContent = STATS.seriousEvents;
+  document.getElementById('seriousSubjects').textContent = STATS.seriousSubjects;
+  document.getElementById('seriousTRAE').textContent = STATS.seriousTRAE;
+  
+  // Render serious AE tables by dose
+  const container = document.getElementById('seriousTablesContainer');
+  container.innerHTML = '';
+  
+  // Group serious records by dose
+  const seriousByDose = {};
+  STATS.records.serious.forEach(r => {
+    if (!seriousByDose[r.dose]) seriousByDose[r.dose] = [];
+    seriousByDose[r.dose].push(r);
+  });
+  
+  const doses = Object.keys(seriousByDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  doses.forEach(dose => {
+    const records = seriousByDose[dose];
+    const N = N_PER_DOSE[dose] || STATS.byDose[dose]?.subjects.size || 0;
+    
+    let rows = '';
+    records.forEach(r => {
+      rows += `
+        <tr>
+          <td>${r.subject}</td>
+          <td>${truncate(r.pt, 40)}</td>
+          <td>Grade ${r.grade}</td>
+          <td>${r.relLevel}</td>
+          <td>${r.outcome || '-'}</td>
+          <td>${r.startDate || '-'}</td>
+        </tr>
+      `;
+    });
+    
+    container.innerHTML += `
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>${dose} (N=${N}) - ${records.length} Serious AE</span>
+        <span class="toggle">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div class="table-container" style="margin:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Preferred Term</th>
+                <th>Grade</th>
+                <th>Relatedness</th>
+                <th>Outcome</th>
+                <th>Start Date</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+  
+  if (doses.length === 0) {
+    container.innerHTML = '<p style="padding:20px;color:#7f8c8d;">No serious adverse events recorded.</p>';
+  }
+}
+
+function renderGrade3Tab() {
+  document.getElementById('grade3Total').textContent = STATS.grade3PlusEvents;
+  document.getElementById('grade3Subjects').textContent = STATS.grade3PlusSubjects;
+  document.getElementById('grade3TRAE').textContent = STATS.grade3PlusTRAE;
+  document.getElementById('grade4Total').textContent = STATS.grades[4];
+  document.getElementById('grade5Total').textContent = STATS.grades[5];
+  
+  // Render Grade ≥3 tables by dose
+  const container = document.getElementById('grade3TablesContainer');
+  container.innerHTML = '';
+  
+  const grade3ByDose = {};
+  STATS.records.grade3.forEach(r => {
+    if (!grade3ByDose[r.dose]) grade3ByDose[r.dose] = [];
+    grade3ByDose[r.dose].push(r);
+  });
+  
+  const doses = Object.keys(grade3ByDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  doses.forEach(dose => {
+    const records = grade3ByDose[dose];
+    const N = N_PER_DOSE[dose] || STATS.byDose[dose]?.subjects.size || 0;
+    
+    let rows = '';
+    records.forEach(r => {
+      const gradeBadge = r.grade >= 5 ? 'badge-grade5' : r.grade >= 4 ? 'badge-grade4' : 'badge-grade3';
+      rows += `
+        <tr>
+          <td>${r.subject}</td>
+          <td>${truncate(r.pt, 40)}</td>
+          <td><span class="badge ${gradeBadge}">Grade ${r.grade}</span></td>
+          <td>${r.isSerious ? '<span class="badge badge-serious">Yes</span>' : 'No'}</td>
+          <td>${r.relLevel}</td>
+          <td>${r.outcome || '-'}</td>
+        </tr>
+      `;
+    });
+    
+    container.innerHTML += `
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>${dose} (N=${N}) - ${records.length} Grade ≥3 AE</span>
+        <span class="toggle">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div class="table-container" style="margin:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Preferred Term</th>
+                <th>Grade</th>
+                <th>Serious</th>
+                <th>Relatedness</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+  
+  if (doses.length === 0) {
+    container.innerHTML = '<p style="padding:20px;color:#7f8c8d;">No Grade ≥3 adverse events recorded.</p>';
+  }
+}
+
+function renderDLTTab() {
+  const s = STATS;
+  document.getElementById('dltTotal').textContent = s.dltEvents;
+  document.getElementById('dltSubjects').textContent = s.dltSubjects;
+  document.getElementById('dltRate').textContent = formatPct(s.dltSubjects, BIG_N);
+  
+  // DLT Rate table
+  const rateBody = document.getElementById('dltRateBody');
+  rateBody.innerHTML = '';
+  
+  const doses = Object.keys(s.byDose).sort((a, b) => getDoseNumeric(a) - getDoseNumeric(b));
+  
+  let totalDLTSubj = 0;
+  let totalDLTEvents = 0;
+  
+  doses.forEach(dose => {
+    const d = s.byDose[dose];
+    const N = N_PER_DOSE[dose] || d.subjects.size;
+    const dltSubj = d.dlt.size;
+    const dltEvts = s.records.dlt.filter(r => r.dose === dose).length;
+    
+    totalDLTSubj += dltSubj;
+    totalDLTEvents += dltEvts;
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${dose}</td>
+      <td>${N}</td>
+      <td>${dltSubj}</td>
+      <td>${dltEvts}</td>
+      <td>${formatPct(dltSubj, N)}</td>
+      <td>${dltSubj}/${N}</td>
+    `;
+    rateBody.appendChild(row);
+  });
+  
+  // Total row
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `
+    <td>Overall</td>
+    <td>${BIG_N}</td>
+    <td>${s.dltSubjects}</td>
+    <td>${s.dltEvents}</td>
+    <td>${formatPct(s.dltSubjects, BIG_N)}</td>
+    <td>${s.dltSubjects}/${BIG_N}</td>
+  `;
+  rateBody.appendChild(totalRow);
+  
+  // DLT Detail table
+  const detailBody = document.getElementById('dltDetailBody');
+  detailBody.innerHTML = '';
+  
+  if (s.records.dlt.length === 0) {
+    detailBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7f8c8d;">No DLT events recorded</td></tr>';
+  } else {
+    s.records.dlt.sort((a, b) => getDoseNumeric(a.dose) - getDoseNumeric(b.dose)).forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.subject}</td>
+        <td>${r.dose}</td>
+        <td>${truncate(r.pt, 35)}</td>
+        <td><span class="badge badge-dlt">Grade ${r.grade}</span></td>
+        <td>${r.relLevel}</td>
+        <td>${r.startDate || '-'}</td>
+        <td>${r.outcome || '-'}</td>
+      `;
+      detailBody.appendChild(row);
+    });
+  }
+}
+
+function renderDeathsTab() {
+  document.getElementById('deathTotal').textContent = STATS.deathEvents;
+  document.getElementById('deathTRAE').textContent = STATS.deathTRAE;
+  
+  const tbody = document.getElementById('deathDetailBody');
+  tbody.innerHTML = '';
+  
+  if (STATS.records.deaths.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7f8c8d;">No deaths (Grade 5 AE) recorded</td></tr>';
+  } else {
+    STATS.records.deaths.sort((a, b) => getDoseNumeric(a.dose) - getDoseNumeric(b.dose)).forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.subject}</td>
+        <td>${r.dose}</td>
+        <td>${truncate(r.pt, 35)}</td>
+        <td>${r.isTreatmentRelated ? '<span class="badge badge-related">Related</span>' : r.relLevel}</td>
+        <td>${r.isSerious ? '<span class="badge badge-serious">Yes</span>' : 'No'}</td>
+        <td>${r.startDate || '-'}</td>
+        <td>${r.endDate || '-'}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+}
+
+function renderListingTab() {
+  const tbody = document.getElementById('aeListingBody');
+  tbody.innerHTML = '';
+  
+  STATS.records.all.sort((a, b) => {
+    const doseComp = getDoseNumeric(a.dose) - getDoseNumeric(b.dose);
+    if (doseComp !== 0) return doseComp;
+    return a.subject.localeCompare(b.subject);
+  }).forEach(r => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${r.subject}</td>
+      <td>${r.dose}</td>
+      <td>${truncate(r.pt, 30)}</td>
+      <td>${r.startDate || '-'}</td>
+      <td>${r.endDate || '-'}</td>
+      <td>Grade ${r.grade}</td>
+      <td>${r.isSerious ? 'Y' : 'N'}</td>
+      <td>${r.relLevel}</td>
+      <td>${r.outcome || '-'}</td>
+      <td>${r.action || '-'}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// ============================================
+// INTERACTION HANDLERS
+// ============================================
+
+function setupTabNavigation() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      
+      // Render tab content on first view
+      if (btn.dataset.tab === 'teae-trae' && !btn.dataset.rendered) {
+        renderTeaeTraeTab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'by-pt' && !btn.dataset.rendered) {
+        renderPTTab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'serious' && !btn.dataset.rendered) {
+        renderSeriousTab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'grade3' && !btn.dataset.rendered) {
+        renderGrade3Tab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'dlt' && !btn.dataset.rendered) {
+        renderDLTTab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'deaths' && !btn.dataset.rendered) {
+        renderDeathsTab();
+        btn.dataset.rendered = 'true';
+      } else if (btn.dataset.tab === 'listing' && !btn.dataset.rendered) {
+        renderListingTab();
+        btn.dataset.rendered = 'true';
+      }
+    });
+  });
+}
+
+function setupSummaryCardClicks() {
+  document.querySelectorAll('.summary-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const filter = card.dataset.filter;
+      // Only open detail page if filter is defined
+      if (filter) {
+        window.open(`ae-detail.html?filter=${filter}`, '_blank');
+      }
+    });
+  });
+}
+
+function showDetailByFilter(filter) {
+  let records = [];
+  let title = '';
+  
+  switch (filter) {
+    case 'all':
+      records = STATS.records.all;
+      title = `All Adverse Events (${records.length} events)`;
+      break;
+    case 'trae':
+      records = STATS.records.trae;
+      title = `Treatment-Related AE (${records.length} events)`;
+      break;
+    case 'serious':
+      records = STATS.records.serious;
+      title = `Serious AE (${records.length} events)`;
+      break;
+    case 'grade3':
+      records = STATS.records.grade3;
+      title = `Grade ≥3 AE (${records.length} events)`;
+      break;
+    case 'dlt':
+      records = STATS.records.dlt;
+      title = `DLT Events (${records.length} events)`;
+      break;
+    case 'deaths':
+      records = STATS.records.deaths;
+      title = `Deaths - Grade 5 (${records.length} events)`;
+      break;
+    default:
+      return;
+  }
+  
+  showDetail(title, records.slice(0, 100));
+}
+
+function showDoseDetail(dose) {
+  const records = STATS.records.all.filter(r => r.dose === dose);
+  showDetail(`${dose} - All AE (${records.length} events)`, records.slice(0, 100));
+}
+
+function showDetail(title, records) {
+  document.getElementById('detailTitle').textContent = title;
+  
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">No records</td></tr>';
+  } else {
+    records.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.subject}</td>
+        <td>${r.dose}</td>
+        <td>${truncate(r.pt, 35)}</td>
+        <td>Grade ${r.grade}</td>
+        <td>${r.isSerious ? '<span class="badge badge-serious">Y</span>' : 'N'}</td>
+        <td>${r.relLevel}</td>
+        <td>${r.outcome || '-'}</td>
+        <td>${r.startDate || '-'}</td>
+        <td>${r.endDate || '-'}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  
+  document.getElementById('detailPanel').classList.remove('hidden');
+  document.getElementById('detailPanel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideDetail() {
+  document.getElementById('detailPanel').classList.add('hidden');
+}
+
+function toggleCollapsible(header) {
+  const content = header.nextElementSibling;
+  const toggle = header.querySelector('.toggle');
+  
+  if (content.classList.contains('open')) {
+    content.classList.remove('open');
+    toggle.textContent = '▼';
+  } else {
+    content.classList.add('open');
+    toggle.textContent = '▲';
+  }
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
+function showError(msg) {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('errorState').textContent = msg;
+  document.getElementById('errorState').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Load AE data
+    AE_DATA = await loadCSV('../../data/ae.CSV');
+    if (!AE_DATA || AE_DATA.length === 0) {
+      throw new Error('No AE data found in ae.csv');
+    }
+    
+    // Try to load DM data
+    try {
+      DM_DATA = await loadCSV('../../data/dm.CSV');
+      
+      // Calculate Big N and N per dose
+      DM_DATA.forEach(row => {
+        const rfx = String(row.RFXSTDTC || '').trim();
+        if (rfx.length >= 2 && rfx.toUpperCase() !== 'UNKNOWN') {
+          BIG_N++;
+          const arm = row.ARM || 'Unknown Dose';
+          N_PER_DOSE[arm] = (N_PER_DOSE[arm] || 0) + 1;
+        }
+      });
+      
+      // Merge ARM from DM to AE
+      const armMap = {};
+      DM_DATA.forEach(row => {
+        armMap[row.SUBJID] = row.ARM;
+      });
+      AE_DATA.forEach(row => {
+        if (!row.ARM && armMap[row.Subject]) {
+          row.ARM = armMap[row.Subject];
+        }
+      });
+    } catch (e) {
+      console.log('dm.csv not found, using AE data for N');
+    }
+    
+    // Fallback Big N
+    if (BIG_N === 0) {
+      BIG_N = new Set(AE_DATA.map(r => r.Subject)).size;
+    }
+    
+    // Analyze data
+    STATS = analyzeData();
+    
+    // Update Big N badge
+    document.getElementById('bigNBadge').textContent = `N = ${BIG_N}`;
+    
+    // Render overview
+    renderOverview();
+    
+    // Setup interactions
+    setupTabNavigation();
+    setupSummaryCardClicks();
+    
+    // Show content
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('mainContent').classList.remove('hidden');
+
+    if (typeof initBlockExportDialog === 'function') {
+      initBlockExportDialog();
+      setBlockExportPrefix('Safety_Dashboard');
+    }
+    
+  } catch (err) {
+    console.error(err);
+    showError(`Error: ${err.message}. Please ensure ae.CSV and dm.CSV are in the data directory.`);
+  }
+});
+</script>
+  </main>
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    // Initialize navigation
+    if (typeof renderNav === 'function') {
+      renderNav('safety', 'safety-dashboard', '../../');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTCAE Labs - Laboratory Results</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-cyan: #22d3d4;
+      --grade1: #fbbf24;
+      --grade2: #f97316;
+      --grade3: #ef4444;
+      --grade4: #991b1b;
+      --normal-range: rgba(56, 189, 248, 0.15);
+      --border-color: #475569;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .page-content {
+      margin-top: 60px;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .page-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 28px;
+      background: linear-gradient(180deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+      border-radius: 2px;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select, input[type="file"] {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:hover, select:focus {
+      border-color: var(--accent-blue);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    .local-tabs {
+      background: var(--bg-secondary);
+      padding: 8px 32px;
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 10px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-blue);
+      color: var(--bg-primary);
+      font-weight: 600;
+    }
+
+    .main-content {
+      padding: 24px 32px;
+    }
+
+    .filter-bar {
+      background: var(--bg-secondary);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .filter-label {
+      font-size: 1.2rem;
+      color: white;
+      font-weight: 500;
+    }
+
+    .filter-select {
+      width: 100%;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+    }
+
+    .chart-main {
+      flex: 0 0 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .chart-info-panel {
+      flex: 0 0 50%;
+      border-left: 1px solid var(--border-color);
+      background: #f8f9fa;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .info-section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .info-section-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #000000;
+      margin-bottom: 6px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .info-section-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-style: italic;
+      margin-bottom: 12px;
+      margin-top: -6px;
+    }
+
+    .ctcae-grades-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    .grade-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #000000;
+    }
+
+    .ctcae-definition {
+      margin-left: 8px;
+      color: #475569;
+      font-size: 0.75rem;
+      font-weight: normal;
+    }
+
+    .grade-color {
+      width: 20px;
+      height: 2px;
+      border-radius: 1px;
+    }
+
+    .data-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .data-details-table thead {
+      background: #e2e8f0;
+    }
+
+    .data-details-table th {
+      padding: 10px 8px;
+      text-align: center;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #cbd5e1;
+      font-size: 0.8rem;
+    }
+
+    .data-details-table th:nth-child(3) {
+      width: 120px;
+      max-width: 120px;
+    }
+
+    .data-details-table td {
+      padding: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #475569;
+      text-align: center;
+    }
+
+    .data-details-table td:nth-child(3) {
+      width: 120px;
+      max-width: 120px;
+    }
+
+    .data-details-table td.baseline-n {
+      color: #dc2626;
+    }
+
+    .data-details-table tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    .data-details-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .chart-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .chart-subtitle {
+      font-size: 0.75rem;
+      color: #333333;
+      margin-top: 2px;
+    }
+
+    .chart-header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      text-align: right;
+    }
+
+    .chart-dose {
+      font-size: 0.7rem;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .chart-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-increase {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .badge-decrease {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+    }
+
+    .badge-bidirectional {
+      background: rgba(168, 85, 247, 0.2);
+      color: #d8b4fe;
+    }
+
+    .chart-body {
+      padding: 16px;
+      padding-right: 80px;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    .chart-labels-container {
+      position: absolute;
+      right: 8px;
+      top: 16px;
+      bottom: 16px;
+      width: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .chart-label-item {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .legend-bar {
+      background: var(--bg-card);
+      padding: 12px 20px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-line {
+      width: 24px;
+      height: 2px;
+    }
+
+    .legend-line.normal {
+      background: var(--accent-blue);
+      border-style: solid;
+    }
+
+    .legend-line.grade1 { background: var(--grade1); }
+    .legend-line.grade2 { background: var(--grade2); }
+    .legend-line.grade3 { background: var(--grade3); }
+    .legend-line.grade4 { background: var(--grade4); }
+
+    .info-panel {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+    }
+
+    .info-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent-cyan);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .info-category {
+      background: var(--bg-card);
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .info-category-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-bottom: 8px;
+    }
+
+    .info-category-content {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 16px 20px;
+      border: 1px solid var(--border-color);
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .disclaimer {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 0.8rem;
+      color: #fcd34d;
+    }
+
+    @media (max-width: 768px) {
+      .page-header {
+        padding: 16px;
+      }
+      .main-content {
+        padding: 16px;
+      }
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      .local-tabs {
+        padding: 8px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <div class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">CTCAE Labs - Laboratory Results</h1>
+    </div>
+
+    <main class="main-content">
+      <div class="disclaimer">
+        ⚠️ CTCAE v5.0 grading is for reference only. Clinical assessment should consider patient-specific factors. Some Grade 4 thresholds are clinical (life-threatening), not numeric.
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label">Subject</label>
+          <select id="subjectSelect" class="filter-select" onchange="updateCharts()">
+            <option value="">Select Subject...</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Dose Group</label>
+          <select id="doseSelect" class="filter-select" onchange="updateCharts()">
+            <option value="all">All Dose Groups</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Panel / Category</label>
+          <select id="panelSelect" class="filter-select" onchange="filterAnalytes()">
+            <option value="all">All Panels</option>
+            <option value="liver">Liver Function</option>
+            <option value="renal">Renal Function</option>
+            <option value="hematology">Hematology</option>
+            <option value="electrolytes">Electrolytes</option>
+            <option value="coagulation">Coagulation</option>
+            <option value="metabolic">Metabolic</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Analyte</label>
+          <select id="analyteSelect" class="filter-select" onchange="updateCharts()">
+            <option value="all">All Analytes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats-row" id="statsRow" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-value" id="statRecords">0</div>
+          <div class="stat-label">Patients</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAnalytes">0</div>
+          <div class="stat-label">Analytes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statVisits">0</div>
+          <div class="stat-label">Visits</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAbnormal">0</div>
+          <div class="stat-label">Abnormal Values</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+        <button class="export-btn" onclick="showBlockExportDialog('chartsContainer', 'CTCAE_Labs_All')">Export All Charts</button>
+      </div>
+
+      <div id="chartsContainer">
+        <div class="loading" id="loadingState">
+          <div class="spinner"></div>
+          <div>Please load a CSV file to view laboratory data...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ============================================================================
+    // CTCAE v5.0 Grading Standards - SI Units (Translated from R)
+    // ============================================================================
+
+    const ANALYTE_NAME_MAP = {
+      'Alanine Aminotransferase; ALT': 'ALT',
+      'Aspartate Aminotransferase; AST': 'AST',
+      'Alkaline Phosphatase; ALP': 'ALP',
+      'Bilirubin; BILI': 'BILI',
+      'GGT; GGT': 'GGT',
+      'Lactate Dehydrogenase; LDH': 'LDH',
+      'Creatinine; CREAT': 'CREAT',
+      'Urea Nitrogen; UREAN': 'UREAN',
+      'Urate; URATE': 'URATE',
+      'Albumin; ALB': 'ALB',
+      'Protein; PROT': 'PROT',
+      'Potassium; K': 'K',
+      'Sodium; SODIUM': 'SODIUM',
+      'Calcium; CA': 'CA',
+      'Magnesium; MG': 'MG',
+      'Phosphate; PHOS': 'PHOS',
+      'Chloride; CL': 'CL',
+      'Bicarbonate; BICARB': 'BICARB',
+      'Carbon Dioxide; CO2': 'CO2',
+      'Glucose; GLUC': 'GLUC',
+      'Amylase; AMYLASE': 'AMYLASE',
+      'Lipase; LIPASET': 'LIPASE',
+      'Lipase; LIPASE': 'LIPASE',
+      'Cholesterol; CHOL': 'CHOL',
+      'Triglycerides; TRIG': 'TRIG',
+      'Activated Partial Thromboplastin Time; APTT': 'APTT',
+      'Prothrombin Intl. Normalized Ratio; INR': 'INR',
+      'Prothrombin Time; PT': 'PT',
+      'Partial Thromboplastin Time; PTT': 'PTT',
+      'Fibrinogen; FIB': 'FIB',
+      'Leukocytes; WBC': 'WBC',
+      'Erythrocytes; RBC': 'RBC',
+      'Hemoglobin; HGB': 'HGB',
+      'Hematocrit; HCT': 'HCT',
+      'Platelets; PLAT': 'PLAT',
+      'Neutrophils; NEUT': 'NEUT',
+      'Lymphocytes; LYM': 'LYM',
+      'Monocytes; MONO': 'MONO',
+      'Eosinophils; EOS': 'EOS',
+      'Basophils; BASO': 'BASO',
+      'CD4; CD4': 'CD4'
+    };
+
+    const PANEL_MAPPING = {
+      liver: ['ALT', 'AST', 'ALP', 'BILI', 'GGT', 'LDH'],
+      renal: ['CREAT', 'UREAN', 'URATE'],
+      hematology: ['WBC', 'RBC', 'HGB', 'HCT', 'PLAT', 'NEUT', 'LYM', 'MONO', 'EOS', 'BASO', 'CD4'],
+      electrolytes: ['K', 'SODIUM', 'CA', 'MG', 'PHOS', 'CL', 'BICARB', 'CO2'],
+      coagulation: ['APTT', 'INR', 'PT', 'PTT', 'FIB'],
+      metabolic: ['GLUC', 'CHOL', 'TRIG', 'ALB', 'PROT', 'AMYLASE', 'LIPASE']
+    };
+
+    function getAnalyteShortName(fullName) {
+      if (ANALYTE_NAME_MAP[fullName]) return ANALYTE_NAME_MAP[fullName];
+      if (fullName.includes(';')) {
+        return fullName.split(';').pop().trim();
+      }
+      return fullName;
+    }
+
+    function getBaselineStatus(analyte, baselineValue, stdLow, stdHigh) {
+      const shortName = getAnalyteShortName(analyte);
+
+      if (baselineValue == null) return 'NormalBaseline';
+
+      // ALT/AST/ALP/BILI (increase direction): only check ULN
+      // baseline > ULN = Abnormal, baseline <= ULN = Normal (even if below LLN)
+      if (['ALT', 'AST', 'ALP', 'BILI', 'GGT', 'CREAT', 'LIPASE', 'AMYLASE', 'INR', 'APTT', 'PT', 'PTT', 'CHOL', 'TRIG', 'URATE', 'LDH'].includes(shortName)) {
+        if (stdHigh == null) return 'NormalBaseline';
+        return baselineValue > stdHigh ? 'AbnormalBaseline' : 'NormalBaseline';
+      }
+
+      // NEUT/PLAT/WBC/LYM/HGB etc (decrease direction): only check LLN
+      // baseline < LLN = Abnormal, baseline >= LLN = Normal (even if above ULN)
+      if (['NEUT', 'PLAT', 'WBC', 'LYM', 'HGB', 'CD4', 'MG', 'PHOS', 'ALB', 'FIB'].includes(shortName)) {
+        if (stdLow == null) return 'NormalBaseline';
+        return baselineValue < stdLow ? 'AbnormalBaseline' : 'NormalBaseline';
+      }
+
+      // Bidirectional (K, SODIUM, CA, GLUC): check both LLN and ULN
+      if (stdLow != null && stdHigh != null) {
+        return (baselineValue >= stdLow && baselineValue <= stdHigh) ? 'NormalBaseline' : 'AbnormalBaseline';
+      }
+      return 'NormalBaseline';
+    }
+
+    function getCTCAEGrades(analyte, baselineValue, stdLow, stdHigh, stdUnit = null) {
+      const shortName = getAnalyteShortName(analyte);
+      const baselineStatus = getBaselineStatus(analyte, baselineValue, stdLow, stdHigh);
+      
+      let grades = { grades: [], direction: null, term: null, note: null };
+
+      // ALT / AST
+      if (shortName === 'ALT' || shortName === 'AST') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 3.0 * stdHigh },
+            { grade: 'Grade2', low: 3.0 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+            { grade: 'Grade2', low: 3.0 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = `${shortName} increased`;
+      }
+
+      // ALP
+      else if (shortName === 'ALP') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+            { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+            { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'ALP increased';
+      }
+
+      // GGT
+      else if (shortName === 'GGT') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+            { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+            { grade: 'Grade3', low: 5.0 * stdHigh, high: 20.0 * stdHigh },
+            { grade: 'Grade4', low: 20.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: 2.0 * baselineValue, high: 2.5 * baselineValue },
+            { grade: 'Grade2', low: 2.5 * baselineValue, high: 5.0 * baselineValue },
+            { grade: 'Grade3', low: 5.0 * baselineValue, high: 20.0 * baselineValue },
+            { grade: 'Grade4', low: 20.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'GGT increased';
+      }
+
+      // Bilirubin
+      else if (shortName === 'BILI') {
+        if (baselineStatus === 'NormalBaseline') {
+          grades.grades = [
+            { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+            { grade: 'Grade2', low: 1.5 * stdHigh, high: 3.0 * stdHigh },
+            { grade: 'Grade3', low: 3.0 * stdHigh, high: 10.0 * stdHigh },
+            { grade: 'Grade4', low: 10.0 * stdHigh, high: Infinity }
+          ];
+        } else {
+          grades.grades = [
+            { grade: 'Grade1', low: baselineValue, high: 1.5 * baselineValue },
+            { grade: 'Grade2', low: 1.5 * baselineValue, high: 3.0 * baselineValue },
+            { grade: 'Grade3', low: 3.0 * baselineValue, high: 10.0 * baselineValue },
+            { grade: 'Grade4', low: 10.0 * baselineValue, high: Infinity }
+          ];
+        }
+        grades.direction = 'increase';
+        grades.term = 'Blood bilirubin increased';
+      }
+
+      // Creatinine
+      else if (shortName === 'CREAT') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 3.0 * stdHigh },
+          { grade: 'Grade3', low: 3.0 * stdHigh, high: 6.0 * stdHigh },
+          { grade: 'Grade4', low: 6.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Creatinine increased';
+      }
+
+      // Platelets
+      else if (shortName === 'PLAT') {
+        grades.grades = [
+          { grade: 'Grade1', low: 75, high: stdLow },
+          { grade: 'Grade2', low: 50, high: 75 },
+          { grade: 'Grade3', low: 25, high: 50 },
+          { grade: 'Grade4', low: 0, high: 25 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Platelet count decreased';
+      }
+
+      // Neutrophils
+      else if (shortName === 'NEUT') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.5, high: stdLow },
+          { grade: 'Grade2', low: 1.0, high: 1.5 },
+          { grade: 'Grade3', low: 0.5, high: 1.0 },
+          { grade: 'Grade4', low: 0, high: 0.5 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Neutrophil count decreased';
+      }
+
+      // WBC
+      else if (shortName === 'WBC') {
+        grades.grades = [
+          { grade: 'Grade1', low: 3.0, high: stdLow },
+          { grade: 'Grade2', low: 2.0, high: 3.0 },
+          { grade: 'Grade3', low: 1.0, high: 2.0 },
+          { grade: 'Grade4', low: 0, high: 1.0 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'White blood cell decreased';
+      }
+
+      // Lymphocytes
+      else if (shortName === 'LYM') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.8, high: stdLow },
+          { grade: 'Grade2', low: 0.5, high: 0.8 },
+          { grade: 'Grade3', low: 0.2, high: 0.5 },
+          { grade: 'Grade4', low: 0, high: 0.2 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Lymphocyte count decreased';
+      }
+
+      // Hemoglobin
+      else if (shortName === 'HGB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 100, high: stdLow },
+          { grade: 'Grade2', low: 80, high: 100 },
+          { grade: 'Grade3', low: 0, high: 80 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Anemia';
+        grades.note = 'G4 is clinical (life-threatening), not a numeric threshold';
+      }
+
+      // Potassium (Bidirectional)
+      else if (shortName === 'K') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 3.0, high: stdLow },
+          { grade: 'Grade2_low', low: 2.5, high: 3.0 },
+          { grade: 'Grade3_low', low: 0, high: 2.5 },
+          { grade: 'Grade1_high', low: stdHigh, high: 5.5 },
+          { grade: 'Grade2_high', low: 5.5, high: 6.0 },
+          { grade: 'Grade3_high', low: 6.0, high: 7.0 },
+          { grade: 'Grade4_high', low: 7.0, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypokalemia';
+        grades.highTerm = 'Hyperkalemia';
+      }
+
+      // Sodium (Bidirectional)
+      else if (shortName === 'SODIUM') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 130, high: stdLow },
+          { grade: 'Grade2_low', low: 120, high: 130 },
+          { grade: 'Grade3_low', low: 0, high: 120 },
+          { grade: 'Grade1_high', low: stdHigh, high: 150 },
+          { grade: 'Grade2_high', low: 150, high: 155 },
+          { grade: 'Grade3_high', low: 155, high: 160 },
+          { grade: 'Grade4_high', low: 160, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hyponatremia';
+        grades.highTerm = 'Hypernatremia';
+      }
+
+      // Calcium (Bidirectional)
+      else if (shortName === 'CA') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 2.0, high: stdLow },
+          { grade: 'Grade2_low', low: 1.75, high: 2.0 },
+          { grade: 'Grade3_low', low: 1.5, high: 1.75 },
+          { grade: 'Grade4_low', low: 0, high: 1.5 },
+          { grade: 'Grade1_high', low: stdHigh, high: 2.88 },
+          { grade: 'Grade2_high', low: 2.88, high: 3.13 },
+          { grade: 'Grade3_high', low: 3.13, high: 3.38 },
+          { grade: 'Grade4_high', low: 3.38, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypocalcemia';
+        grades.highTerm = 'Hypercalcemia';
+      }
+
+      // Magnesium
+      else if (shortName === 'MG') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.5, high: stdLow },
+          { grade: 'Grade2', low: 0.4, high: 0.5 },
+          { grade: 'Grade3', low: 0.3, high: 0.4 },
+          { grade: 'Grade4', low: 0, high: 0.3 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypomagnesemia';
+      }
+
+      // Phosphate
+      else if (shortName === 'PHOS') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.8, high: stdLow },
+          { grade: 'Grade2', low: 0.6, high: 0.8 },
+          { grade: 'Grade3', low: 0.3, high: 0.6 },
+          { grade: 'Grade4', low: 0, high: 0.3 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypophosphatemia';
+      }
+
+      // Glucose (Bidirectional)
+      else if (shortName === 'GLUC') {
+        grades.grades = [
+          { grade: 'Grade1_low', low: 3.0, high: stdLow },
+          { grade: 'Grade2_low', low: 2.2, high: 3.0 },
+          { grade: 'Grade3_low', low: 0, high: 2.2 },
+          { grade: 'Grade1_high', low: stdHigh, high: 8.9 },
+          { grade: 'Grade2_high', low: 8.9, high: 13.9 },
+          { grade: 'Grade3_high', low: 13.9, high: 27.8 },
+          { grade: 'Grade4_high', low: 27.8, high: Infinity }
+        ];
+        grades.direction = 'bidirectional';
+        grades.lowTerm = 'Hypoglycemia';
+        grades.highTerm = 'Hyperglycemia';
+      }
+
+      // Lipase / Amylase
+      else if (shortName === 'LIPASE' || shortName === 'AMYLASE') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 2.0 * stdHigh },
+          { grade: 'Grade3', low: 2.0 * stdHigh, high: 5.0 * stdHigh },
+          { grade: 'Grade4', low: 5.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = `${shortName} increased`;
+      }
+
+      // INR
+      else if (shortName === 'INR') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.2, high: 1.5 },
+          { grade: 'Grade2', low: 1.5, high: 2.5 },
+          { grade: 'Grade3', low: 2.5, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'INR increased';
+      }
+
+      // APTT / PT / PTT
+      else if (shortName === 'APTT' || shortName === 'PT' || shortName === 'PTT') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 1.5 * stdHigh },
+          { grade: 'Grade2', low: 1.5 * stdHigh, high: 2.5 * stdHigh },
+          { grade: 'Grade3', low: 2.5 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = `${shortName} prolonged`;
+      }
+
+      // Fibrinogen
+      else if (shortName === 'FIB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.0, high: stdLow },
+          { grade: 'Grade2', low: 0.75, high: 1.0 },
+          { grade: 'Grade3', low: 0.5, high: 0.75 },
+          { grade: 'Grade4', low: 0, high: 0.5 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Fibrinogen decreased';
+      }
+
+      // Albumin
+      else if (shortName === 'ALB') {
+        grades.grades = [
+          { grade: 'Grade1', low: 30, high: stdLow },
+          { grade: 'Grade2', low: 20, high: 30 },
+          { grade: 'Grade3', low: 0, high: 20 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'Hypoalbuminemia';
+      }
+
+      // LDH
+      else if (shortName === 'LDH') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 2.5 * stdHigh },
+          { grade: 'Grade2', low: 2.5 * stdHigh, high: 5.0 * stdHigh },
+          { grade: 'Grade3', low: 5.0 * stdHigh, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'LDH increased';
+        grades.note = 'No formal CTCAE grading; thresholds are commonly used clinical reference';
+      }
+
+      // Cholesterol
+      else if (shortName === 'CHOL') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 7.75 },
+          { grade: 'Grade2', low: 7.75, high: 12.92 },
+          { grade: 'Grade3', low: 12.92, high: 15.5 },
+          { grade: 'Grade4', low: 15.5, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Cholesterol high';
+      }
+
+      // Triglycerides
+      else if (shortName === 'TRIG') {
+        grades.grades = [
+          { grade: 'Grade1', low: 1.71, high: 3.42 },
+          { grade: 'Grade2', low: 3.42, high: 5.7 },
+          { grade: 'Grade3', low: 5.7, high: 11.4 },
+          { grade: 'Grade4', low: 11.4, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Hypertriglyceridemia';
+      }
+
+      // Urate
+      else if (shortName === 'URATE') {
+        grades.grades = [
+          { grade: 'Grade1', low: stdHigh, high: 595 },
+          { grade: 'Grade3', low: 595, high: Infinity }
+        ];
+        grades.direction = 'increase';
+        grades.term = 'Hyperuricemia';
+      }
+
+      // CD4
+      else if (shortName === 'CD4') {
+        grades.grades = [
+          { grade: 'Grade1', low: 0.5, high: stdLow },
+          { grade: 'Grade2', low: 0.2, high: 0.5 },
+          { grade: 'Grade3', low: 0.05, high: 0.2 },
+          { grade: 'Grade4', low: 0, high: 0.05 }
+        ];
+        grades.direction = 'decrease';
+        grades.term = 'CD4 lymphocytes decreased';
+      }
+
+      // Default - no CTCAE grading
+      else {
+        grades.note = `CTCAE v5.0 does not provide quantitative grading criteria for: ${shortName}`;
+      }
+
+      return grades;
+    }
+
+    // ============================================================================
+    // Global Variables
+    // ============================================================================
+    let labData = [];
+    let charts = {};
+
+    // ============================================================================
+    // Data Loading
+    // ============================================================================
+    async function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            console.log('Papa.parse complete, rows:', results.data.length);
+            resolve(results.data);
+          },
+          error: (error) => {
+            console.error('Papa.parse error:', error);
+            reject(error);
+          }
+        });
+      });
+    }
+
+    async function loadLabData() {
+      const loadingEl = document.getElementById('loadingState');
+      if (!loadingEl) {
+        console.error('loadingState element not found');
+        return;
+      }
+      
+      loadingEl.innerHTML = '<div class="spinner"></div><div>Loading data from lab.CSV, lblc.CSV, and dm.CSV...</div>';
+
+      try {
+        console.log('Starting to load lab.CSV, lblc.CSV, and dm.CSV...');
+        // Load both files in parallel
+        const [labData, lblcData, dmData] = await Promise.all([
+          loadCSV('../../data/lab.CSV'),
+          loadCSV('../../data/lblc.CSV').catch(err => {
+            console.warn('Could not load lblc.CSV, continuing without date information:', err);
+            return [];
+          }),
+          loadCSV('../../data/dm.CSV').catch(err => {
+            console.warn('Could not load dm.CSV, dose group will show as Unknown:', err);
+            return [];
+          })
+        ]);
+        console.log('lab.CSV loaded, rows:', labData.length);
+        console.log('lblc.CSV loaded, rows:', lblcData.length);
+        console.log('dm.CSV loaded, rows:', dmData.length);
+        processLabData(labData, lblcData, dmData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        loadingEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>Error loading data: ' + error.message + '</div></div>';
+      }
+    }
+
+    function processLabData(data, lblcData = [], dmData = []) {
+      try {
+        if (!data || data.length === 0) {
+          document.getElementById('loadingState').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data found in lab.CSV</div></div>';
+          return;
+        }
+
+        console.log('Processing lab data, total rows:', data.length);
+        console.log('Processing lblc data, total rows:', lblcData.length);
+        
+        // Create a lookup map from lblc.CSV for date information
+        // Key: Subject + Folder, Value: date information
+        const dateLookup = new Map();
+        if (lblcData && lblcData.length > 0) {
+          const lblcFirstRow = lblcData[0];
+          const lblcCols = Object.keys(lblcFirstRow);
+          console.log('lblc.CSV columns:', lblcCols);
+          
+          // Find Subject, Folder, and Date columns in lblc.CSV
+          const lblcSubjectCol = lblcCols.find(col => 
+            col === 'Subject' || col === 'SUBJID' || col.toUpperCase() === 'SUBJECT'
+          ) || 'Subject';
+          const lblcFolderCol = lblcCols.find(col => 
+            col === 'Folder' || col.toUpperCase() === 'FOLDER'
+          ) || 'Folder';
+          const lblcDateCol = lblcCols.find(col => 
+            col === 'LBDAT_INT' || col === 'LBDAT' || col === 'LBDTC' ||
+            col.toUpperCase() === 'LBDAT_INT' || col.toUpperCase() === 'LBDAT'
+          ) || 'LBDAT_INT';
+          
+          console.log('lblc.CSV column mapping:', {
+            subject: lblcSubjectCol,
+            folder: lblcFolderCol,
+            date: lblcDateCol
+          });
+          
+          // Build lookup map
+          lblcData.forEach(row => {
+            const subject = row[lblcSubjectCol] || row.Subject || row.SUBJID;
+            const folder = row[lblcFolderCol] || row.Folder;
+            const dateStr = row[lblcDateCol] || row.LBDAT_INT || row.LBDAT || row.LBDTC || '';
+            
+            if (subject && folder && dateStr) {
+              const key = `${subject}|${folder}`;
+              dateLookup.set(key, dateStr);
+            }
+          });
+          
+          console.log('Date lookup map created with', dateLookup.size, 'entries');
+          // Log sample entries
+          const sampleKeys = Array.from(dateLookup.keys()).slice(0, 3);
+          sampleKeys.forEach(key => {
+            console.log('Sample date lookup:', key, '->', dateLookup.get(key));
+          });
+        }
+        
+        // Build ARM lookup from dm.CSV
+        const armLookup = {};
+        if (dmData && dmData.length > 0) {
+          const dmCols = Object.keys(dmData[0]);
+          const dmSubjectCol = dmCols.find(col =>
+            col === 'Subject' || col === 'SUBJID' || col.toUpperCase() === 'SUBJECT'
+          ) || 'Subject';
+          const dmArmCol = dmCols.find(col =>
+            col.toUpperCase() === 'ARM'
+          ) || 'ARM';
+          dmData.forEach(row => {
+            const subject = row[dmSubjectCol] || row.Subject || row.SUBJID;
+            const arm = row[dmArmCol] || row.ARM;
+            if (subject) {
+              armLookup[String(subject).trim()] = String(arm || '').trim() || 'Unknown';
+            }
+          });
+        }
+
+        // Check available column names in lab.CSV
+        const firstRow = data[0];
+        if (!firstRow) {
+          throw new Error('First row is empty');
+        }
+        const availableCols = Object.keys(firstRow);
+        console.log('lab.CSV available columns:', availableCols);
+
+      // Try to find the correct column names (try common variations)
+      const valueCol = availableCols.find(col => 
+        col === 'StdValue' || col === 'NumericValue' || col === 'LBORRES'
+      ) || availableCols.find(col => 
+        col.toLowerCase().includes('value') && !col.toLowerCase().includes('unit')
+      ) || 'StdValue';
+      
+      const subjectCol = availableCols.find(col => 
+        col === 'Subject' || col === 'SUBJID'
+      ) || 'Subject';
+      
+      const analyteCol = availableCols.find(col => 
+        col === 'AnalyteName' || col === 'LBTEST'
+      ) || availableCols.find(col => 
+        col.toLowerCase().includes('analyte') || col.toLowerCase().includes('test')
+      ) || 'AnalyteName';
+      
+      const folderCol = availableCols.find(col => 
+        col === 'Folder'
+      ) || 'Folder';
+      
+      const lowCol = availableCols.find(col => 
+        col === 'StdLow' || col === 'LabLow' || col === 'LBORNRLO'
+      ) || 'StdLow';
+      
+      const highCol = availableCols.find(col => 
+        col === 'StdHigh' || col === 'LabHigh' || col === 'LBORNRHI'
+      ) || 'StdHigh';
+      
+      const unitsCol = availableCols.find(col => 
+        col === 'StdUnits' || col === 'LabUnits' || col === 'LBORRESU'
+      ) || 'StdUnits';
+      
+      // Find date column - try multiple possible names
+      const dateCol = availableCols.find(col => 
+        col === 'LBDAT_INT' || col === 'LBDAT' || col === 'RecordDate' || col === 'LBDTC' || 
+        col.toUpperCase() === 'LBDAT_INT' || col.toUpperCase() === 'LBDAT'
+      ) || availableCols.find(col => 
+        col.toLowerCase().includes('date') && !col.toLowerCase().includes('record')
+      ) || 'LBDAT_INT';
+      
+      console.log('Date column found:', dateCol, 'Available columns:', availableCols.filter(c => c.toLowerCase().includes('date') || c.toLowerCase().includes('lbd')));
+
+      // Helper function to parse date from '18DEC2024:00:00:00.000' format
+      function parseDate(dateStr) {
+        if (!dateStr || dateStr === '') return null;
+        // Parse format like '18DEC2024:00:00:00.000' or '18DEC2024'
+        const match = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+        if (match) {
+          const day = parseInt(match[1]);
+          const monthStr = match[2].toUpperCase();
+          const year = parseInt(match[3]);
+          const monthMap = {
+            'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+            'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+          };
+          const month = monthMap[monthStr];
+          if (month !== undefined) {
+            const date = new Date(year, month, day);
+            return date;
+          }
+        }
+        // Fallback: try standard Date parsing
+        const fallbackDate = new Date(dateStr);
+        return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+      }
+
+      // Clean and standardize data
+      let validRows = 0;
+      let invalidRows = 0;
+      
+      labData = data.filter(row => {
+        // Keep rows even if value is missing (empty plots required)
+        const subject = row[subjectCol] || row.Subject || row.SUBJID;
+        const analyte = row[analyteCol] || row.AnalyteName || row.LBTEST;
+        const folder = row[folderCol] || row.Folder;
+
+        const isValid = subject != null && subject !== '' &&
+               analyte != null && analyte !== '' &&
+               folder != null && folder !== '';
+
+        if (isValid) validRows++;
+        else invalidRows++;
+
+        return isValid;
+      }).map(row => {
+        const rawValue = row[valueCol] ?? row.StdValue ?? row.NumericValue ?? row.LBORRES ?? '';
+        const parsedValue = parseFloat(rawValue);
+        const stdValue = Number.isFinite(parsedValue) ? parsedValue : null;
+        const subject = row[subjectCol] || row.Subject || row.SUBJID;
+        const analyte = row[analyteCol] || row.AnalyteName || row.LBTEST;
+        const folder = row[folderCol] || row.Folder;
+
+        // Get date from lblc.CSV lookup map using Subject + Folder as key
+        const lookupKey = `${subject}|${folder}`;
+        let dateStr = dateLookup.get(lookupKey) || '';
+        
+        // Fallback: try to get date from lab.CSV directly if not found in lookup
+        if (!dateStr) {
+          dateStr = row[dateCol] || row.LBDAT_INT || row.RecordDate || row.LBDTC || row.LBDAT || '';
+        }
+        
+        const dateObj = parseDate(dateStr);
+        
+        // Debug: log first few rows to check date values
+        if (validRows < 3) {
+          console.log('Date debug - Row:', {
+            subject: subject,
+            folder: folder,
+            lookupKey: lookupKey,
+            dateFromLookup: dateLookup.get(lookupKey),
+            dateStr: dateStr,
+            dateObj: dateObj
+          });
+        }
+        
+        const rawLow = row[lowCol] ?? row.StdLow ?? row.LabLow ?? row.LBORNRLO ?? '';
+        const rawHigh = row[highCol] ?? row.StdHigh ?? row.LabHigh ?? row.LBORNRHI ?? '';
+        const parsedLow = parseFloat(rawLow);
+        const parsedHigh = parseFloat(rawHigh);
+
+        return {
+          Subject: subject,
+          AnalyteName: analyte,
+          Folder: folder === 'DSET' ? 'End of Treatment' : folder,
+          StdValue: stdValue,
+          StdLow: Number.isFinite(parsedLow) ? parsedLow : null,
+          StdHigh: Number.isFinite(parsedHigh) ? parsedHigh : null,
+          StdUnits: row[unitsCol] || row.StdUnits || row.LabUnits || row.LBORRESU || '',
+          RecordDate: dateStr,
+          DateObj: dateObj, // Store parsed date object for sorting
+          FormName: row.FormName || '',
+          ARM: armLookup[String(subject).trim()] || 'Unknown'
+        };
+      });
+      
+      console.log(`Processed ${labData.length} records`);
+
+      // Hide loading state
+      const loadingEl = document.getElementById('loadingState');
+      if (loadingEl) {
+        loadingEl.style.display = 'none';
+      }
+
+      if (labData.length === 0) {
+        document.getElementById('chartsContainer').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No valid laboratory data found in the CSV file. Please check the column names match: Subject, AnalyteName, Folder, StdValue</div></div>';
+        return;
+      }
+
+        populateFilters();
+        document.getElementById('statsRow').style.display = 'flex';
+        updateCharts();
+        console.log('Data processing complete');
+      } catch (error) {
+        console.error('Error processing lab data:', error);
+        const loadingEl = document.getElementById('loadingState');
+        if (loadingEl) {
+          loadingEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>Error processing data: ' + error.message + '</div></div>';
+        }
+      }
+    }
+
+    function populateFilters() {
+      // Populate subjects
+      const subjects = [...new Set(labData.map(r => r.Subject))].sort();
+      const subjectSelect = document.getElementById('subjectSelect');
+      subjectSelect.innerHTML = '<option value="">All Subjects</option>';
+      subjects.forEach(s => {
+        subjectSelect.innerHTML += `<option value="${s}">${s}</option>`;
+      });
+
+      // Select first subject by default
+      if (subjects.length > 0) {
+        subjectSelect.value = subjects[0];
+      }
+
+      // Populate dose groups
+      const doseSelect = document.getElementById('doseSelect');
+      if (doseSelect) {
+        const doseGroups = [...new Set(labData.map(r => r.ARM || 'Unknown'))].sort();
+        doseSelect.innerHTML = '<option value="all">All Dose Groups</option>';
+        doseGroups.forEach(group => {
+          doseSelect.innerHTML += `<option value="${group}">${group}</option>`;
+        });
+      }
+
+      // Populate analytes
+      filterAnalytes();
+    }
+
+    function filterAnalytes() {
+      const panel = document.getElementById('panelSelect').value;
+      let analytes = [...new Set(labData.map(r => r.AnalyteName))].sort();
+
+      if (panel !== 'all') {
+        const panelAnalytes = PANEL_MAPPING[panel] || [];
+        analytes = analytes.filter(a => {
+          const shortName = getAnalyteShortName(a);
+          return panelAnalytes.includes(shortName);
+        });
+      }
+
+      const analyteSelect = document.getElementById('analyteSelect');
+      analyteSelect.innerHTML = '<option value="all">All Analytes</option>';
+      analytes.forEach(a => {
+        analyteSelect.innerHTML += `<option value="${a}">${a}</option>`;
+      });
+
+      updateCharts();
+    }
+
+    // ============================================================================
+    // Chart Rendering
+    // ============================================================================
+    function updateCharts() {
+      const subject = document.getElementById('subjectSelect').value;
+      const doseGroup = document.getElementById('doseSelect').value;
+      const selectedAnalyte = document.getElementById('analyteSelect').value;
+      const panel = document.getElementById('panelSelect').value;
+
+      // Base data for subject list (do NOT filter by analyte/panel here)
+      let baseData = labData;
+      if (subject) {
+        baseData = baseData.filter(r => r.Subject === subject);
+      }
+      if (doseGroup !== 'all') {
+        baseData = baseData.filter(r => (r.ARM || 'Unknown') === doseGroup);
+      }
+
+      // Build analyte list (global, not per subject)
+      let analyteNames = [...new Set(labData.map(r => r.AnalyteName))].sort();
+      if (panel !== 'all') {
+        const panelAnalytes = PANEL_MAPPING[panel] || [];
+        analyteNames = analyteNames.filter(a => {
+          const shortName = getAnalyteShortName(a);
+          return panelAnalytes.includes(shortName);
+        });
+      }
+      if (selectedAnalyte !== 'all') {
+        analyteNames = [selectedAnalyte];
+      }
+
+      // Filtered data for stats (subject/dose/analyte/panel)
+      let filteredData = baseData;
+      if (selectedAnalyte !== 'all') {
+        filteredData = filteredData.filter(r => r.AnalyteName === selectedAnalyte);
+      }
+      if (panel !== 'all') {
+        const panelAnalytes = PANEL_MAPPING[panel] || [];
+        filteredData = filteredData.filter(r => {
+          const shortName = getAnalyteShortName(r.AnalyteName);
+          return panelAnalytes.includes(shortName);
+        });
+      }
+
+      // Update stats
+      updateStats(filteredData);
+
+      // Destroy existing charts
+      Object.values(charts).forEach(chart => chart.destroy());
+      charts = {};
+
+      // Build charts
+      const container = document.getElementById('chartsContainer');
+      container.innerHTML = '<div class="charts-grid" id="chartsGrid"></div>';
+      const grid = document.getElementById('chartsGrid');
+
+      const subjects = [...new Set(baseData.map(r => r.Subject))].sort();
+      if (subjects.length === 0 || analyteNames.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data matches the current filters</div></div>';
+        return;
+      }
+
+      // Create charts for ALL subjects × ALL analytes (empty plots allowed)
+      analyteNames.forEach(analyteName => {
+        subjects.forEach(subj => {
+          const subjectData = baseData.filter(r => r.Subject === subj && r.AnalyteName === analyteName);
+          createChart(grid, analyteName, subj, subjectData);
+        });
+      });
+
+      if (grid.children.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data points to generate charts for the current filters</div></div>';
+      }
+    }
+
+    function createChart(container, analyteName, subject, data) {
+      const hasRecords = Array.isArray(data) && data.length > 0;
+      const hasNumericValues = hasRecords && data.some(r => Number.isFinite(r.StdValue));
+
+      if (!hasRecords || !hasNumericValues) {
+        const shortName = getAnalyteShortName(analyteName);
+        const subjectKey = subject.replace(/[^a-zA-Z0-9]/g, '_');
+        const doseGroup = (labData.find(r => r.Subject === subject)?.ARM) || 'Unknown';
+        const emptyMessage = hasRecords ? 'No numeric values for this analyte.' : 'No records for this analyte.';
+
+        const card = document.createElement('div');
+        card.className = 'chart-card';
+        card.innerHTML = `
+          <div class="chart-main">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">${analyteName}</div>
+                <div class="chart-subtitle">Subject: ${subject} | ${emptyMessage}</div>
+              </div>
+              <div class="chart-header-right">
+                <div class="chart-dose">Dose Group: ${doseGroup}</div>
+                <span class="chart-badge badge-bidirectional">N/A</span>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="chart-${shortName}-${subjectKey}"></canvas>
+              <div class="chart-labels-container" id="labels-${shortName}-${subjectKey}"></div>
+            </div>
+          </div>
+          <div class="chart-info-panel">
+            <div class="info-section">
+              <div class="info-section-title">CTCAE Grading Standard</div>
+              <div class="info-section-subtitle">(Common Terminology Criteria for Adverse Events v5.0)</div>
+              <div class="ctcae-grades-list">
+                <div style="color: #64748b; font-size: 0.85rem;">No data available for CTCAE grading</div>
+              </div>
+            </div>
+            <div class="info-section">
+              <div class="info-section-title">Data Details</div>
+              <div style="color: #64748b; font-size: 0.85rem;">${emptyMessage}</div>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+
+        const ctx = card.querySelector('canvas').getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: analyteName,
+              data: [],
+              borderColor: '#94a3b8',
+              backgroundColor: 'rgba(148, 163, 184, 0.1)',
+              borderWidth: 1,
+              pointRadius: 0,
+              tension: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#1e293b', font: { size: 10 } } },
+              y: {
+                min: 0,
+                max: 1,
+                grid: { display: false },
+                ticks: { color: '#1e293b', font: { size: 10 } },
+                title: { display: true, text: 'Value', color: '#000000', font: { size: 13 } }
+              }
+            }
+          },
+          plugins: []
+        });
+
+        charts[`${shortName}-${subject}`] = chart;
+        return;
+      }
+
+      // Sort by date (LBDAT_INT) if available, otherwise fallback to folder order
+      data.sort((a, b) => {
+        // If both have date objects, sort by date
+        if (a.DateObj && b.DateObj) {
+          return a.DateObj - b.DateObj;
+        }
+        // If only one has date, prioritize it
+        if (a.DateObj && !b.DateObj) return -1;
+        if (!a.DateObj && b.DateObj) return 1;
+        // Fallback to folder order if no dates
+        const folderOrder = ['SCREEN', 'SCR', 'BL', 'BASELINE', 'V1', 'C1D1', 'C1D8', 'C1D15', 'C2D1', 'C2D8', 'C2D15', 'C3D1', 'C3D8', 'C3D15', 'C4D1', 'C5D1', 'C6D1', 'End of Treatment', 'EOT', 'DSET'];
+        const aIdx = folderOrder.findIndex(f => a.Folder.toUpperCase().includes(f.toUpperCase()));
+        const bIdx = folderOrder.findIndex(f => b.Folder.toUpperCase().includes(f.toUpperCase()));
+        if (aIdx === -1 && bIdx === -1) return a.Folder.localeCompare(b.Folder);
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return -1;
+        return aIdx - bIdx;
+      });
+
+      const numericData = data.filter(r => Number.isFinite(r.StdValue));
+
+      // Get baseline data from numeric records only
+      let baselineData = numericData.find(r => /^(SCREEN|SCR|BL|BASELINE|V1)$/i.test(r.Folder));
+      if (!baselineData) baselineData = numericData[0];
+
+      const stdLow = Number.isFinite(baselineData.StdLow) ? baselineData.StdLow : null;
+      const stdHigh = Number.isFinite(baselineData.StdHigh) ? baselineData.StdHigh : null;
+      const stdUnit = baselineData.StdUnits || '';
+      
+      // Debug: log values to check
+      console.log('Baseline data:', { stdLow, stdHigh, stdUnit, baselineValue: baselineData.StdValue });
+
+      const hasStdLow = Number.isFinite(stdLow);
+      const hasStdHigh = Number.isFinite(stdHigh);
+
+      // Get CTCAE grades
+      const ctcaeGrades = getCTCAEGrades(analyteName, baselineData.StdValue, stdLow, stdHigh, stdUnit);
+
+      // Remove invalid grade thresholds
+      let filteredGrades = (ctcaeGrades.grades || []).filter(g =>
+        Number.isFinite(g.low) && (Number.isFinite(g.high) || g.high === Infinity)
+      );
+
+      // If required ranges are missing, skip grade thresholds
+      const missingRangeForDirection = (ctcaeGrades.direction === 'increase' && !hasStdHigh) ||
+        (ctcaeGrades.direction === 'decrease' && !hasStdLow) ||
+        (ctcaeGrades.direction === 'bidirectional' && (!hasStdLow || !hasStdHigh));
+
+      if (missingRangeForDirection) {
+        filteredGrades = [];
+      } else if (ctcaeGrades.direction === 'bidirectional') {
+        const hasLowValues = numericData.some(r => Number.isFinite(r.StdValue) && r.StdValue < stdLow);
+        const hasHighValues = numericData.some(r => Number.isFinite(r.StdValue) && r.StdValue > stdHigh);
+        
+        if (hasLowValues && !hasHighValues) {
+          filteredGrades = filteredGrades.filter(g => g.grade.includes('_low'));
+        } else if (hasHighValues && !hasLowValues) {
+          filteredGrades = filteredGrades.filter(g => g.grade.includes('_high'));
+        }
+      }
+
+      // Create card
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+      
+      const shortName = getAnalyteShortName(analyteName);
+      const directionClass = ctcaeGrades.direction === 'increase' ? 'badge-increase' : 
+                            ctcaeGrades.direction === 'decrease' ? 'badge-decrease' : 'badge-bidirectional';
+      const directionText = ctcaeGrades.direction || 'N/A';
+
+      const termText = ctcaeGrades.term || ctcaeGrades.lowTerm || 'No CTCAE grading';
+
+      // Helper function to get CTCAE definition text
+      function getCTCAEDefinition(g, stdLow, stdHigh, direction) {
+        if (g.grade === 'Normal' || !g.grade) {
+          return '(LLN - ULN)';
+        }
+        
+        const isLow = g.grade.includes('_low');
+        const isHigh = g.grade.includes('_high');
+        const tolerance = 0.01;
+        
+        if ((direction === 'increase' || isHigh) && !hasStdHigh) return '';
+        if ((direction === 'decrease' || isLow) && !hasStdLow) return '';
+        
+        // Helper to format multiplier
+        function formatMultiplier(val, base) {
+          const mult = val / base;
+          if (Math.abs(mult - Math.round(mult * 10) / 10) < 0.01) {
+            return `${Math.round(mult * 10) / 10}×`;
+          }
+          return `${mult.toFixed(2)}×`;
+        }
+        
+        // Helper to check if value equals base (with tolerance)
+        function equalsBase(val, base) {
+          return Math.abs(val - base) < tolerance;
+        }
+        
+        // Helper to check if value is multiple of base (with tolerance)
+        function isMultiple(val, base) {
+          const mult = val / base;
+          return Math.abs(mult - Math.round(mult * 100) / 100) < 0.01;
+        }
+        
+        if (direction === 'increase' || isHigh) {
+          // For increase direction, grades are based on ULN multiples
+          let lowStr = '';
+          let highStr = '';
+          
+          // Determine low bound
+          if (equalsBase(g.low, stdHigh)) {
+            lowStr = 'ULN';
+          } else if (isMultiple(g.low, stdHigh)) {
+            lowStr = `${formatMultiplier(g.low, stdHigh)}ULN`;
+          } else {
+            lowStr = g.low.toFixed(2);
+          }
+          
+          // Determine high bound
+          if (g.high === Infinity) {
+            // For Infinity, show multiplier with actual ULN value
+            if (isMultiple(g.low, stdHigh)) {
+              const mult = g.low / stdHigh;
+              highStr = `> ${mult.toFixed(1)}×${stdHigh.toFixed(2)}`;
+            } else {
+              highStr = `>${g.low.toFixed(2)}`;
+            }
+            return `(${highStr})`;
+          } else if (isMultiple(g.high, stdHigh)) {
+            highStr = `${formatMultiplier(g.high, stdHigh)}ULN`;
+          } else {
+            highStr = g.high.toFixed(2);
+          }
+          
+          return `(${lowStr} - ${highStr})`;
+        } else if (direction === 'decrease' || isLow) {
+          // For decrease direction, grades are based on LLN
+          let lowStr = '';
+          let highStr = '';
+          
+          // Determine high bound
+          if (equalsBase(g.high, stdLow)) {
+            highStr = 'LLN';
+          } else if (isMultiple(g.high, stdLow)) {
+            highStr = `${formatMultiplier(g.high, stdLow)}LLN`;
+          } else {
+            highStr = g.high.toFixed(2);
+          }
+          
+          // Determine low bound
+          if (g.low === 0) {
+            lowStr = '0';
+          } else if (isMultiple(g.low, stdLow)) {
+            lowStr = `${formatMultiplier(g.low, stdLow)}LLN`;
+          } else {
+            lowStr = g.low.toFixed(2);
+          }
+          
+          return `(${lowStr} - ${highStr})`;
+        }
+        
+        return '';
+      }
+
+      // Build CTCAE grades HTML
+      let ctcaeGradesHTML = '';
+      if (missingRangeForDirection) {
+        ctcaeGradesHTML = '<div style="color: #64748b; font-size: 0.85rem;">Missing ULN/LLN for CTCAE grading</div>';
+      } else if (filteredGrades.length > 0) {
+        const gradeColors = {
+          'Grade1': '#fbbf24',
+          'Grade2': '#f97316',
+          'Grade3': '#ef4444',
+          'Grade4': '#991b1b'
+        };
+        filteredGrades.forEach((g) => {
+          const gradeClean = g.grade.replace(/_low|_high/, '');
+          const color = gradeColors[gradeClean] || '#888';
+          let range = 'N/A';
+          if (isFinite(g.low)) {
+            if (g.high === Infinity) {
+              range = `>${g.low.toFixed(2)}`;
+            } else if (isFinite(g.high)) {
+              range = `${g.low.toFixed(2)} - ${g.high.toFixed(2)}`;
+            }
+          }
+          const ctcaeDef = getCTCAEDefinition(g, stdLow, stdHigh, ctcaeGrades.direction);
+          ctcaeGradesHTML += `
+            <div class="grade-item">
+              <div class="grade-color" style="background: ${color};"></div>
+              <span><strong>${gradeClean}:</strong> ${range} ${stdUnit}${ctcaeDef ? '<span class="ctcae-definition">' + ctcaeDef + '</span>' : ''}</span>
+            </div>
+          `;
+        });
+      } else {
+        ctcaeGradesHTML = '<div style="color: #64748b; font-size: 0.85rem;">No CTCAE grading available</div>';
+      }
+
+      // Add Normal Range
+      if (hasStdLow && hasStdHigh) {
+        ctcaeGradesHTML = `
+          <div class="grade-item">
+            <div class="grade-color" style="background: #38bdf8;"></div>
+            <span><strong>Normal:</strong> ${stdLow.toFixed(2)} - ${stdHigh.toFixed(2)} ${stdUnit} (LLN - ULN)</span>
+          </div>
+        ` + ctcaeGradesHTML;
+      }
+
+      // Format date function
+      function formatDate(dateStr) {
+        if (!dateStr) return '';
+        // Parse format like '17JUN2025:15:20:03.943' or '17JUN2025'
+        const match = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+        if (match) {
+          const day = match[1].padStart(2, '0');
+          const month = match[2].toUpperCase(); // Make month uppercase
+          const year = match[3];
+          return `${day}-${month}-${year}`;
+        }
+        return dateStr;
+      }
+
+      // Check if baseline is abnormal
+      const baselineAbnormal = baselineData && Number.isFinite(baselineData.StdValue) && (
+        (hasStdLow && baselineData.StdValue < stdLow) || 
+        (hasStdHigh && baselineData.StdValue > stdHigh)
+      ) ? 'Y' : 'N';
+
+      // Build data details HTML as table
+      let dataDetailsHTML = `
+        <table class="data-details-table">
+          <thead>
+            <tr>
+              <th>Folder</th>
+              <th>Value</th>
+              <th>Baseline Abnormality</th>
+              <th>Grade</th>
+              <th>ULN</th>
+              <th>LLN</th>
+              ${data.some(r => r.RecordDate) ? '<th>Date</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      data.forEach((row, idx) => {
+        const hasValue = Number.isFinite(row.StdValue);
+        const grade = hasValue ? getGradeForValue(row.StdValue, filteredGrades, stdLow, stdHigh, ctcaeGrades.direction) : 'N/A';
+        const ulnValue = hasStdHigh ? stdHigh.toFixed(2) : '-';
+        const llnValue = hasStdLow ? stdLow.toFixed(2) : '-';
+        const formattedDate = formatDate(row.RecordDate);
+        const baselineClass = baselineAbnormal === 'N' ? 'baseline-n' : '';
+        dataDetailsHTML += `
+            <tr>
+              <td>${row.Folder}</td>
+              <td>${hasValue ? row.StdValue.toFixed(2) : '-'} ${stdUnit}</td>
+              <td class="${baselineClass}">${baselineAbnormal}</td>
+              <td>${grade}</td>
+              <td>${ulnValue}</td>
+              <td>${llnValue}</td>
+              ${row.RecordDate ? `<td>${formattedDate}</td>` : '<td></td>'}
+            </tr>
+        `;
+      });
+      dataDetailsHTML += `
+          </tbody>
+        </table>
+      `;
+
+      const doseGroup = data[0]?.ARM || 'Unknown';
+      card.innerHTML = `
+        <div class="chart-main">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">${analyteName}</div>
+              <div class="chart-subtitle">Subject: ${subject} | ${termText}</div>
+            </div>
+            <div class="chart-header-right">
+              <div class="chart-dose">Dose Group: ${doseGroup}</div>
+              <span class="chart-badge ${directionClass}">${directionText}</span>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-${shortName}-${subject.replace(/[^a-zA-Z0-9]/g, '_')}"></canvas>
+            <div class="chart-labels-container" id="labels-${shortName}-${subject.replace(/[^a-zA-Z0-9]/g, '_')}"></div>
+          </div>
+        </div>
+        <div class="chart-info-panel">
+          <div class="info-section">
+            <div class="info-section-title">CTCAE Grading Standard</div>
+            <div class="info-section-subtitle">(Common Terminology Criteria for Adverse Events v5.0)</div>
+            <div class="ctcae-grades-list">
+              ${ctcaeGradesHTML}
+            </div>
+          </div>
+          <div class="info-section">
+            <div class="info-section-title">Data Details</div>
+            ${dataDetailsHTML}
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+
+      // Create chart
+      const ctx = card.querySelector('canvas').getContext('2d');
+      
+      const labels = numericData.map(r => r.Folder);
+      const values = numericData.map(r => r.StdValue);
+
+      // Calculate Y axis range
+      let allValues = [...values];
+      if (hasStdLow) allValues.push(stdLow);
+      if (hasStdHigh) allValues.push(stdHigh);
+      
+      // Find the maximum data point value and round up to next grade threshold
+      let targetMaxThreshold = null;
+      let targetMinThreshold = null;
+      
+      if (ctcaeGrades.direction === 'increase') {
+        const maxValue = Math.max(...values.filter(v => isFinite(v)));
+        
+        // Sort grades by threshold (low to high)
+        const sortedGrades = [...filteredGrades].sort((a, b) => a.low - b.low);
+        
+        if (sortedGrades.length === 0) {
+          // No grades defined, use ULN with margin
+          targetMaxThreshold = hasStdHigh ? stdHigh * 1.2 : maxValue * 1.2;
+        } else {
+          // Check if maxValue is in normal range (below first grade's low threshold)
+          if (maxValue < sortedGrades[0].low) {
+            // Round up to first grade's low threshold
+            targetMaxThreshold = sortedGrades[0].low;
+          } else {
+            // Find which grade the maxValue falls into
+            let foundGrade = false;
+            for (let i = 0; i < sortedGrades.length; i++) {
+              const g = sortedGrades[i];
+              // Check if maxValue is within this grade's range [g.low, g.high)
+              if (maxValue >= g.low && (g.high === Infinity || maxValue < g.high)) {
+                // MaxValue is in this grade range
+                // Round up to the next grade's low threshold
+                if (i < sortedGrades.length - 1) {
+                  targetMaxThreshold = sortedGrades[i + 1].low;
+                } else {
+                  // This is the highest grade, use its high threshold (or reasonable upper bound)
+                  targetMaxThreshold = g.high === Infinity ? g.low * 1.5 : g.high;
+                }
+                foundGrade = true;
+                break;
+              }
+            }
+            
+            // Fallback: if not found (shouldn't happen), use highest grade
+            if (!foundGrade) {
+              const lastGrade = sortedGrades[sortedGrades.length - 1];
+              targetMaxThreshold = lastGrade.high === Infinity ? lastGrade.low * 1.5 : lastGrade.high;
+            }
+          }
+        }
+      } else if (ctcaeGrades.direction === 'decrease') {
+        const minValue = Math.min(...values.filter(v => isFinite(v)));
+        
+        // Sort grades by threshold (high to low for decrease)
+        const sortedGrades = [...filteredGrades].sort((a, b) => b.high - a.high);
+        
+        // Find which grade the minValue falls into, then round down to next grade
+        let foundGrade = false;
+        for (let i = 0; i < sortedGrades.length; i++) {
+          const g = sortedGrades[i];
+          if (minValue <= g.high && minValue > g.low) {
+            // MinValue is in this grade range
+            // Round down to the next grade's high threshold (or this grade's low if it's the last)
+            if (i < sortedGrades.length - 1) {
+              // Round down to next grade's high threshold
+              targetMinThreshold = sortedGrades[i + 1].high;
+            } else {
+              // This is the lowest grade, use its low threshold
+              targetMinThreshold = g.low;
+            }
+            foundGrade = true;
+            break;
+          }
+        }
+        
+        // If minValue is in normal range (above first grade), round down to first grade's high
+        if (!foundGrade && sortedGrades.length > 0 && minValue > sortedGrades[0].high) {
+          targetMinThreshold = sortedGrades[0].high;
+        }
+        
+        // If no grades or still null, use LLN with margin
+        if (targetMinThreshold === null && hasStdLow) {
+          targetMinThreshold = stdLow * 0.8;
+        }
+      } else if (ctcaeGrades.direction === 'bidirectional') {
+        const maxValue = Math.max(...values.filter(v => isFinite(v)));
+        const minValue = Math.min(...values.filter(v => isFinite(v)));
+        
+        // Handle high direction
+        const highGrades = filteredGrades.filter(g => g.grade.includes('_high')).sort((a, b) => a.low - b.low);
+        if (highGrades.length > 0) {
+          // Check if maxValue is in normal range (below first grade's low threshold)
+          if (maxValue < highGrades[0].low) {
+            // Round up to first grade's low threshold
+            targetMaxThreshold = highGrades[0].low;
+          } else {
+            // Find which grade the maxValue falls into
+            let foundGrade = false;
+            for (let i = 0; i < highGrades.length; i++) {
+              const g = highGrades[i];
+              if (maxValue >= g.low && (g.high === Infinity || maxValue < g.high)) {
+                if (i < highGrades.length - 1) {
+                  targetMaxThreshold = highGrades[i + 1].low;
+                } else {
+                  targetMaxThreshold = g.high === Infinity ? g.low * 1.5 : g.high;
+                }
+                foundGrade = true;
+                break;
+              }
+            }
+            if (!foundGrade) {
+              const lastGrade = highGrades[highGrades.length - 1];
+              targetMaxThreshold = lastGrade.high === Infinity ? lastGrade.low * 1.5 : lastGrade.high;
+            }
+          }
+        } else if (hasStdHigh) {
+          targetMaxThreshold = stdHigh * 1.2;
+        }
+        
+        // Handle low direction
+        const lowGrades = filteredGrades.filter(g => g.grade.includes('_low')).sort((a, b) => b.high - a.high);
+        if (lowGrades.length > 0) {
+          // Check if minValue is in normal range (above first grade's high threshold)
+          if (minValue > lowGrades[0].high) {
+            // Round down to first grade's high threshold
+            targetMinThreshold = lowGrades[0].high;
+          } else {
+            // Find which grade the minValue falls into
+            let foundGrade = false;
+            for (let i = 0; i < lowGrades.length; i++) {
+              const g = lowGrades[i];
+              if (minValue <= g.high && minValue > g.low) {
+                if (i < lowGrades.length - 1) {
+                  targetMinThreshold = lowGrades[i + 1].high;
+                } else {
+                  targetMinThreshold = g.low;
+                }
+                foundGrade = true;
+                break;
+              }
+            }
+            if (!foundGrade) {
+              const lastGrade = lowGrades[lowGrades.length - 1];
+              targetMinThreshold = lastGrade.low;
+            }
+          }
+        } else if (hasStdLow) {
+          targetMinThreshold = stdLow * 0.8;
+        }
+      }
+      
+      // Calculate initial min/max from data and reference ranges
+      let minVal = Math.min(...allValues.filter(v => isFinite(v)));
+      let maxVal = Math.max(...allValues.filter(v => isFinite(v) && v < 1000000));
+      
+      // Set Y axis range based on rounded-up thresholds
+      // The rounded-up value IS the Y-max (with 10% padding for visibility)
+      if (targetMaxThreshold !== null && (ctcaeGrades.direction === 'increase' || ctcaeGrades.direction === 'bidirectional')) {
+        maxVal = targetMaxThreshold * 1.1;
+      }
+      
+      // The rounded-down value IS the Y-min (with 10% padding for visibility)
+      if (targetMinThreshold !== null && (ctcaeGrades.direction === 'decrease' || ctcaeGrades.direction === 'bidirectional')) {
+        minVal = targetMinThreshold * 0.9;
+      }
+      
+      // Ensure we still show normal range if it exists and no grades were rounded
+      if (targetMaxThreshold === null && hasStdHigh && maxVal < stdHigh) {
+        maxVal = Math.max(maxVal, stdHigh * 1.1);
+      }
+      if (targetMinThreshold === null && hasStdLow && minVal > stdLow) {
+        minVal = Math.min(minVal, stdLow * 0.9);
+      }
+      
+      const padding = (maxVal - minVal) * 0.15;
+
+      // Build annotations
+      const annotations = {};
+      
+      // Normal range box
+      if (hasStdLow && hasStdHigh) {
+        annotations.normalRange = {
+          type: 'box',
+          yMin: stdLow,
+          yMax: stdHigh,
+          backgroundColor: 'rgba(56, 189, 248, 0.1)',
+          borderColor: 'rgba(56, 189, 248, 0.3)',
+          borderWidth: 1
+        };
+        annotations.llnLine = {
+          type: 'line',
+          yMin: stdLow,
+          yMax: stdLow,
+          borderColor: '#38bdf8',
+          borderWidth: 1
+        };
+        annotations.ulnLine = {
+          type: 'line',
+          yMin: stdHigh,
+          yMax: stdHigh,
+          borderColor: '#38bdf8',
+          borderWidth: 1
+        };
+      }
+
+      // Grade lines
+      const gradeColors = {
+        'Grade1': '#fbbf24',
+        'Grade2': '#f97316',
+        'Grade3': '#ef4444',
+        'Grade4': '#991b1b'
+      };
+
+      filteredGrades.forEach((g, idx) => {
+        const gradeClean = g.grade.replace(/_low|_high/, '');
+        const color = gradeColors[gradeClean] || '#888';
+        
+        if (isFinite(g.low) && g.low > 0 && g.low >= minVal - padding && g.low <= maxVal + padding) {
+          annotations[`grade_${idx}`] = {
+            type: 'line',
+            yMin: g.low,
+            yMax: g.low,
+            borderColor: color,
+            borderWidth: 1
+          };
+        }
+      });
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `${analyteName} (${stdUnit})`,
+            data: values,
+            borderColor: '#22d3d4',
+            backgroundColor: 'rgba(34, 211, 212, 0.1)',
+            borderWidth: 1,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBackgroundColor: '#ef4444',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            tension: 0.1,
+            fill: false,
+            order: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          backgroundColor: 'white',
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          elements: {
+            point: {
+              radius: 6,
+              hoverRadius: 8,
+              borderWidth: 2,
+              z: 10
+            },
+            line: {
+              z: 0
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleFont: { size: 12 },
+              bodyFont: { size: 11 },
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  const grade = getGradeForValue(value, filteredGrades, stdLow, stdHigh, ctcaeGrades.direction);
+                  return [`Value: ${value.toFixed(2)} ${stdUnit}`, `Grade: ${grade}`];
+                }
+              }
+            },
+            annotation: {
+              annotations: annotations
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#1e293b', font: { size: 10 }, maxRotation: 45 },
+              backgroundColor: 'white'
+            },
+            y: {
+              min: Math.max(0, minVal - padding),
+              max: maxVal + padding,
+              grid: { display: false },
+              ticks: { color: '#1e293b', font: { size: 10 } },
+              backgroundColor: 'white',
+              title: {
+                display: true,
+                text: `Value (${stdUnit})`,
+                color: '#000000',
+                font: { size: 13 },
+                padding: { top: 10, bottom: 10 }
+              }
+            }
+          }
+        },
+        plugins: []
+      });
+
+      // Store chart reference
+      charts[`${shortName}-${subject}`] = chart;
+
+      // Add labels to the right side after chart is rendered
+      setTimeout(() => {
+        const labelsContainer = card.querySelector('.chart-labels-container');
+        if (!labelsContainer) return;
+
+        labelsContainer.innerHTML = '';
+        const yScale = chart.scales.y;
+        const chartArea = chart.chartArea;
+        const labelItems = [];
+
+        // Add LLN label
+        if (hasStdLow && stdLow >= yScale.min && stdLow <= yScale.max) {
+          const yPos = yScale.getPixelForValue(stdLow);
+          labelItems.push({ value: stdLow, label: 'LLN', color: '#38bdf8', yPos });
+        }
+
+        // Add ULN label
+        if (hasStdHigh && stdHigh >= yScale.min && stdHigh <= yScale.max) {
+          const yPos = yScale.getPixelForValue(stdHigh);
+          labelItems.push({ value: stdHigh, label: 'ULN', color: '#38bdf8', yPos });
+        }
+
+        // Add Grade labels
+        filteredGrades.forEach((g) => {
+          const gradeClean = g.grade.replace(/_low|_high/, '');
+          const color = gradeColors[gradeClean] || '#888';
+          if (isFinite(g.low) && g.low > 0 && g.low >= yScale.min && g.low <= yScale.max) {
+            const yPos = yScale.getPixelForValue(g.low);
+            labelItems.push({ value: g.low, label: gradeClean, color, yPos });
+          }
+        });
+
+        // Sort by Y position (top to bottom)
+        labelItems.sort((a, b) => a.yPos - b.yPos);
+
+        // Create label elements
+        labelItems.forEach(item => {
+          const labelEl = document.createElement('div');
+          labelEl.className = 'chart-label-item';
+          labelEl.textContent = item.label;
+          labelEl.style.color = item.color;
+          labelEl.style.position = 'absolute';
+          labelEl.style.top = `${item.yPos - chartArea.top + 8}px`;
+          labelEl.style.transform = 'translateY(-50%)';
+          labelsContainer.appendChild(labelEl);
+        });
+      }, 100);
+    }
+
+    function getGradeForValue(value, grades, stdLow, stdHigh, direction) {
+      // Check if value is within normal range based on direction
+      if (direction === 'decrease') {
+        // For decrease: only need LLN to determine normal
+        if (stdLow != null && value >= stdLow) return 'Normal';
+      } else if (direction === 'increase') {
+        // For increase: only need ULN to determine normal
+        if (stdHigh != null && value <= stdHigh) return 'Normal';
+      } else if (direction === 'bidirectional') {
+        // For bidirectional: need both
+        if (stdLow != null && stdHigh != null && value >= stdLow && value <= stdHigh) return 'Normal';
+      }
+      
+      for (const g of grades) {
+        const gradeClean = g.grade.replace(/_low|_high/, '');
+        if (direction === 'decrease') {
+          // Decrease: value < high && value >= low (strictly less than upper, inclusive of lower)
+          if (value < g.high && value >= g.low) return gradeClean;
+        } else if (direction === 'increase') {
+          // Increase: value > low && value <= high (strictly greater than lower, inclusive of upper)
+          if (value > g.low && value <= g.high) return gradeClean;
+        } else if (direction === 'bidirectional') {
+          if (g.grade.includes('_low') && value < stdLow) {
+            if (value < g.high && value >= g.low) return gradeClean;
+          } else if (g.grade.includes('_high') && value > stdHigh) {
+            if (value > g.low && value <= g.high) return gradeClean;
+          }
+        }
+      }
+      return 'Normal';
+    }
+
+    function updateStats(data) {
+      const uniqueSubjects = new Set(data.map(r => r.Subject));
+      document.getElementById('statRecords').textContent = uniqueSubjects.size;
+      document.getElementById('statAnalytes').textContent = [...new Set(data.map(r => r.AnalyteName))].length;
+      document.getElementById('statVisits').textContent = [...new Set(data.map(r => r.Folder))].length;
+      
+      const abnormal = data.filter(r => {
+        const low = r.StdLow;
+        const high = r.StdHigh;
+        const value = r.StdValue;
+        return (Number.isFinite(low) && Number.isFinite(value) && value < low) ||
+               (Number.isFinite(high) && Number.isFinite(value) && value > high);
+      }).length;
+      document.getElementById('statAbnormal').textContent = abnormal;
+    }
+
+    // ============================================================================
+    // Auto-load data when page loads (same pattern as mutation page)
+    window.addEventListener('DOMContentLoaded', function() {
+      // Initialize block export dialog (auto-adjusts width/height)
+      if (typeof initBlockExportDialog === 'function') {
+        initBlockExportDialog();
+        setBlockExportPrefix('CTCAE_Labs_Individual');
+      }
+      loadLabData();
+    });
+  </script>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'ctcae-labs', '../../');
+    }
+  </script>
+</body>
+</html>
+

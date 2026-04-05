@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C797S mAF: Baseline → Best Response</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <script src="../../assets/js/mutation-lock.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+    .page-content { margin-top: 60px; padding: 20px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+
+    .page-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%); color: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .page-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+    .page-header p { opacity: 0.85; font-size: 0.95rem; line-height: 1.5; }
+
+    .stats-panel { margin-bottom: 20px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .stat-card { padding: 14px; background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%); border-radius: 8px; text-align: center; transition: all 0.2s; border: 2px solid transparent; }
+    .stat-value { font-size: 1.7rem; font-weight: 700; color: #2c3e50; }
+    .stat-label { font-size: 0.8rem; color: #7f8c8d; margin-top: 3px; }
+
+    .chart-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; position: relative; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .chart-title { font-size: 1.15rem; font-weight: 700; color: #2c3e50; }
+    .chart-subtitle { font-size: 0.82rem; color: #7f8c8d; margin-top: 4px; line-height: 1.4; }
+    .chart-wrapper { position: relative; height: 520px; }
+
+    .legend-panel { margin-top: 16px; padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; }
+    .legend-title { font-size: 0.82rem; font-weight: 700; color: #2c3e50; margin-bottom: 8px; }
+    .legend-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; padding: 4px 10px; background: white; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+    .legend-item:hover { border-color: #3498db; background: #eaf4fd; }
+    .legend-item.dimmed { opacity: 0.3; }
+    .legend-color { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.7); box-shadow: 0 0 3px rgba(0,0,0,0.25); flex-shrink: 0; }
+    .shape-key { margin-top: 10px; display: flex; gap: 16px; align-items: center; font-size: 0.78rem; color: #555; }
+    .shape-key span { display: flex; align-items: center; gap: 4px; }
+
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px; background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .filter-label { font-size: 0.82rem; font-weight: 700; color: #2c3e50; margin-right: 4px; }
+    .filter-btn { padding: 6px 14px; border: 2px solid #dee2e6; border-radius: 20px; background: white; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .filter-btn:hover { border-color: #3498db; background: #eaf4fd; }
+    .filter-btn.active { background: #3498db; color: white; border-color: #3498db; }
+
+    .table-section { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+    .table-header { padding: 16px 20px; background: linear-gradient(135deg, #2c3e50, #34495e); color: white; }
+    .table-header h2 { font-size: 1.1rem; margin-bottom: 3px; }
+    .table-header p { font-size: 0.78rem; opacity: 0.85; }
+    .detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .detail-table thead th { background: #3B6DA5; color: white; padding: 10px 14px; text-align: left; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 2; cursor: pointer; user-select: none; }
+    .detail-table thead th:hover { background: #2d5a8e; }
+    .detail-table thead th .sort-icon { margin-left: 4px; font-size: 0.7rem; opacity: 0.6; }
+    .detail-table thead th.sorted .sort-icon { opacity: 1; }
+    .detail-table tbody td { padding: 8px 14px; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }
+    .detail-table tbody tr:nth-child(even) { background: #F0F4FA; }
+    .detail-table tbody tr:hover { background: #e3ecf7; }
+    .detail-table .af-nd { color: #aaa; font-style: italic; }
+    .detail-table .positive { color: #27ae60; font-weight: 600; }
+    .detail-table .negative { color: #c0392b; font-weight: 600; }
+    .category-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+    .table-scroll { max-height: 500px; overflow: auto; }
+
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
+    .btn-export { background: #dc3545; color: white; }
+    .btn-export:hover { background: #c82333; transform: translateY(-1px); }
+
+    .loading { text-align: center; padding: 60px; color: #7f8c8d; }
+    .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 3px solid #3498db; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .no-data-msg { text-align: center; padding: 60px; color: #95a5a6; font-size: 1.1rem; }
+
+    @media (max-width: 768px) {
+      .chart-wrapper { height: 380px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <div class="page-content">
+    <div class="page-header">
+      <h1>C797S mAF: Baseline Response → Best Response</h1>
+      <p>Paired comparison of C797S mutant allele frequency at baseline (C1) versus best response (minimum mAF at C2+), grouped by mutation category</p>
+    </div>
+
+    <div class="stats-panel" id="statsPanel" style="display:none;">
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div class="filter-bar" id="filterBar" style="display:none;">
+      <span class="filter-label">Filter by Category:</span>
+      <button class="filter-btn active" data-filter="all">All</button>
+    </div>
+
+    <div id="chartExportBlock" style="position:relative;">
+      <div class="chart-section" id="chartSection" style="display:none;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" id="chartTitle">C797S mAF: Baseline → Best Response</div>
+            <div class="chart-subtitle" id="chartSubtitle"></div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-export" onclick="exportChart()">Export Chart</button>
+          </div>
+        </div>
+        <div class="chart-wrapper" id="chartWrapper">
+          <canvas id="mainChart"></canvas>
+        </div>
+        <div class="legend-panel" id="legendPanel">
+          <div class="legend-title">Patient Legend</div>
+          <div class="legend-grid" id="legendGrid"></div>
+          <div class="shape-key">
+            <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#888"/></svg> Baseline Response</span>
+            <span><svg width="14" height="14"><polygon points="7,2 12,12 2,12" fill="#888"/></svg> Best Response</span>
+            <span style="color:#aaa;">— Line drawn only when both values are detected (non-ND)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-section" id="tableSection" style="display:none;">
+      <div class="table-header">
+        <h2 id="tableTitle">Patient Details</h2>
+        <p>Base AF = C1 mAF | Best AF = min C2+ mAF | ND = detection limit (≤0.01) | Delta/Drop% shown only when both values are non-ND</p>
+      </div>
+      <div class="table-scroll">
+        <table class="detail-table" id="detailTable">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="loadingIndicator" class="loading">Loading C797S response data...</div>
+  </div>
+
+<script>
+const ND_VALUE = 0.01;
+const VISIT_MAPPING = {
+  'PH1 C0 D-1': 'C1', 'C0D-1': 'C1',
+  'PH1 C2 D1': 'C2', 'C2D1': 'C2',
+  'C3D1': 'C3', 'C5D1': 'C5', 'C7D1': 'C7'
+};
+
+let mainChart = null;
+let analysisData = [];
+let totalC797Patients = 0;
+let categoryColors = {};
+let patientColors = {};
+let activeFilter = 'all';
+let sortCol = null;
+let sortAsc = true;
+
+function mapVisit(v) {
+  const s = (v || '').trim();
+  return VISIT_MAPPING[s] || s.toUpperCase().replace(/\s+/g, '');
+}
+
+function findCol(row, candidates) {
+  if (!row) return null;
+  const keys = Object.keys(row);
+  for (const c of candidates) { if (keys.includes(c)) return c; }
+  for (const c of candidates) {
+    const norm = c.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    for (const k of keys) { if (k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === norm) return k; }
+  }
+  return null;
+}
+
+function generateHueColors(n) {
+  const colors = [];
+  for (let i = 0; i < n; i++) {
+    const hue = (i * (360 / n) + 15) % 360;
+    colors.push(`hsl(${hue}, 65%, 50%)`);
+  }
+  return colors;
+}
+
+const CATEGORY_PALETTE = {
+  'Resistance':        '#e74c3c',
+  'Classical':         '#3498db',
+  'Atypical':          '#2ecc71',
+  'Exon 20 Insertion': '#f39c12',
+  'Exon 19 Insertion': '#9b59b6',
+  'Unknown':           '#95a5a6'
+};
+
+function getCategoryColor(cat) {
+  return CATEGORY_PALETTE[cat] || '#7f8c8d';
+}
+
+function processData(rawData) {
+  if (!rawData || rawData.length === 0) return;
+
+  const cols = {
+    subject:  findCol(rawData[0], ['Subject', 'SUBJID', 'subject']),
+    visit:    findCol(rawData[0], ['Visit', 'visit', 'VISIT']),
+    gene:     findCol(rawData[0], ['Gene', 'gene', 'GENE']),
+    pHGVS:    findCol(rawData[0], ['p.HGVS', 'p_HGVS', 'pHGVS']),
+    af:       findCol(rawData[0], ['AF', 'af', 'Af']),
+    category: findCol(rawData[0], ['mutation...Category', 'mutation - Category', 'mutation_Category', 'mutationCategory', 'mutation___Category', 'Mutation Category'])
+  };
+
+  let data = rawData.map(r => ({
+    Subject: (r[cols.subject] || '').trim(),
+    Visit: mapVisit(r[cols.visit]),
+    Gene: (r[cols.gene] || '').trim(),
+    pHGVS: (r[cols.pHGVS] || '').trim(),
+    AF: parseFloat(r[cols.af]),
+    category: (r[cols.category] || '').trim()
+  }));
+
+  data = data.filter(r => /^C\d+$/.test(r.Visit));
+  data = data.filter(r => r.Gene !== 'Fail');
+  data = data.filter(r => r.pHGVS && r.pHGVS !== '' && r.pHGVS !== 'NULL');
+
+  data = data.map(r => ({
+    ...r,
+    AF: (!isFinite(r.AF) || r.AF <= 0 || r.AF < ND_VALUE) ? ND_VALUE : r.AF,
+    visit_num: parseInt(r.Visit.replace('C', ''))
+  }));
+
+  const c797Data = data.filter(r => r.pHGVS.includes('C797S'));
+  if (c797Data.length === 0) {
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('chartSection').style.display = 'block';
+    document.getElementById('chartWrapper').innerHTML = '<div class="no-data-msg">No C797S records found in dataset.</div>';
+    return;
+  }
+
+  totalC797Patients = new Set(c797Data.map(r => r.Subject)).size;
+
+  const baselineMap = {};
+  c797Data.filter(r => r.Visit === 'C1').forEach(r => {
+    if (!baselineMap[r.Subject] || r.AF > baselineMap[r.Subject]) {
+      baselineMap[r.Subject] = r.AF;
+    }
+  });
+
+  const bestMap = {};
+  c797Data.filter(r => r.visit_num > 1).forEach(r => {
+    const cur = bestMap[r.Subject];
+    if (!cur || r.AF < cur.af || (r.AF === cur.af && r.visit_num < cur.visit_num)) {
+      bestMap[r.Subject] = { af: r.AF, visit_num: r.visit_num, visit: r.Visit };
+    }
+  });
+
+  const catRaw = {};
+  c797Data.filter(r => r.Visit === 'C1').forEach(r => {
+    if (!catRaw[r.Subject]) catRaw[r.Subject] = [];
+    catRaw[r.Subject].push({ category: r.category || 'Unknown', af: r.AF });
+  });
+
+  const categoryMap = {};
+  Object.entries(catRaw).forEach(([subj, entries]) => {
+    entries.sort((a, b) => {
+      if (b.af !== a.af) return b.af - a.af;
+      return a.category.localeCompare(b.category);
+    });
+    categoryMap[subj] = entries[0].category || 'Unknown';
+  });
+
+  const subjects = Object.keys(baselineMap).filter(s => bestMap[s]);
+
+  analysisData = subjects.map(subj => {
+    const baseline_af = baselineMap[subj];
+    const best_af = bestMap[subj].af;
+    const best_visit = bestMap[subj].visit;
+    const category = categoryMap[subj] || 'Unknown';
+    const baseline_is_nd = baseline_af <= ND_VALUE;
+    const best_is_nd = best_af <= ND_VALUE;
+    const is_comparable = !baseline_is_nd && !best_is_nd;
+    const delta_af = is_comparable ? baseline_af - best_af : null;
+    const drop_pct = is_comparable && baseline_af > 0 ? (delta_af / baseline_af) * 100 : null;
+
+    return {
+      Subject: subj,
+      Category: category,
+      baseline_af,
+      best_af,
+      best_visit,
+      baseline_is_nd,
+      best_is_nd,
+      is_comparable,
+      delta_af,
+      drop_pct
+    };
+  });
+
+  analysisData.sort((a, b) => {
+    const ca = a.Category.localeCompare(b.Category);
+    if (ca !== 0) return ca;
+    return a.Subject.localeCompare(b.Subject, undefined, { numeric: true });
+  });
+
+  const patients = analysisData.map(d => d.Subject).sort();
+  const colors = generateHueColors(patients.length);
+  patients.forEach((p, i) => { patientColors[p] = colors[i]; });
+
+  const categories = [...new Set(analysisData.map(d => d.Category))];
+  categories.forEach(c => { categoryColors[c] = getCategoryColor(c); });
+
+  const comparableCount = analysisData.filter(d => d.is_comparable).length;
+  const ndCount = analysisData.length - comparableCount;
+
+  renderStats(analysisData.length, totalC797Patients, categories, comparableCount, ndCount);
+  renderFilterButtons(categories);
+  renderChart();
+  renderTable();
+
+  document.getElementById('loadingIndicator').style.display = 'none';
+  document.getElementById('statsPanel').style.display = 'block';
+  document.getElementById('chartSection').style.display = 'block';
+  document.getElementById('filterBar').style.display = 'flex';
+  document.getElementById('tableSection').style.display = 'block';
+}
+
+function renderStats(included, total, categories, comparable, ndCount) {
+  const grid = document.getElementById('statsGrid');
+  let html = `
+    <div class="stat-card"><div class="stat-value">${included}</div><div class="stat-label">Patients Included</div></div>
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total C797S Patients</div></div>
+    <div class="stat-card"><div class="stat-value">${comparable}</div><div class="stat-label">Comparable (non-ND)</div></div>
+    <div class="stat-card"><div class="stat-value">${ndCount}</div><div class="stat-label">ND at Baseline/Best</div></div>
+  `;
+  categories.forEach(cat => {
+    const count = analysisData.filter(d => d.Category === cat).length;
+    html += `<div class="stat-card"><div class="stat-value" style="color:${getCategoryColor(cat)}">${count}</div><div class="stat-label">${cat}</div></div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function renderFilterButtons(categories) {
+  const bar = document.getElementById('filterBar');
+  let html = '<span class="filter-label">Filter by Category:</span>';
+  html += '<button class="filter-btn active" data-filter="all">All</button>';
+  categories.forEach(cat => {
+    html += `<button class="filter-btn" data-filter="${cat}">${cat}</button>`;
+  });
+  bar.innerHTML = html;
+
+  bar.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      bar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      activeFilter = this.dataset.filter;
+      renderChart();
+      renderTable();
+    });
+  });
+}
+
+function getFilteredData() {
+  if (activeFilter === 'all') return analysisData;
+  return analysisData.filter(d => d.Category === activeFilter);
+}
+
+function renderChart() {
+  if (mainChart) { mainChart.destroy(); mainChart = null; }
+
+  const filtered = getFilteredData();
+  if (filtered.length === 0) {
+    document.getElementById('chartWrapper').innerHTML = '<div class="no-data-msg">No patients match the selected filter.</div>';
+    document.getElementById('legendPanel').style.display = 'none';
+    return;
+  }
+  document.getElementById('legendPanel').style.display = 'block';
+
+  const wrapper = document.getElementById('chartWrapper');
+  wrapper.innerHTML = '<canvas id="mainChart"></canvas>';
+  const ctx = document.getElementById('mainChart').getContext('2d');
+
+  const comparable = filtered.filter(d => d.is_comparable);
+  const ndPatients = filtered.filter(d => !d.is_comparable);
+
+  const subtitle = `N = ${filtered.length} included (of ${totalC797Patients} total C797S) | Best = min C797S mAF at C2+ | Lines drawn only when both values are detected (non-ND)`;
+  document.getElementById('chartSubtitle').textContent = subtitle;
+
+  const datasets = [];
+
+  comparable.forEach(d => {
+    datasets.push({
+      label: d.Subject,
+      data: [d.baseline_af, d.best_af],
+      borderColor: patientColors[d.Subject],
+      backgroundColor: patientColors[d.Subject],
+      pointBackgroundColor: patientColors[d.Subject],
+      pointBorderColor: 'white',
+      pointBorderWidth: 1.5,
+      pointRadius: [7, 7],
+      pointHoverRadius: [10, 10],
+      pointStyle: ['circle', 'triangle'],
+      borderWidth: 2,
+      tension: 0,
+      showLine: true
+    });
+  });
+
+  ndPatients.forEach(d => {
+    datasets.push({
+      label: d.Subject,
+      data: [d.baseline_af, d.best_af],
+      borderColor: patientColors[d.Subject],
+      backgroundColor: patientColors[d.Subject],
+      pointBackgroundColor: patientColors[d.Subject],
+      pointBorderColor: 'white',
+      pointBorderWidth: 1.5,
+      pointRadius: [7, 7],
+      pointHoverRadius: [10, 10],
+      pointStyle: ['circle', 'triangle'],
+      borderWidth: 0,
+      tension: 0,
+      showLine: false
+    });
+  });
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Baseline Response', 'Best Response'],
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      interaction: { mode: 'point', intersect: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(44, 62, 80, 0.95)',
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            title: function(ctx) {
+              return ctx[0].dataset.label;
+            },
+            label: function(ctx) {
+              const val = ctx.parsed.y;
+              const type = ctx.dataIndex === 0 ? 'Baseline' : 'Best';
+              const display = val <= ND_VALUE ? 'ND' : val.toFixed(4);
+              const d = analysisData.find(a => a.Subject === ctx.dataset.label);
+              const lines = [`${type}: ${display}`];
+              if (d) {
+                lines.push(`Category: ${d.Category}`);
+                if (ctx.dataIndex === 1) lines.push(`Best Cycle: ${d.best_visit}`);
+                if (d.is_comparable && d.drop_pct !== null) lines.push(`Drop: ${d.drop_pct.toFixed(1)}%`);
+              }
+              return lines;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: false },
+          grid: { display: false },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: { font: { size: 13, weight: 'bold' }, color: '#2c3e50' }
+        },
+        y: {
+          type: 'logarithmic',
+          min: 0.008,
+          max: 120,
+          title: {
+            display: true,
+            text: 'mAF (log₁₀)',
+            font: { size: 13, weight: 'bold' },
+            color: '#2c3e50'
+          },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: true, color: '#aaa', width: 1 },
+          ticks: {
+            font: { size: 11 },
+            color: '#555',
+            callback: function(value) {
+              if (value <= 0.01) return 'ND';
+              if (value === 0.1) return '0.1';
+              if (value === 1) return '1';
+              if (value === 10) return '10';
+              if (value === 100) return '100';
+              return '';
+            }
+          },
+          afterBuildTicks: function(axis) {
+            axis.ticks = [
+              { value: 0.01 },
+              { value: 0.1 },
+              { value: 1 },
+              { value: 10 },
+              { value: 100 }
+            ];
+          }
+        }
+      }
+    }
+  });
+
+  renderLegend(filtered);
+}
+
+function renderLegend(filtered) {
+  const grid = document.getElementById('legendGrid');
+  grid.innerHTML = '';
+  filtered.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.dataset.subject = d.Subject;
+    item.innerHTML = `<span class="legend-color" style="background:${patientColors[d.Subject]}"></span><span>${d.Subject}</span>`;
+    item.title = `${d.Category} | Base: ${d.baseline_is_nd ? 'ND' : d.baseline_af.toFixed(4)} | Best: ${d.best_is_nd ? 'ND' : d.best_af.toFixed(4)}`;
+
+    item.addEventListener('click', function() {
+      togglePatientHighlight(d.Subject);
+    });
+
+    grid.appendChild(item);
+  });
+}
+
+function togglePatientHighlight(subject) {
+  if (!mainChart) return;
+  const ds = mainChart.data.datasets;
+  const targetIdx = ds.findIndex(d => d.label === subject);
+  if (targetIdx < 0) return;
+
+  const isHidden = ds[targetIdx].hidden;
+
+  if (isHidden) {
+    ds.forEach(d => { d.hidden = false; });
+    document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('dimmed'));
+  } else {
+    const allVisible = ds.every(d => !d.hidden);
+    if (allVisible) {
+      ds.forEach((d, i) => { d.hidden = i !== targetIdx; });
+      document.querySelectorAll('.legend-item').forEach(el => {
+        el.classList.toggle('dimmed', el.dataset.subject !== subject);
+      });
+    } else {
+      ds.forEach(d => { d.hidden = false; });
+      document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('dimmed'));
+    }
+  }
+  mainChart.update();
+}
+
+function renderTable() {
+  const filtered = getFilteredData();
+  const table = document.getElementById('detailTable');
+  const thead = table.querySelector('thead tr');
+  const tbody = table.querySelector('tbody');
+
+  document.getElementById('tableTitle').textContent = `Patient Details (N = ${filtered.length})`;
+
+  const columns = [
+    { key: 'Subject', label: 'Subject' },
+    { key: 'Category', label: 'Category' },
+    { key: 'baseline_af', label: 'Base AF', numeric: true },
+    { key: 'best_af', label: 'Best AF', numeric: true },
+    { key: 'best_visit', label: 'Best Cycle' },
+    { key: 'delta_af', label: 'Delta', numeric: true },
+    { key: 'drop_pct', label: 'Drop %', numeric: true }
+  ];
+
+  thead.innerHTML = columns.map(c => {
+    const isSorted = sortCol === c.key;
+    const icon = isSorted ? (sortAsc ? '▲' : '▼') : '⇅';
+    return `<th class="${isSorted ? 'sorted' : ''}" data-col="${c.key}"><span>${c.label}</span><span class="sort-icon">${icon}</span></th>`;
+  }).join('');
+
+  thead.querySelectorAll('th').forEach(th => {
+    th.addEventListener('click', function() {
+      const col = this.dataset.col;
+      if (sortCol === col) { sortAsc = !sortAsc; }
+      else { sortCol = col; sortAsc = true; }
+      renderTable();
+    });
+  });
+
+  let sorted = [...filtered];
+  if (sortCol) {
+    const colDef = columns.find(c => c.key === sortCol);
+    sorted.sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (va === null || va === undefined) va = colDef?.numeric ? -Infinity : '';
+      if (vb === null || vb === undefined) vb = colDef?.numeric ? -Infinity : '';
+      if (colDef?.numeric) return sortAsc ? va - vb : vb - va;
+      return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+  }
+
+  tbody.innerHTML = sorted.map(d => {
+    const baseDisp = d.baseline_is_nd ? '<span class="af-nd">ND</span>' : d.baseline_af.toFixed(4);
+    const bestDisp = d.best_is_nd ? '<span class="af-nd">ND</span>' : d.best_af.toFixed(4);
+    const deltaDisp = d.is_comparable ? d.delta_af.toFixed(4) : '—';
+    const dropDisp = d.is_comparable ? d.drop_pct.toFixed(1) + '%' : '—';
+    const dropClass = d.is_comparable ? (d.drop_pct >= 0 ? 'positive' : 'negative') : '';
+    const catColor = getCategoryColor(d.Category);
+
+    return `<tr>
+      <td><strong>${d.Subject}</strong></td>
+      <td><span class="category-badge" style="background:${catColor}20; color:${catColor}; border:1px solid ${catColor}40;">${d.Category}</span></td>
+      <td>${baseDisp}</td>
+      <td>${bestDisp}</td>
+      <td>${d.best_visit}</td>
+      <td>${deltaDisp}</td>
+      <td class="${dropClass}">${dropDisp}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function exportChart() {
+  const section = document.getElementById('chartSection');
+  try {
+    const canvas = await html2canvas(section, { backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false });
+    const link = document.createElement('a');
+    link.download = 'C797S_mAF_Baseline_to_BestResponse.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    console.error('Export failed:', err);
+    alert('Export failed. Please try again.');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof initBlockExportDialog === 'function') {
+    initBlockExportDialog();
+    setBlockExportPrefix('C797S_BestResponse');
+  }
+
+  fetch('../../data/G360_Filtered.csv')
+    .then(response => {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    })
+    .then(csvText => {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          processData(results.data);
+        },
+        error: function(err) {
+          console.error('Parse error:', err);
+          document.getElementById('loadingIndicator').textContent = 'Error parsing CSV: ' + err.message;
+        }
+      });
+    })
+    .catch(err => {
+      console.error('Load error:', err);
+      document.getElementById('loadingIndicator').textContent = 'Error loading G360_Filtered.csv: ' + err.message;
+    });
+});
+</script>
+
+<script src="../../assets/js/nav.js"></script>
+<script>
+if (typeof renderNav === 'function') renderNav('mutation', 'best-response', '../../');
+</script>
+</body>
+</html>

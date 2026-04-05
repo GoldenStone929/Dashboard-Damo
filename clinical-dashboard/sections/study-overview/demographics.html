@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demographics Dashboard</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+    
+    .page-content {
+      padding: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #2C3E50;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .page-subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 30px;
+      font-size: 1rem;
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 25px;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .card h3 {
+      color: #2C3E50;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #3498db;
+      font-size: 1.3rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #3498db;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    
+    th, td {
+      padding: 12px 15px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
+      color: white;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+    
+    tr:nth-child(even) { 
+      background: #f8f9fa; 
+    }
+    
+    tr:hover { 
+      background: #e8f4f8; 
+      transition: background 0.2s ease;
+    }
+    
+    tr.total-row {
+      background: #ecf0f1;
+      font-weight: 600;
+      border-top: 2px solid #3498db;
+    }
+    
+    /* Chart Container */
+    .chart-container {
+      position: relative;
+      height: 450px;
+      margin-top: 20px;
+      padding: 10px;
+    }
+    
+    .chart-container.box-plot {
+      height: 400px;
+    }
+    
+    /* Summary Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+      transition: transform 0.2s ease;
+    }
+    
+    .stat-box:hover {
+      transform: scale(1.05);
+    }
+    
+    .stat-box .label { 
+      font-size: 0.85rem; 
+      opacity: 0.95; 
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .stat-box .value { 
+      font-size: 1.8rem; 
+      font-weight: bold; 
+      margin-top: 5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: #7f8c8d;
+    }
+    
+    .loading .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading p {
+      font-size: 1.1rem;
+      margin-top: 15px;
+    }
+    
+    .hidden { 
+      display: none; 
+    }
+    
+    /* Error State */
+    .error {
+      background: #fee;
+      border: 2px solid #e74c3c;
+      color: #c0392b;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 1rem;
+    }
+    
+    .error strong {
+      font-weight: 600;
+    }
+    
+    /* Disclaimer Section */
+    .disclaimer-content {
+      color: #555;
+      line-height: 1.7;
+    }
+    
+    .disclaimer-section {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .disclaimer-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .disclaimer-section h4 {
+      color: #2C3E50;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .disclaimer-section ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .disclaimer-section li {
+      margin-bottom: 8px;
+    }
+    
+    .disclaimer-section strong {
+      color: #34495E;
+    }
+    
+    .completeness-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    
+    .completeness-table th,
+    .completeness-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .completeness-table th {
+      background: #f8f9fa;
+      color: #2C3E50;
+      font-weight: 600;
+      text-transform: none;
+      font-size: 0.9rem;
+    }
+    
+    .completeness-table .missing-highlight {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .completeness-table .complete {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .stat-box.unknown {
+      background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+      box-shadow: 0 4px 10px rgba(149, 165, 166, 0.3);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.6rem;
+      }
+      
+      .card {
+        padding: 15px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      table {
+        font-size: 0.85rem;
+      }
+      
+      th, td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+  
+  <main class="page-content">
+    <h1>📊 Demographics Dashboard</h1>
+    <p class="page-subtitle">Comprehensive demographic and anthropometric analysis of study population</p>
+    
+    <!-- Loading State -->
+    <div id="loadingState" class="loading">
+      <div class="spinner"></div>
+      <p>Loading data files...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div id="errorState" class="error hidden"></div>
+    
+    <!-- Dashboard Content -->
+    <div id="dashboardContent" class="hidden">
+      <div class="dashboard-grid">
+        
+        <!-- Part 1: Overall Summary -->
+        <div class="card">
+          <h3>📋 Study Population Overview</h3>
+          <div class="stats-grid" id="overviewStats"></div>
+        </div>
+        
+        <!-- Part 5: Anthropometric Measurements -->
+        <div class="card">
+          <h3>📏 Anthropometric Measurements</h3>
+          <table id="anthropometricTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Mean</th>
+                <th>Median</th>
+                <th>Min</th>
+                <th>Max</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        
+        <!-- Age Group Categories (FDA Guidance) -->
+        <div class="card" id="cardAgeGroups">
+          <div class="card-header">
+            <h3>📊 Age Group Distribution (FDA Categories)</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardAgeGroups', 'Age_Groups')">Export</button>
+          </div>
+          <table id="ageGroupTable">
+            <thead>
+              <tr>
+                <th>Age Group</th>
+                <th>N</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="chart-container" style="height: 300px;">
+            <canvas id="ageGroupChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Part 2: Age Distribution by Sex -->
+        <div class="card" id="cardAgeSex">
+          <div class="card-header">
+            <h3>👥 Age Distribution by Sex</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardAgeSex', 'Age_Distribution_by_Sex')">Export</button>
+          </div>
+          <table id="ageSexTable">
+            <thead>
+              <tr>
+                <th>Statistic</th>
+                <th>Female</th>
+                <th>Male</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="chart-container box-plot">
+            <canvas id="ageBoxPlot"></canvas>
+          </div>
+        </div>
+        
+        <!-- Part 3: Race Distribution -->
+        <div class="card" id="cardRace">
+          <div class="card-header">
+            <h3>🌍 Race Distribution</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardRace', 'Race_Distribution')">Export</button>
+          </div>
+          <table id="raceTable">
+            <thead>
+              <tr>
+                <th>Race</th>
+                <th>Count</th>
+                <th>Percentage</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="chart-container">
+            <canvas id="racePieChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Part 4: Ethnicity Distribution -->
+        <div class="card" id="cardEthnicity">
+          <div class="card-header">
+            <h3>🏛️ Ethnicity Distribution</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardEthnicity', 'Ethnicity_Distribution')">Export</button>
+          </div>
+          <table id="ethnicityTable">
+            <thead>
+              <tr>
+                <th>Ethnicity</th>
+                <th>Count</th>
+                <th>Percentage</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="chart-container">
+            <canvas id="ethnicityPieChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- ECOG Performance Status -->
+        <div class="card" id="cardECOG">
+          <div class="card-header">
+            <h3>⚡ Baseline ECOG Performance Status</h3>
+            <button class="export-btn" onclick="showBlockExportDialog('cardECOG', 'ECOG_Status')">Export</button>
+          </div>
+          <table id="ecogTable">
+            <thead>
+              <tr>
+                <th>ECOG Score</th>
+                <th>Description</th>
+                <th>Count</th>
+                <th>Percentage</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="chart-container" style="height: 250px;">
+            <canvas id="ecogChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Data Sources Disclaimer -->
+        <div class="card" id="cardDisclaimer">
+          <h3>ℹ️ Data Sources & Notes</h3>
+          <div class="disclaimer-content" id="disclaimerContent">
+            <div class="disclaimer-section">
+              <h4>Data Sources</h4>
+              <ul>
+                <li><strong>Safety Analysis Set (N):</strong> Derived from DM (Demographics) domain - subjects with a valid first treatment date (RFXSTDTC).</li>
+                <li><strong>Demographics (Sex, Age, Race, Ethnicity):</strong> Derived from DMMR (Demographics - Medical Record) domain, filtered by subjects present in VS (Vital Signs) data.</li>
+                <li><strong>Anthropometric Measurements (Height, Weight, BMI, BSA):</strong> Derived from VS (Vital Signs) domain.</li>
+              </ul>
+            </div>
+            <div class="disclaimer-section">
+              <h4>Why Numbers May Not Match</h4>
+              <ul>
+                <li><strong>Different Data Sources:</strong> The Safety Analysis Set count comes from the DM domain, while sex/demographics counts come from the DMMR domain. Not all subjects may have records in both domains.</li>
+                <li><strong>Missing Data:</strong> Some subjects may have incomplete demographic information (e.g., missing sex, race, or ethnicity values) recorded as blank, null, or "Unknown".</li>
+                <li><strong>Data Filtering:</strong> Demographics are filtered to include only subjects with Vital Signs (VS) data available, which may exclude some subjects from the Safety Analysis Set.</li>
+              </ul>
+            </div>
+            <div class="disclaimer-section">
+              <h4>Data Completeness Summary</h4>
+              <div id="dataCompletenessSummary"></div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </main>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-piechart-outlabels@0.1.4"></script>
+  <script>
+    // ========================================
+    // Navigation Setup
+    // ========================================
+    renderNav('study-overview', 'demographics', '../../');
+    
+    // ========================================
+    // Register Chart.js plugins
+    // ========================================
+    function waitForChart(callback) {
+      if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+        // Register the datalabels plugin globally
+        Chart.register(ChartDataLabels);
+        callback();
+      } else {
+        setTimeout(() => waitForChart(callback), 100);
+      }
+    }
+    
+    // ========================================
+    // Global State
+    // ========================================
+    let vsData = null;
+    let dmmrData = null;
+    let dmData = null;
+    let charts = {};
+    let BIG_N = 0; // Safety Analysis Set count
+    
+    // State object for chart export functionality
+    const state = {
+      charts: {},
+      currentPatient: 'Demographics'
+    };
+    
+    // Cache buster for CSV files
+    const CACHE_BUSTER = new Date().getTime();
+    
+    // Set export filename prefix for this page
+    setBlockExportPrefix('Demographics');
+    
+    // ========================================
+    // Debug Logger
+    // ========================================
+    function log(message) {
+      console.log(message);
+    }
+    
+    // ========================================
+    // Show Error
+    // ========================================
+    function showError(message) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorState').innerHTML = `<strong>Error:</strong> ${message}`;
+      log(`ERROR: ${message}`);
+    }
+    
+    // ========================================
+    // Load CSV File
+    // ========================================
+    function loadCSV(filename) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(filename, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+            if (results.errors.length > 0) {
+              reject(new Error(`Parse error in ${filename}: ${results.errors[0].message}`));
+            } else {
+              resolve(results.data);
+            }
+          },
+          error: function(err) {
+            reject(new Error(`Failed to load ${filename}: ${err.message}`));
+          }
+        });
+      });
+    }
+    
+    // ========================================
+    // Initialize Dashboard
+    // ========================================
+    async function initDashboard() {
+      try {
+        log('Starting data load...');
+        
+        // Load CSV files from data directory
+        const [vs, dmmr, dm, ecog] = await Promise.all([
+          loadCSV(`../../data/vs.csv?${CACHE_BUSTER}`),
+          loadCSV(`../../data/dmmr.csv?${CACHE_BUSTER}`),
+          loadCSV(`../../data/dm.csv?${CACHE_BUSTER}`),
+          loadCSV(`../../data/rsecog1.CSV?${CACHE_BUSTER}`).catch(() => [])
+        ]);
+        
+        vsData = vs;
+        dmmrData = dmmr;
+        dmData = dm;
+        window.ecogData = ecog;
+        
+        log(`VS data loaded: ${vsData.length} rows, ${Object.keys(vsData[0] || {}).length} columns`);
+        log(`DMMR data loaded: ${dmmrData.length} rows, ${Object.keys(dmmrData[0] || {}).length} columns`);
+        log(`DM data loaded: ${dmData.length} rows, ${Object.keys(dmData[0] || {}).length} columns`);
+        
+        // Calculate Big N (Safety Analysis Set - subjects who received at least one dose)
+        // Based on RFXSTDTC column having a valid date (length >= 5)
+        if (dmData && dmData.length > 0) {
+          const dmColumns = Object.keys(dmData[0] || {});
+          const rfxCol = dmColumns.find(k => k.toUpperCase() === 'RFXSTDTC') || 'RFXSTDTC';
+          const subjCol = dmColumns.find(k => k.toUpperCase() === 'SUBJID') || 'SUBJID';
+          
+          const validSubjects = new Set();
+          dmData.forEach(row => {
+            const subject = String(row[subjCol] || row['Subject'] || '').trim();
+            const rawRfx = row[rfxCol];
+            const rfxstdtcTrimmed = rawRfx == null ? '' : String(rawRfx).trim();
+            if (subject && rfxstdtcTrimmed.length >= 5) {
+              validSubjects.add(subject);
+            }
+          });
+          BIG_N = validSubjects.size;
+          log(`Safety Analysis Set (Big N): ${BIG_N}`);
+        }
+        
+        // Hide loading, show dashboard
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('dashboardContent').classList.remove('hidden');
+        
+        // Process and render
+        renderDashboard();
+        
+      } catch (error) {
+        showError(error.message);
+        console.error(error);
+      }
+    }
+    
+    // ========================================
+    // Main Rendering Function
+    // ========================================
+    function renderDashboard() {
+      log('Processing data...');
+      
+      // Get unique subjects from VS data
+      const vsSubjects = new Set(vsData.map(r => r.Subject));
+      log(`Unique subjects in VS: ${vsSubjects.size}`);
+      
+      // Filter DMMR to only include subjects in VS
+      const filteredDmmr = dmmrData.filter(r => vsSubjects.has(r.Subject));
+      log(`Filtered DMMR subjects: ${filteredDmmr.length}`);
+      
+      // Get unique subjects
+      const uniqueDmmr = getUniqueBySubject(filteredDmmr);
+      const uniqueVs = getUniqueBySubject(vsData);
+      log(`Unique DMMR records: ${uniqueDmmr.length}`);
+      log(`Unique VS records: ${uniqueVs.length}`);
+      
+      // Render all sections
+      renderOverviewStats(uniqueDmmr, uniqueVs);
+      renderAgeGroups(uniqueDmmr);
+      renderAgeSexDistribution(uniqueDmmr);
+      renderRaceDistribution(uniqueDmmr);
+      renderEthnicityDistribution(uniqueDmmr);
+      renderECOGStatus();
+      renderAnthropometricMeasurements(uniqueDmmr, uniqueVs);
+      renderDataCompletenessSummary(uniqueDmmr);
+      
+      // Initialize export dialog for whole block export
+      initBlockExportDialog();
+      
+      log('Dashboard rendering complete!');
+    }
+    
+    // ========================================
+    // Utility Functions
+    // ========================================
+    function getUniqueBySubject(data) {
+      const seen = new Set();
+      return data.filter(row => {
+        if (seen.has(row.Subject)) return false;
+        seen.add(row.Subject);
+        return true;
+      });
+    }
+    
+    function safeNumber(val) {
+      const num = parseFloat(val);
+      return isNaN(num) ? null : num;
+    }
+    
+    function formatNumber(val, decimals = 2) {
+      if (val === null || val === undefined || isNaN(val)) return 'Missing';
+      return val.toFixed(decimals);
+    }
+    
+    function calcStats(values) {
+      const valid = values.filter(v => v !== null && !isNaN(v));
+      if (valid.length === 0) return { count: 0, mean: null, median: null, min: null, max: null, q1: null, q3: null };
+      
+      valid.sort((a, b) => a - b);
+      const n = valid.length;
+      const sum = valid.reduce((a, b) => a + b, 0);
+      
+      return {
+        count: n,
+        mean: sum / n,
+        median: n % 2 === 0 ? (valid[n/2 - 1] + valid[n/2]) / 2 : valid[Math.floor(n/2)],
+        min: valid[0],
+        max: valid[n - 1],
+        q1: valid[Math.floor(n * 0.25)],
+        q3: valid[Math.floor(n * 0.75)]
+      };
+    }
+    
+    // ========================================
+    // Part 1: Overview Stats
+    // ========================================
+    function renderOverviewStats(dmmr, vs) {
+      const maleCount = dmmr.filter(r => r.SEX_STD === 'M').length;
+      const femaleCount = dmmr.filter(r => r.SEX_STD === 'F').length;
+      const unknownSexInDmmr = dmmr.filter(r => r.SEX_STD !== 'M' && r.SEX_STD !== 'F').length;
+      
+      // Calculate total known sex subjects
+      const totalKnownSex = maleCount + femaleCount;
+      // Calculate missing/unknown: difference between Safety N and known sex counts
+      const missingSexCount = BIG_N - totalKnownSex;
+      // Use the larger of: subjects with unknown SEX_STD in DMMR, or subjects missing from DMMR altogether
+      const unknownSexCount = Math.max(unknownSexInDmmr, missingSexCount);
+      
+      const ages = dmmr.map(r => safeNumber(r.AGE)).filter(v => v !== null);
+      const meanAge = ages.length > 0 ? (ages.reduce((a,b) => a+b, 0) / ages.length).toFixed(1) : 'N/A';
+      
+      // Store for later use in completeness summary
+      window.demographicsStats = {
+        bigN: BIG_N,
+        maleCount,
+        femaleCount,
+        unknownSexCount,
+        unknownSexInDmmr,
+        missingSexCount,
+        dmmrCount: dmmr.length,
+        vsCount: vs.length,
+        agesCount: ages.length
+      };
+      
+      const html = `
+        <div class="stat-box">
+          <div class="label">Safety Analysis Set (N)</div>
+          <div class="value">${BIG_N}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Male</div>
+          <div class="value">${maleCount}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Female</div>
+          <div class="value">${femaleCount}</div>
+        </div>
+        <div class="stat-box unknown">
+          <div class="label">Unknown/Missing Sex</div>
+          <div class="value">${unknownSexCount}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Mean Age</div>
+          <div class="value">${meanAge}</div>
+        </div>
+      `;
+      document.getElementById('overviewStats').innerHTML = html;
+      log(`Overview: Safety N=${BIG_N}, ${maleCount} male, ${femaleCount} female, ${unknownSexCount} unknown/missing, mean age ${meanAge}`);
+    }
+    
+    // ========================================
+    // ECOG Performance Status
+    // ========================================
+    function renderECOGStatus() {
+      const ecogData = window.ecogData || [];
+      const tbody = document.querySelector('#ecogTable tbody');
+      
+      if (ecogData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #95a5a6;">ECOG data not available</td></tr>';
+        return;
+      }
+      
+      // Get baseline ECOG for each subject (earliest Screening visit)
+      const baselineEcog = {};
+      const parseSasDate = (str) => {
+        if (!str) return null;
+        const match = String(str).match(/(\d{2})([A-Z]{3})(\d{4})/i);
+        if (!match) return null;
+        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+        return new Date(parseInt(match[3], 10), months[match[2].toUpperCase()], parseInt(match[1], 10));
+      };
+      
+      ecogData.forEach(row => {
+        const subject = row.Subject || row.SUBJID || row.USUBJID;
+        const folder = row.Folder || '';
+        const score = row.ECOG101_RSSTRESC_STD;
+        const date = parseSasDate(row.RSDAT || row.RSDAT_RAW || row.RSDAT_INT);
+        
+        // Only take screening baseline
+        if (subject && folder === 'SCRN' && score !== undefined && score !== '') {
+          if (!baselineEcog[subject] || (date && (!baselineEcog[subject].date || date < baselineEcog[subject].date))) {
+            baselineEcog[subject] = { score, date };
+          }
+        }
+      });
+      
+      // Count by score
+      const scoreCounts = {};
+      Object.values(baselineEcog).forEach(entry => {
+        scoreCounts[entry.score] = (scoreCounts[entry.score] || 0) + 1;
+      });
+      
+      const total = Object.values(scoreCounts).reduce((a, b) => a + b, 0);
+      
+      // ECOG descriptions
+      const ecogDescriptions = {
+        '0': 'Fully active, able to carry on all pre-disease activities',
+        '1': 'Restricted in strenuous activity, ambulatory, light work',
+        '2': 'Ambulatory, capable of self-care, unable to work',
+        '3': 'Limited self-care, confined to bed/chair >50% of waking hours',
+        '4': 'Completely disabled, confined to bed/chair',
+        '5': 'Dead'
+      };
+      
+      // Sort scores and render table
+      const sortedScores = Object.keys(scoreCounts).sort((a, b) => parseInt(a) - parseInt(b));
+      
+      let html = '';
+      sortedScores.forEach(score => {
+        const count = scoreCounts[score];
+        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+        const desc = ecogDescriptions[score] || 'Unknown';
+        html += `
+          <tr>
+            <td style="font-weight: 700; text-align: center;">${score}</td>
+            <td style="text-align: left; font-size: 0.85rem;">${desc}</td>
+            <td>${count}</td>
+            <td>${pct}%</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        <tr style="background: #34495E; color: white; font-weight: bold;">
+          <td colspan="2" style="text-align: left;">Total</td>
+          <td>${total}</td>
+          <td>100.0%</td>
+        </tr>
+      `;
+      
+      tbody.innerHTML = html;
+      
+      // Render chart
+      if (charts.ecog) charts.ecog.destroy();
+      
+      const colors = ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c', '#2C3E50'];
+      
+      const ctx = document.getElementById('ecogChart').getContext('2d');
+      charts.ecog = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: sortedScores.map(s => `ECOG ${s}`),
+          datasets: [{
+            data: sortedScores.map(s => scoreCounts[s]),
+            backgroundColor: sortedScores.map((_, i) => colors[i % colors.length]),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { font: { size: 11 } }
+            },
+            datalabels: {
+              formatter: (value, ctx) => {
+                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                return value > 0 ? `${value}\n(${pct}%)` : '';
+              },
+              color: '#fff',
+              font: { weight: 'bold', size: 11 }
+            }
+          }
+        }
+      });
+      
+      state.charts['ecogChart'] = charts.ecog;
+      log(`ECOG status rendered: ${sortedScores.map(s => `${s}:${scoreCounts[s]}`).join(', ')}`);
+    }
+    
+    // ========================================
+    // Age Group Distribution (FDA Categories)
+    // ========================================
+    function renderAgeGroups(dmmr) {
+      const ages = dmmr.map(r => safeNumber(r.AGE)).filter(v => v !== null);
+      const total = ages.length;
+      
+      // FDA recommended age categories for oncology
+      const ageGroups = [
+        { label: '< 18 years (Pediatric)', min: 0, max: 17 },
+        { label: '18-44 years', min: 18, max: 44 },
+        { label: '45-64 years', min: 45, max: 64 },
+        { label: '65-74 years (Elderly)', min: 65, max: 74 },
+        { label: '≥ 75 years', min: 75, max: 999 }
+      ];
+      
+      const groupCounts = ageGroups.map(group => {
+        const count = ages.filter(a => a >= group.min && a <= group.max).length;
+        return { ...group, count };
+      });
+      
+      // Render table
+      const tbody = document.querySelector('#ageGroupTable tbody');
+      let html = '';
+      groupCounts.forEach(group => {
+        const pct = total > 0 ? ((group.count / total) * 100).toFixed(1) : '0.0';
+        html += `
+          <tr>
+            <td style="text-align: left;">${group.label}</td>
+            <td>${group.count}</td>
+            <td>${pct}%</td>
+          </tr>
+        `;
+      });
+      html += `
+        <tr style="background: #34495E; color: white; font-weight: bold;">
+          <td style="text-align: left;">Total</td>
+          <td>${total}</td>
+          <td>100.0%</td>
+        </tr>
+      `;
+      tbody.innerHTML = html;
+      
+      // Render chart
+      if (charts.ageGroup) charts.ageGroup.destroy();
+      
+      const ctx = document.getElementById('ageGroupChart').getContext('2d');
+      const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+      
+      charts.ageGroup = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: groupCounts.map(g => g.label),
+          datasets: [{
+            label: 'Count',
+            data: groupCounts.map(g => g.count),
+            backgroundColor: colors,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'right',
+              formatter: (value, ctx) => {
+                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                return `${value} (${pct}%)`;
+              },
+              font: { weight: 'bold', size: 11 },
+              color: '#2C3E50'
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              title: { display: true, text: 'Number of Subjects', font: { weight: 'bold' } }
+            }
+          }
+        }
+      });
+      
+      state.charts['ageGroupChart'] = charts.ageGroup;
+      log(`Age groups rendered: ${groupCounts.map(g => `${g.label}:${g.count}`).join(', ')}`);
+    }
+    
+    // ========================================
+    // Part 2: Age Distribution by Sex
+    // ========================================
+    function renderAgeSexDistribution(dmmr) {
+      const males = dmmr.filter(r => r.SEX_STD === 'M').map(r => safeNumber(r.AGE)).filter(v => v !== null);
+      const females = dmmr.filter(r => r.SEX_STD === 'F').map(r => safeNumber(r.AGE)).filter(v => v !== null);
+      
+      const maleStats = calcStats(males);
+      const femaleStats = calcStats(females);
+      
+      log(`Age by Sex - Males: n=${maleStats.count}, median=${formatNumber(maleStats.median)}`);
+      log(`Age by Sex - Females: n=${femaleStats.count}, median=${formatNumber(femaleStats.median)}`);
+      
+      // Render table
+      const tbody = document.querySelector('#ageSexTable tbody');
+      tbody.innerHTML = `
+        <tr>
+          <td>Count</td>
+          <td>${femaleStats.count}</td>
+          <td>${maleStats.count}</td>
+        </tr>
+        <tr>
+          <td>Median</td>
+          <td>${formatNumber(femaleStats.median)}</td>
+          <td>${formatNumber(maleStats.median)}</td>
+        </tr>
+        <tr>
+          <td>Min</td>
+          <td>${formatNumber(femaleStats.min)}</td>
+          <td>${formatNumber(maleStats.min)}</td>
+        </tr>
+        <tr>
+          <td>Max</td>
+          <td>${formatNumber(femaleStats.max)}</td>
+          <td>${formatNumber(maleStats.max)}</td>
+        </tr>
+        <tr>
+          <td>Q1</td>
+          <td>${formatNumber(femaleStats.q1)}</td>
+          <td>${formatNumber(maleStats.q1)}</td>
+        </tr>
+        <tr>
+          <td>Q3</td>
+          <td>${formatNumber(femaleStats.q3)}</td>
+          <td>${formatNumber(maleStats.q3)}</td>
+        </tr>
+      `;
+      
+      // Render chart
+      if (charts.ageBoxPlot) charts.ageBoxPlot.destroy();
+      
+      const ctx = document.getElementById('ageBoxPlot').getContext('2d');
+      charts.ageBoxPlot = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Female', 'Male'],
+          datasets: [
+            { 
+              label: 'Min', 
+              data: [femaleStats.min, maleStats.min], 
+              backgroundColor: 'rgba(46, 204, 113, 0.6)', 
+              borderColor: 'rgba(46, 204, 113, 1)', 
+              borderWidth: 1 
+            },
+            { 
+              label: 'Q1', 
+              data: [femaleStats.q1, maleStats.q1], 
+              backgroundColor: 'rgba(52, 152, 219, 0.6)', 
+              borderColor: 'rgba(52, 152, 219, 1)', 
+              borderWidth: 1 
+            },
+            { 
+              label: 'Median', 
+              data: [femaleStats.median, maleStats.median], 
+              backgroundColor: 'rgba(155, 89, 182, 0.8)', 
+              borderColor: 'rgba(155, 89, 182, 1)', 
+              borderWidth: 2 
+            },
+            { 
+              label: 'Q3', 
+              data: [femaleStats.q3, maleStats.q3], 
+              backgroundColor: 'rgba(230, 126, 34, 0.6)', 
+              borderColor: 'rgba(230, 126, 34, 1)', 
+              borderWidth: 1 
+            },
+            { 
+              label: 'Max', 
+              data: [femaleStats.max, maleStats.max], 
+              backgroundColor: 'rgba(231, 76, 60, 0.6)', 
+              borderColor: 'rgba(231, 76, 60, 1)', 
+              borderWidth: 1 
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          rotation: -90, // Rotate chart so small slices appear on left
+          plugins: {
+            title: { 
+              display: true, 
+              text: 'Age Distribution by Sex', 
+              font: { size: 14, weight: 'bold' } 
+            },
+            tooltip: { 
+              callbacks: { 
+                label: ctx => `${ctx.dataset.label}: ${ctx.raw?.toFixed(1) || 'N/A'} years` 
+              } 
+            },
+            legend: {
+              position: 'top',
+              labels: {
+                boxWidth: 12,
+                padding: 8
+              }
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              formatter: function(value) {
+                return value !== null && !isNaN(value) ? value.toFixed(1) : '';
+              },
+              font: {
+                weight: 'bold',
+                size: 11
+              },
+              color: '#2C3E50'
+            }
+          },
+          scales: { 
+            y: { 
+              beginAtZero: false, 
+              title: { 
+                display: true, 
+                text: 'Age (Years)',
+                font: { weight: 'bold' }
+              } 
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Sex',
+                font: { weight: 'bold' }
+              }
+            }
+          }
+        }
+      });
+      
+      // Add to state for export functionality
+      state.charts['ageBoxPlot'] = charts.ageBoxPlot;
+    }
+    
+    // ========================================
+    // Part 3: Race Distribution
+    // ========================================
+    function renderRaceDistribution(dmmr) {
+      const raceData = dmmr.map(row => {
+        const flags = {
+          WHITE: row.WHITE_STD && row.WHITE_STD !== '' && row.WHITE_STD !== '0',
+          NATIVE_HAWAIIAN: row.NATIVE_HAWAIIAN_STD && row.NATIVE_HAWAIIAN_STD !== '' && row.NATIVE_HAWAIIAN_STD !== '0',
+          BLACK: row.BLACK_STD && row.BLACK_STD !== '' && row.BLACK_STD !== '0',
+          ASIAN: row.ASIAN_STD && row.ASIAN_STD !== '' && row.ASIAN_STD !== '0',
+          AMERICAN_INDIAN: row.AMERICAN_INDIAN_STD && row.AMERICAN_INDIAN_STD !== '' && row.AMERICAN_INDIAN_STD !== '0',
+          OTHER: row.OTHER_STD && row.OTHER_STD !== '' && row.OTHER_STD !== '0'
+        };
+        
+        const raceCount = Object.values(flags).filter(Boolean).length;
+        
+        if (raceCount > 1) return 'MULTI-RACIAL';
+        if (flags.WHITE) return 'WHITE';
+        if (flags.NATIVE_HAWAIIAN) return 'NATIVE HAWAIIAN';
+        if (flags.BLACK) return 'BLACK';
+        if (flags.ASIAN) return 'ASIAN';
+        if (flags.AMERICAN_INDIAN) return 'AMERICAN INDIAN';
+        if (flags.OTHER) return 'OTHER';
+        return 'UNKNOWN';
+      });
+      
+      const raceCounts = {};
+      raceData.forEach(race => { raceCounts[race] = (raceCounts[race] || 0) + 1; });
+      
+      const total = raceData.length;
+      const raceEntries = Object.entries(raceCounts).sort((a, b) => b[1] - a[1]);
+      
+      log(`Race distribution: ${raceEntries.map(([r, c]) => `${r}:${c}`).join(', ')}`);
+      
+      // Render table
+      const tbody = document.querySelector('#raceTable tbody');
+      let html = '';
+      raceEntries.forEach(([race, count]) => {
+        html += `<tr>
+          <td>${race}</td>
+          <td>${count}</td>
+          <td>${((count / total) * 100).toFixed(2)}%</td>
+        </tr>`;
+      });
+      html += `<tr class="total-row">
+        <td>Total</td>
+        <td>${total}</td>
+        <td>100%</td>
+      </tr>`;
+      tbody.innerHTML = html;
+      
+      // Render pie chart
+      if (charts.racePie) charts.racePie.destroy();
+      
+      const ctx = document.getElementById('racePieChart').getContext('2d');
+      const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#95a5a6'];
+      
+      charts.racePie = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: raceEntries.map(([r]) => r),
+          datasets: [{ 
+            data: raceEntries.map(([, c]) => c), 
+            backgroundColor: colors.slice(0, raceEntries.length), 
+            borderWidth: 2, 
+            borderColor: '#fff' 
+          }]
+        },
+        plugins: [ChartDataLabels, {
+          id: 'raceCalloutLines',
+          afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            
+            // Collect small slices
+            const smallSlices = [];
+            meta.data.forEach((slice, index) => {
+              const value = chart.data.datasets[0].data[index];
+              const percentage = ((value / total) * 100);
+              if (percentage < 5) {
+                const angle = slice.startAngle + (slice.endAngle - slice.startAngle) / 2;
+                smallSlices.push({ slice, angle, index, percentage, value });
+              }
+            });
+            
+            // Sort by angle
+            smallSlices.sort((a, b) => a.angle - b.angle);
+            
+            const x = chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
+            const y = chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
+            
+              // Draw callout lines and labels for small slices
+            smallSlices.forEach(({ slice, angle, index, value }, arrayIndex) => {
+              const radius = slice.outerRadius;
+              
+              // Calculate end point of slice (outer edge)
+              const endX = x + Math.cos(angle) * radius;
+              const endY = y + Math.sin(angle) * radius;
+              
+              // Extend line STRAIGHT OUTWARD from slice (same direction as slice angle)
+              const extensionLength = 60; // Total length of straight line outward
+              const labelX = x + Math.cos(angle) * (radius + extensionLength);
+              const labelY = y + Math.sin(angle) * (radius + extensionLength);
+              
+              // Determine if on left side for text alignment
+              const normalizedAngle = ((angle % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+              const isLeftSide = normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2;
+              
+              // Draw STRAIGHT callout line: slice edge -> directly outward to label
+              ctx.save();
+              ctx.strokeStyle = '#666';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(endX, endY); // Start from slice edge
+              ctx.lineTo(labelX, labelY); // Straight line outward to label
+              ctx.stroke();
+              ctx.restore();
+              
+              // Draw label manually
+              const percentage = ((value / total) * 100).toFixed(1);
+              const labelText = value + ' (' + percentage + '%)';
+              
+              ctx.save();
+              ctx.fillStyle = '#2C3E50';
+              ctx.font = 'bold 11px Segoe UI';
+              ctx.textAlign = isLeftSide ? 'right' : 'left';
+              ctx.textBaseline = 'middle';
+              
+              // Draw background
+              const textMetrics = ctx.measureText(labelText);
+              const padding = 4;
+              const bgWidth = textMetrics.width + (padding * 2);
+              const bgHeight = 16;
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+              // Adjust background position based on text alignment
+              const bgX = isLeftSide ? labelX - bgWidth + padding : labelX - padding;
+              ctx.fillRect(bgX, labelY - bgHeight/2, bgWidth, bgHeight);
+              
+              // Draw text
+              ctx.fillStyle = '#2C3E50';
+              const textX = isLeftSide ? labelX - padding : labelX + padding;
+              ctx.fillText(labelText, textX, labelY);
+              ctx.restore();
+            });
+          }
+        }],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          rotation: -90, // Rotate chart so small slices appear on left
+          plugins: {
+            title: { 
+              display: true, 
+              text: 'Race Distribution', 
+              font: { size: 14, weight: 'bold' } 
+            },
+            legend: { 
+              position: 'right', 
+              labels: { 
+                boxWidth: 15,
+                padding: 10,
+                font: { size: 11 }
+              } 
+            },
+            tooltip: { 
+              callbacks: { 
+                label: ctx => `${ctx.label}: ${ctx.raw} (${((ctx.raw / total) * 100).toFixed(1)}%)` 
+              } 
+            },
+            datalabels: {
+              display: function(context) {
+                // Hide labels for small slices - we'll draw them manually
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage >= 5;
+              },
+              formatter: function(value, context) {
+                const percentage = ((value / total) * 100).toFixed(1);
+                // Count and percentage on same row
+                return value + ' (' + percentage + '%)';
+              },
+              anchor: 'center',
+              align: 'center',
+              offset: 0,
+              font: {
+                weight: 'bold',
+                size: 10
+              },
+              color: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? '#2C3E50' : '#fff';
+              },
+              backgroundColor: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 'rgba(255, 255, 255, 0.95)' : 'transparent';
+              },
+              borderColor: 'transparent',
+              borderWidth: 0,
+              borderRadius: 3,
+              padding: 3,
+              textStrokeColor: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 'transparent' : '#000';
+              },
+              textStrokeWidth: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 0 : 2;
+              }
+            }
+          }
+        }
+      });
+      
+      // Add to state for export functionality
+      state.charts['racePieChart'] = charts.racePie;
+    }
+    
+    // ========================================
+    // Part 4: Ethnicity Distribution
+    // ========================================
+    function renderEthnicityDistribution(dmmr) {
+      const ethnicData = dmmr.map(row => {
+        const eth = row.ETHNIC_STD;
+        return (eth && eth !== '') ? eth : 'UNKNOWN';
+      });
+      
+      const ethnicCounts = {};
+      ethnicData.forEach(eth => { ethnicCounts[eth] = (ethnicCounts[eth] || 0) + 1; });
+      
+      const total = ethnicData.length;
+      const ethnicEntries = Object.entries(ethnicCounts).sort((a, b) => b[1] - a[1]);
+      
+      log(`Ethnicity distribution: ${ethnicEntries.map(([e, c]) => `${e}:${c}`).join(', ')}`);
+      
+      // Render table
+      const tbody = document.querySelector('#ethnicityTable tbody');
+      let html = '';
+      ethnicEntries.forEach(([eth, count]) => {
+        html += `<tr>
+          <td>${eth}</td>
+          <td>${count}</td>
+          <td>${((count / total) * 100).toFixed(2)}%</td>
+        </tr>`;
+      });
+      html += `<tr class="total-row">
+        <td>Total</td>
+        <td>${total}</td>
+        <td>100%</td>
+      </tr>`;
+      tbody.innerHTML = html;
+      
+      // Render pie chart
+      if (charts.ethnicityPie) charts.ethnicityPie.destroy();
+      
+      const ctx = document.getElementById('ethnicityPieChart').getContext('2d');
+      const colors = ['#1abc9c', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', '#2ecc71', '#f39c12'];
+      
+      charts.ethnicityPie = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ethnicEntries.map(([e]) => e),
+          datasets: [{ 
+            data: ethnicEntries.map(([, c]) => c), 
+            backgroundColor: colors.slice(0, ethnicEntries.length), 
+            borderWidth: 2, 
+            borderColor: '#fff' 
+          }]
+        },
+        plugins: [ChartDataLabels, {
+          id: 'ethnicityCalloutLines',
+          afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            
+            // Collect small slices and draw lines
+            const smallSlices = [];
+            meta.data.forEach((slice, index) => {
+              const value = chart.data.datasets[0].data[index];
+              const percentage = ((value / total) * 100);
+              if (percentage < 5) {
+                const angle = slice.startAngle + (slice.endAngle - slice.startAngle) / 2;
+                smallSlices.push({ slice, angle, index, percentage, value });
+              }
+            });
+            
+            // Sort by angle
+            smallSlices.sort((a, b) => a.angle - b.angle);
+            
+            const x = chart.chartArea.left + (chart.chartArea.right - chart.chartArea.left) / 2;
+            const y = chart.chartArea.top + (chart.chartArea.bottom - chart.chartArea.top) / 2;
+            
+            // Draw callout lines and labels for small slices
+            smallSlices.forEach(({ slice, angle, index, value }, arrayIndex) => {
+              const radius = slice.outerRadius;
+              
+              // Calculate end point of slice (outer edge)
+              const endX = x + Math.cos(angle) * radius;
+              const endY = y + Math.sin(angle) * radius;
+              
+              // Extend line STRAIGHT OUTWARD from slice (same direction as slice angle)
+              const extensionLength = 60; // Total length of straight line outward
+              const labelX = x + Math.cos(angle) * (radius + extensionLength);
+              const labelY = y + Math.sin(angle) * (radius + extensionLength);
+              
+              // Determine if on left side for text alignment
+              const normalizedAngle = ((angle % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+              const isLeftSide = normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2;
+              
+              // Draw STRAIGHT callout line: slice edge -> directly outward to label
+              ctx.save();
+              ctx.strokeStyle = '#666';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(endX, endY); // Start from slice edge
+              ctx.lineTo(labelX, labelY); // Straight line outward to label
+              ctx.stroke();
+              ctx.restore();
+              
+              // Draw label manually
+              const percentage = ((value / total) * 100).toFixed(1);
+              const labelText = value + ' (' + percentage + '%)';
+              
+              ctx.save();
+              ctx.fillStyle = '#2C3E50';
+              ctx.font = 'bold 11px Segoe UI';
+              ctx.textAlign = isLeftSide ? 'right' : 'left';
+              ctx.textBaseline = 'middle';
+              
+              // Draw background
+              const textMetrics = ctx.measureText(labelText);
+              const padding = 4;
+              const bgWidth = textMetrics.width + (padding * 2);
+              const bgHeight = 16;
+              
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+              // Adjust background position based on text alignment
+              const bgX = isLeftSide ? labelX - bgWidth + padding : labelX - padding;
+              ctx.fillRect(bgX, labelY - bgHeight/2, bgWidth, bgHeight);
+              
+              // Draw text
+              ctx.fillStyle = '#2C3E50';
+              const textX = isLeftSide ? labelX - padding : labelX + padding;
+              ctx.fillText(labelText, textX, labelY);
+              ctx.restore();
+            });
+          }
+        }],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          rotation: -90, // Rotate chart so small slices appear on left
+          plugins: {
+            title: { 
+              display: true, 
+              text: 'Ethnicity Distribution', 
+              font: { size: 14, weight: 'bold' } 
+            },
+            legend: { 
+              position: 'right', 
+              labels: { 
+                boxWidth: 15,
+                padding: 10,
+                font: { size: 11 }
+              } 
+            },
+            tooltip: { 
+              callbacks: { 
+                label: ctx => `${ctx.label}: ${ctx.raw} (${((ctx.raw / total) * 100).toFixed(1)}%)` 
+              } 
+            },
+            datalabels: {
+              display: function(context) {
+                // Hide labels for small slices - we'll draw them manually
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage >= 5;
+              },
+              formatter: function(value, context) {
+                const percentage = ((value / total) * 100).toFixed(1);
+                // Count and percentage on same row
+                return value + ' (' + percentage + '%)';
+              },
+              anchor: 'center',
+              align: 'center',
+              offset: 0,
+              font: {
+                weight: 'bold',
+                size: 10
+              },
+              color: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? '#2C3E50' : '#fff';
+              },
+              backgroundColor: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 'rgba(255, 255, 255, 0.95)' : 'transparent';
+              },
+              borderColor: 'transparent',
+              borderWidth: 0,
+              borderRadius: 3,
+              padding: 3,
+              textStrokeColor: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 'transparent' : '#000';
+              },
+              textStrokeWidth: function(context) {
+                const value = context.dataset.data[context.dataIndex];
+                const percentage = ((value / total) * 100);
+                return percentage < 5 ? 0 : 2;
+              }
+            }
+          }
+        }
+      });
+      
+      // Add to state for export functionality
+      state.charts['ethnicityPieChart'] = charts.ethnicityPie;
+    }
+    
+    // ========================================
+    // Part 5: Anthropometric Measurements
+    // ========================================
+    function renderAnthropometricMeasurements(dmmr, vs) {
+      const vsLookup = {};
+      vs.forEach(row => { vsLookup[row.Subject] = row; });
+      
+      const merged = dmmr.map(row => {
+        const vsRow = vsLookup[row.Subject] || {};
+        const age = safeNumber(row.AGE);
+        const height = safeNumber(vsRow.HEIGHT_VSORRES_STD);
+        const weight = safeNumber(vsRow.WEIGHT_VSORRES_STD);
+        
+        let bmi = null;
+        if (height && weight && height > 0) {
+          const heightM = height / 100;
+          bmi = weight / (heightM * heightM);
+        }
+        
+        let bsa = null;
+        if (height && weight && height > 0 && weight > 0) {
+          bsa = Math.sqrt((height * weight) / 3600);
+        }
+        
+        return { age, height, weight, bmi, bsa };
+      });
+      
+      const ageStats = calcStats(merged.map(r => r.age));
+      const heightStats = calcStats(merged.map(r => r.height));
+      const weightStats = calcStats(merged.map(r => r.weight));
+      const bmiStats = calcStats(merged.map(r => r.bmi));
+      const bsaStats = calcStats(merged.map(r => r.bsa));
+      
+      log(`Anthropometric - Age: mean=${formatNumber(ageStats.mean)}, Height: mean=${formatNumber(heightStats.mean)}`);
+      log(`Anthropometric - Weight: mean=${formatNumber(weightStats.mean)}, BMI: mean=${formatNumber(bmiStats.mean)}, BSA: mean=${formatNumber(bsaStats.mean)}`);
+      
+      const tbody = document.querySelector('#anthropometricTable tbody');
+      tbody.innerHTML = `
+        <tr>
+          <td>Age (years)</td>
+          <td>${formatNumber(ageStats.mean)}</td>
+          <td>${formatNumber(ageStats.median)}</td>
+          <td>${formatNumber(ageStats.min)}</td>
+          <td>${formatNumber(ageStats.max)}</td>
+        </tr>
+        <tr>
+          <td>Height (cm)</td>
+          <td>${formatNumber(heightStats.mean)}</td>
+          <td>${formatNumber(heightStats.median)}</td>
+          <td>${formatNumber(heightStats.min)}</td>
+          <td>${formatNumber(heightStats.max)}</td>
+        </tr>
+        <tr>
+          <td>Weight (kg)</td>
+          <td>${formatNumber(weightStats.mean)}</td>
+          <td>${formatNumber(weightStats.median)}</td>
+          <td>${formatNumber(weightStats.min)}</td>
+          <td>${formatNumber(weightStats.max)}</td>
+        </tr>
+        <tr>
+          <td>BMI (kg/m²)</td>
+          <td>${formatNumber(bmiStats.mean)}</td>
+          <td>${formatNumber(bmiStats.median)}</td>
+          <td>${formatNumber(bmiStats.min)}</td>
+          <td>${formatNumber(bmiStats.max)}</td>
+        </tr>
+        <tr>
+          <td>BSA (m²)</td>
+          <td>${formatNumber(bsaStats.mean)}</td>
+          <td>${formatNumber(bsaStats.median)}</td>
+          <td>${formatNumber(bsaStats.min)}</td>
+          <td>${formatNumber(bsaStats.max)}</td>
+        </tr>
+      `;
+    }
+    
+    // ========================================
+    // Part 6: Data Completeness Summary
+    // ========================================
+    function renderDataCompletenessSummary(dmmr) {
+      const stats = window.demographicsStats || {};
+      
+      // Calculate completeness percentages
+      const sexComplete = stats.bigN > 0 ? (((stats.maleCount + stats.femaleCount) / stats.bigN) * 100).toFixed(1) : 0;
+      const sexMissing = stats.bigN > 0 ? ((stats.unknownSexCount / stats.bigN) * 100).toFixed(1) : 0;
+      
+      // Race completeness
+      const raceData = dmmr.map(row => {
+        const flags = {
+          WHITE: row.WHITE_STD && row.WHITE_STD !== '' && row.WHITE_STD !== '0',
+          NATIVE_HAWAIIAN: row.NATIVE_HAWAIIAN_STD && row.NATIVE_HAWAIIAN_STD !== '' && row.NATIVE_HAWAIIAN_STD !== '0',
+          BLACK: row.BLACK_STD && row.BLACK_STD !== '' && row.BLACK_STD !== '0',
+          ASIAN: row.ASIAN_STD && row.ASIAN_STD !== '' && row.ASIAN_STD !== '0',
+          AMERICAN_INDIAN: row.AMERICAN_INDIAN_STD && row.AMERICAN_INDIAN_STD !== '' && row.AMERICAN_INDIAN_STD !== '0',
+          OTHER: row.OTHER_STD && row.OTHER_STD !== '' && row.OTHER_STD !== '0'
+        };
+        return Object.values(flags).some(Boolean);
+      });
+      const raceKnownCount = raceData.filter(Boolean).length;
+      const raceUnknownCount = stats.bigN - raceKnownCount;
+      const raceComplete = stats.bigN > 0 ? ((raceKnownCount / stats.bigN) * 100).toFixed(1) : 0;
+      
+      // Ethnicity completeness
+      const ethKnownCount = dmmr.filter(row => row.ETHNIC_STD && row.ETHNIC_STD !== '' && row.ETHNIC_STD.toUpperCase() !== 'UNKNOWN').length;
+      const ethUnknownCount = stats.bigN - ethKnownCount;
+      const ethComplete = stats.bigN > 0 ? ((ethKnownCount / stats.bigN) * 100).toFixed(1) : 0;
+      
+      // Age completeness
+      const ageComplete = stats.bigN > 0 ? ((stats.agesCount / stats.bigN) * 100).toFixed(1) : 0;
+      const ageMissing = stats.bigN - stats.agesCount;
+      
+      const html = `
+        <table class="completeness-table">
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Known/Complete</th>
+              <th>Unknown/Missing</th>
+              <th>Completeness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="${stats.unknownSexCount > 0 ? 'missing-highlight' : 'complete'}">
+              <td><strong>Sex</strong></td>
+              <td>${stats.maleCount + stats.femaleCount} (Male: ${stats.maleCount}, Female: ${stats.femaleCount})</td>
+              <td>${stats.unknownSexCount}</td>
+              <td>${sexComplete}%</td>
+            </tr>
+            <tr class="${raceUnknownCount > 0 ? 'missing-highlight' : 'complete'}">
+              <td><strong>Race</strong></td>
+              <td>${raceKnownCount}</td>
+              <td>${raceUnknownCount}</td>
+              <td>${raceComplete}%</td>
+            </tr>
+            <tr class="${ethUnknownCount > 0 ? 'missing-highlight' : 'complete'}">
+              <td><strong>Ethnicity</strong></td>
+              <td>${ethKnownCount}</td>
+              <td>${ethUnknownCount}</td>
+              <td>${ethComplete}%</td>
+            </tr>
+            <tr class="${ageMissing > 0 ? 'missing-highlight' : 'complete'}">
+              <td><strong>Age</strong></td>
+              <td>${stats.agesCount}</td>
+              <td>${ageMissing}</td>
+              <td>${ageComplete}%</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 15px; font-size: 0.85rem; color: #666;">
+          <strong>Note:</strong> Safety Analysis Set (N=${stats.bigN}) is defined as subjects who received at least one dose of study treatment. 
+          Demographics data is filtered to subjects with Vital Signs (VS) records (n=${stats.dmmrCount} subjects in filtered DMMR). 
+          ${stats.missingSexCount > 0 ? `<br><strong>Discrepancy:</strong> ${stats.missingSexCount} subject(s) in the Safety Set do not have matching DMMR records or have incomplete sex data.` : ''}
+        </p>
+      `;
+      
+      document.getElementById('dataCompletenessSummary').innerHTML = html;
+      log(`Data completeness rendered - Sex: ${sexComplete}%, Race: ${raceComplete}%, Ethnicity: ${ethComplete}%, Age: ${ageComplete}%`);
+    }
+    
+    // ========================================
+    // Auto-initialize on page load
+    // ========================================
+    document.addEventListener('DOMContentLoaded', function() {
+      waitForChart(initDashboard);
+    });
+  </script>
+</body>
+</html>

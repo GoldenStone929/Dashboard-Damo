@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab Original Values - Laboratory Results</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="../../assets/js/hardcode.js"></script>
+  <script src="../../assets/js/block-export.js"></script>
+  <script src="../../assets/js/word-export.js"></script>
+  <script src="../../assets/js/pdf-export.js"></script>
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --normal-range: rgba(34, 197, 94, 0.15);
+      --border-color: #e2e8f0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .page-content { margin-top: 60px; }
+
+    .page-header {
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .page-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 28px;
+      background: linear-gradient(180deg, var(--accent-blue) 0%, var(--accent-green) 100%);
+      border-radius: 2px;
+    }
+
+    .main-content { padding: 24px 32px; }
+
+    .info-panel {
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+      color: #0369a1;
+    }
+
+    .info-panel h4 {
+      margin: 0 0 8px 0;
+      color: #0c4a6e;
+    }
+
+    .info-panel ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .info-panel li { margin-bottom: 4px; }
+
+    .filter-bar {
+      background: var(--bg-secondary);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      border: 1px solid var(--border-color);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .filter-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 16px 20px;
+      border: 1px solid var(--border-color);
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .chart-main {
+      flex: 0 0 60%;
+      display: flex;
+      flex-direction: column;
+      min-width: 0; /* Allow shrinking */
+    }
+
+    .chart-info-panel {
+      flex: 0 0 40%;
+      border-left: 1px solid var(--border-color);
+      background: #f8fafc;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      overflow-x: auto;
+      min-width: 0; /* Allow shrinking */
+    }
+
+    .info-section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .info-section-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .range-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .range-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+
+    .range-color {
+      width: 20px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    .data-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .data-details-table thead { background: #e2e8f0; }
+
+    .data-details-table th {
+      padding: 8px 6px;
+      text-align: center;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #cbd5e1;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .data-details-table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #475569;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .data-details-table tbody tr:hover { background: #f1f5f9; }
+
+    .status-normal { color: #16a34a; font-weight: 600; }
+    .status-high { color: #dc2626; font-weight: 600; }
+    .status-low { color: #2563eb; font-weight: 600; }
+
+    .chart-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chart-subtitle {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .chart-header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .chart-dose {
+      font-size: 0.75rem;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .chart-units {
+      font-size: 0.7rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .chart-body {
+      padding: 16px;
+      flex: 1;
+      min-height: 350px;
+      position: relative;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .xaxis-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toggle-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .toggle-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      background: white;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:first-of-type {
+      border-radius: 6px 0 0 6px;
+    }
+
+    .toggle-btn:last-of-type {
+      border-radius: 0 6px 6px 0;
+      border-left: none;
+    }
+
+    .toggle-btn:hover {
+      background: #f1f5f9;
+    }
+
+    .toggle-btn.active {
+      background: var(--accent-blue);
+      color: white;
+      border-color: var(--accent-blue);
+    }
+
+    /* Ensure chart card doesn't overflow */
+    .chart-card {
+      min-width: 0; /* Allow flex items to shrink below content size */
+    }
+
+    .data-details-table {
+      min-width: 350px; /* Minimum table width to ensure readability */
+    }
+
+    /* Medium screens: adjust ratio */
+    @media (max-width: 1400px) {
+      .chart-main { flex: 0 0 55%; }
+      .chart-info-panel { flex: 0 0 45%; }
+    }
+
+    /* Tablet/narrow screens: stack vertically */
+    @media (max-width: 1100px) {
+      .chart-card { flex-direction: column; }
+      .chart-main { flex: none; width: 100%; }
+      .chart-info-panel { 
+        flex: none; 
+        width: 100%;
+        border-left: none; 
+        border-top: 1px solid var(--border-color);
+        max-height: 350px;
+        overflow-y: auto;
+        overflow-x: auto;
+      }
+      .data-details-table {
+        min-width: unset;
+        width: 100%;
+      }
+    }
+
+    /* Mobile screens */
+    @media (max-width: 768px) {
+      .main-content { padding: 16px; }
+      .page-header { padding: 16px; }
+      .filter-bar { flex-direction: column; }
+      .filter-group { min-width: 100%; }
+      .chart-body { min-height: 250px; }
+      .xaxis-toggle { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header id="global-nav"></header>
+
+  <div class="page-content">
+    <div class="page-header">
+      <h1 class="page-title">Lab Original Values</h1>
+    </div>
+
+    <main class="main-content">
+      <div class="info-panel">
+        <h4>📊 Original Lab Values Display</h4>
+        <ul>
+          <li><strong>Values:</strong> Original lab values (NumericValue from lab.csv)</li>
+          <li><strong>Normal Range:</strong> Lab normal range (LabHigh, LabLow from lab.csv) - shown as green shaded zone</li>
+          <li><strong>Units:</strong> Lab units (LabUnits from lab.csv)</li>
+          <li><strong>Status:</strong> Normal (within range), High (above LabHigh), or Low (below LabLow)</li>
+          <li><strong>X-Axis Toggle:</strong> Switch between Visits (categorical) and Study Days (numeric, Day 0 = C0D1/Screening)</li>
+          <li><strong>Export to Word:</strong> Export all charts to a Word document (.docx), one chart per page</li>
+        </ul>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label">Subject</label>
+          <select id="subjectSelect" class="filter-select" onchange="updateCharts()">
+            <option value="">Select Subject...</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Dose Group</label>
+          <select id="doseSelect" class="filter-select" onchange="updateCharts()">
+            <option value="all">All Dose Groups</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Analyte</label>
+          <select id="analyteSelect" class="filter-select" onchange="updateCharts()">
+            <option value="all">All Analytes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats-row" id="statsRow" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-value" id="statPatients">0</div>
+          <div class="stat-label">Patients</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAnalytes">0</div>
+          <div class="stat-label">Analytes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statRecords">0</div>
+          <div class="stat-label">Records</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAbnormal">0</div>
+          <div class="stat-label">Abnormal Values</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div class="xaxis-toggle">
+          <span class="toggle-label">X-Axis:</span>
+          <button id="btnVisits" class="toggle-btn active" onclick="setXAxisMode('visits')">Visits</button>
+          <button id="btnStudyDays" class="toggle-btn" onclick="setXAxisMode('studydays')">Study Days</button>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="export-btn" onclick="showBlockExportDialog('chartsContainer', 'Lab_Original_Charts')">Export</button>
+          <button class="export-word-btn" onclick="exportChartsToWord('chartsGrid', 'Lab_Original_Values')">Export to Word</button>
+          <button class="export-pdf-btn" onclick="exportChartsToPDF('chartsGrid', 'Lab_Original_Values')">Export to PDF</button>
+        </div>
+      </div>
+
+      <div id="chartsContainer">
+        <div class="loading" id="loadingState">
+          <div class="spinner"></div>
+          <div>Loading laboratory data...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('labs', 'lab-original', '../../');
+    }
+  </script>
+
+  <script>
+    // ============================================================================
+    // Global Variables
+    // ============================================================================
+    let labData = [];
+    let charts = {};
+    let xAxisMode = 'visits'; // 'visits' or 'studydays'
+    let baselineDates = {}; // Subject -> baseline date for StudyDay calculation
+
+    const ANALYTE_NAME_MAP = {
+      'Alanine Aminotransferase; ALT': 'ALT',
+      'Aspartate Aminotransferase; AST': 'AST',
+      'Alkaline Phosphatase; ALP': 'ALP',
+      'Bilirubin; BILI': 'BILI',
+      'GGT; GGT': 'GGT',
+      'Creatinine; CREAT': 'CREAT',
+      'Platelets; PLAT': 'PLAT',
+      'Neutrophils; NEUT': 'NEUT',
+      'Hemoglobin; HGB': 'HGB',
+      'Leukocytes; WBC': 'WBC',
+      'Lymphocytes; LYM': 'LYM',
+      'Potassium; K': 'K',
+      'Sodium; SODIUM': 'SODIUM',
+      'Calcium; CA': 'CA',
+      'Glucose; GLUC': 'GLUC'
+    };
+
+    function getAnalyteShortName(fullName) {
+      if (ANALYTE_NAME_MAP[fullName]) return ANALYTE_NAME_MAP[fullName];
+      if (fullName.includes(';')) return fullName.split(';').pop().trim();
+      return fullName;
+    }
+
+    // ============================================================================
+    // X-Axis Mode Toggle
+    // ============================================================================
+    function setXAxisMode(mode) {
+      xAxisMode = mode;
+      // Update button states
+      document.getElementById('btnVisits').classList.toggle('active', mode === 'visits');
+      document.getElementById('btnStudyDays').classList.toggle('active', mode === 'studydays');
+      // Redraw charts
+      updateCharts();
+    }
+
+    // ============================================================================
+    // Data Loading
+    // ============================================================================
+    async function loadCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data),
+          error: (error) => reject(error)
+        });
+      });
+    }
+
+    async function loadLabData() {
+      const loadingEl = document.getElementById('loadingState');
+      loadingEl.innerHTML = '<div class="spinner"></div><div>Loading lab.CSV, lblc.CSV, and dm.CSV...</div>';
+
+      try {
+        const [rawLabData, lblcData, dmData] = await Promise.all([
+          loadCSV('../../data/lab.CSV'),
+          loadCSV('../../data/lblc.CSV').catch(() => []),
+          loadCSV('../../data/dm.CSV').catch(() => [])
+        ]);
+
+        processLabData(rawLabData, lblcData, dmData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        loadingEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>Error loading data: ' + error.message + '</div></div>';
+      }
+    }
+
+    function parseDate(dateStr) {
+      if (!dateStr || dateStr === '') return null;
+      const match = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const monthMap = { 'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5, 'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11 };
+        const month = monthMap[monthStr];
+        if (month !== undefined) return new Date(year, month, day);
+      }
+      const fallbackDate = new Date(dateStr);
+      return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const match = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = match[1].padStart(2, '0');
+        const month = match[2].toUpperCase();
+        const year = match[3];
+        return `${day}-${month}-${year}`;
+      }
+      return dateStr;
+    }
+
+    function processLabData(data, lblcData = [], dmData = []) {
+      if (!data || data.length === 0) {
+        document.getElementById('loadingState').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data found in lab.CSV</div></div>';
+        return;
+      }
+
+      // Build lookup from lblc.CSV
+      // Key: Subject + InstanceName -> { date, instanceName }
+      // InstanceName has full visit names like "Unscheduled Visits (2)", "Unscheduled Visits (3)"
+      const visitLookup = new Map();
+      if (lblcData && lblcData.length > 0) {
+        lblcData.forEach(row => {
+          const subject = row.Subject || row.SUBJID;
+          const instanceName = row.InstanceName; // Full visit name
+          const dateStr = row.LBDAT || ''; // Use LBDAT for date
+          if (subject && instanceName) {
+            visitLookup.set(`${subject}|${instanceName}`, {
+              date: dateStr,
+              instanceName: instanceName
+            });
+          }
+        });
+      }
+
+      // Build ARM lookup from dm.CSV
+      const armLookup = {};
+      if (dmData && dmData.length > 0) {
+        dmData.forEach(row => {
+          const subject = row.Subject || row.SUBJID;
+          const arm = row.ARM;
+          if (subject) armLookup[String(subject).trim()] = String(arm || '').trim() || 'Unknown';
+        });
+      }
+
+      const cols = Object.keys(data[0]);
+
+      // Process each row - use Lab values (NumericValue, LabLow, LabHigh, LabUnits)
+      labData = data.filter(row => {
+        const subject = row.Subject || row.SUBJID;
+        const analyte = row.AnalyteName || row.LBTEST;
+        const folder = row.Folder;
+        return subject && analyte && folder;
+      }).map(row => {
+        const subject = row.Subject || row.SUBJID;
+        const folder = row.Folder; // Keep original short name (USV, SCR, etc.)
+        const analyte = row.AnalyteName || row.LBTEST;
+
+        // Use InstanceName from lab.csv for lookup (to get correct date for duplicates)
+        const instanceName = row.InstanceName || folder;
+        
+        // Look up visit info using Subject + InstanceName
+        const lookupKey = `${subject}|${instanceName}`;
+        const visitInfo = visitLookup.get(lookupKey);
+        
+        // Get date from lookup or fallback
+        let dateStr = visitInfo?.date || row.LBDAT || '';
+        const dateObj = parseDate(dateStr);
+
+        // Use NumericValue (original lab value) - NOT StdValue
+        const rawValue = row.NumericValue ?? row.LBORRES ?? '';
+        const parsedValue = parseFloat(rawValue);
+        const labValue = Number.isFinite(parsedValue) ? parsedValue : null;
+
+        // Use LabLow and LabHigh (original lab normal range)
+        const rawLow = row.LabLow ?? row.LBORNRLO ?? '';
+        const rawHigh = row.LabHigh ?? row.LBORNRHI ?? '';
+        const labLow = Number.isFinite(parseFloat(rawLow)) ? parseFloat(rawLow) : null;
+        const labHigh = Number.isFinite(parseFloat(rawHigh)) ? parseFloat(rawHigh) : null;
+
+        // Use LabUnits
+        const labUnits = row.LabUnits || row.LBORRESU || '';
+
+        return {
+          Subject: subject,
+          AnalyteName: analyte,
+          Folder: folder, // Keep original short Folder name
+          FolderDisplay: folder, // Will be updated with numbers for duplicates
+          InstanceName: instanceName, // Keep for reference
+          Value: labValue,
+          Low: labLow,
+          High: labHigh,
+          Units: labUnits,
+          RecordDate: dateStr,
+          DateObj: dateObj,
+          ARM: armLookup[String(subject).trim()] || 'Unknown',
+          IsHardcoded: false
+        };
+      });
+
+      // Merge hardcoded data if available
+      if (typeof LABS_HARDCODED_DATA !== 'undefined') {
+        labData = LABS_HARDCODED_DATA.mergeWithCSVData(labData);
+        console.log('Merged hardcoded lab data. Total records:', labData.length);
+      }
+
+      // Add number suffixes for duplicate Folder names within each Subject+Analyte group
+      // First, sort all data by date
+      labData.sort((a, b) => {
+        if (a.DateObj && b.DateObj) return a.DateObj - b.DateObj;
+        if (a.DateObj && !b.DateObj) return -1;
+        if (!a.DateObj && b.DateObj) return 1;
+        return 0;
+      });
+
+      // Group by Subject + Analyte, then number duplicates
+      const groupKey = (r) => `${r.Subject}|${r.AnalyteName}`;
+      const groups = {};
+      labData.forEach(row => {
+        const key = groupKey(row);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      // For each group, find duplicate Folder names and add numbers
+      Object.values(groups).forEach(group => {
+        // Count occurrences of each Folder name
+        const folderCounts = {};
+        group.forEach(row => {
+          folderCounts[row.Folder] = (folderCounts[row.Folder] || 0) + 1;
+        });
+
+        // Track current index for each Folder that has duplicates
+        const folderIndex = {};
+        group.forEach(row => {
+          if (folderCounts[row.Folder] > 1) {
+            // Has duplicates, add number suffix
+            folderIndex[row.Folder] = (folderIndex[row.Folder] || 0) + 1;
+            row.FolderDisplay = `${row.Folder}${folderIndex[row.Folder]}`;
+          } else {
+            // No duplicates, use original name
+            row.FolderDisplay = row.Folder === 'DSET' ? 'End of Treatment' : row.Folder;
+          }
+        });
+      });
+
+      // Calculate baseline dates for each subject (C0D1 or first screening visit)
+      // Baseline is Day 0 for StudyDay calculation
+      baselineDates = {};
+      const subjects = [...new Set(labData.map(r => r.Subject))];
+      subjects.forEach(subject => {
+        const subjectRows = labData.filter(r => r.Subject === subject && r.DateObj);
+        if (subjectRows.length === 0) return;
+        
+        // Look for C0D1 or C1D1 first (dosing start)
+        const c0d1 = subjectRows.find(r => /^(C0D1|C1D1)$/i.test(r.Folder));
+        // Then look for screening visits
+        const scrn = subjectRows.find(r => /^(SCREEN|SCR|SCRN|BL|BASELINE)$/i.test(r.Folder));
+        
+        // Use C0D1 if found, otherwise use screening, otherwise first visit
+        if (c0d1 && c0d1.DateObj) {
+          baselineDates[subject] = c0d1.DateObj;
+        } else if (scrn && scrn.DateObj) {
+          baselineDates[subject] = scrn.DateObj;
+        } else {
+          // Sort by date and use the first one
+          const sorted = subjectRows.sort((a, b) => a.DateObj - b.DateObj);
+          baselineDates[subject] = sorted[0].DateObj;
+        }
+      });
+
+      // Calculate StudyDay for each record
+      labData.forEach(row => {
+        if (row.DateObj && baselineDates[row.Subject]) {
+          const diffMs = row.DateObj - baselineDates[row.Subject];
+          row.StudyDay = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        } else {
+          row.StudyDay = null;
+        }
+      });
+
+      document.getElementById('loadingState').style.display = 'none';
+
+      if (labData.length === 0) {
+        document.getElementById('chartsContainer').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No valid laboratory data found</div></div>';
+        return;
+      }
+
+      populateFilters();
+      document.getElementById('statsRow').style.display = 'flex';
+      updateCharts();
+    }
+
+    function populateFilters() {
+      // Subjects
+      const subjects = [...new Set(labData.map(r => r.Subject))].sort();
+      const subjectSelect = document.getElementById('subjectSelect');
+      subjectSelect.innerHTML = '<option value="">All Subjects</option>' +
+        subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      if (subjects.length > 0) subjectSelect.value = subjects[0];
+
+      // Dose groups
+      const doseGroups = [...new Set(labData.map(r => r.ARM))].sort();
+      const doseSelect = document.getElementById('doseSelect');
+      doseSelect.innerHTML = '<option value="all">All Dose Groups</option>' +
+        doseGroups.map(d => `<option value="${d}">${d}</option>`).join('');
+
+      // Analytes
+      const analytes = [...new Set(labData.map(r => r.AnalyteName))].sort();
+      const analyteSelect = document.getElementById('analyteSelect');
+      analyteSelect.innerHTML = '<option value="all">All Analytes</option>' +
+        analytes.map(a => `<option value="${a}">${a}</option>`).join('');
+    }
+
+    // ============================================================================
+    // Chart Rendering
+    // ============================================================================
+    function updateCharts() {
+      const subject = document.getElementById('subjectSelect').value;
+      const doseGroup = document.getElementById('doseSelect').value;
+      const selectedAnalyte = document.getElementById('analyteSelect').value;
+
+      let filteredData = labData;
+      if (subject) filteredData = filteredData.filter(r => r.Subject === subject);
+      if (doseGroup !== 'all') filteredData = filteredData.filter(r => r.ARM === doseGroup);
+
+      // Get analytes to display
+      let analyteNames = [...new Set(labData.map(r => r.AnalyteName))].sort();
+      if (selectedAnalyte !== 'all') analyteNames = [selectedAnalyte];
+
+      // Update stats
+      updateStats(filteredData, selectedAnalyte);
+
+      // Destroy existing charts
+      Object.values(charts).forEach(chart => chart.destroy());
+      charts = {};
+
+      const container = document.getElementById('chartsContainer');
+      container.innerHTML = '<div class="charts-grid" id="chartsGrid"></div>';
+      const grid = document.getElementById('chartsGrid');
+
+      const subjects = [...new Set(filteredData.map(r => r.Subject))].sort();
+      if (subjects.length === 0 || analyteNames.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data matches the current filters</div></div>';
+        return;
+      }
+
+      // Create charts
+      analyteNames.forEach(analyteName => {
+        subjects.forEach(subj => {
+          const subjectData = filteredData.filter(r => r.Subject === subj && r.AnalyteName === analyteName);
+          if (subjectData.length > 0) {
+            createChart(grid, analyteName, subj, subjectData);
+          }
+        });
+      });
+
+      if (grid.children.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No data points to display</div></div>';
+      }
+    }
+
+    function createChart(container, analyteName, subject, data) {
+      const hasNumericValues = data.some(r => Number.isFinite(r.Value));
+      if (!hasNumericValues) return;
+
+      // Sort by date
+      data.sort((a, b) => {
+        if (a.DateObj && b.DateObj) return a.DateObj - b.DateObj;
+        if (a.DateObj && !b.DateObj) return -1;
+        if (!a.DateObj && b.DateObj) return 1;
+        return a.FolderDisplay.localeCompare(b.FolderDisplay);
+      });
+
+      const numericData = data.filter(r => Number.isFinite(r.Value));
+      
+      // Pre-check: if Study Days mode and no valid StudyDay data, skip this chart
+      if (xAxisMode === 'studydays') {
+        const hasStudyDayData = numericData.some(r => r.StudyDay !== null && r.StudyDay !== undefined);
+        if (!hasStudyDayData) return;
+      }
+      const firstRow = numericData[0];
+      const labLow = firstRow.Low;
+      const labHigh = firstRow.High;
+      const labUnits = firstRow.Units || '';
+      const hasLow = Number.isFinite(labLow);
+      const hasHigh = Number.isFinite(labHigh);
+
+      // Determine status for each value
+      function getStatus(value) {
+        if (!Number.isFinite(value)) return 'N/A';
+        if (hasLow && value < labLow) return 'Low';
+        if (hasHigh && value > labHigh) return 'High';
+        return 'Normal';
+      }
+
+      // Build range info HTML
+      let rangeInfoHTML = '';
+      if (hasLow && hasHigh) {
+        rangeInfoHTML = `
+          <div class="range-item">
+            <div class="range-color" style="background: #22c55e;"></div>
+            <span><strong>Normal Range:</strong> ${labLow.toFixed(2)} - ${labHigh.toFixed(2)} ${labUnits}</span>
+          </div>
+          <div class="range-item">
+            <div class="range-color" style="background: #2563eb;"></div>
+            <span><strong>Low:</strong> &lt; ${labLow.toFixed(2)} ${labUnits}</span>
+          </div>
+          <div class="range-item">
+            <div class="range-color" style="background: #dc2626;"></div>
+            <span><strong>High:</strong> &gt; ${labHigh.toFixed(2)} ${labUnits}</span>
+          </div>
+        `;
+      } else if (hasLow) {
+        rangeInfoHTML = `
+          <div class="range-item">
+            <span><strong>Lower Limit (LLN):</strong> ${labLow.toFixed(2)} ${labUnits}</span>
+          </div>
+        `;
+      } else if (hasHigh) {
+        rangeInfoHTML = `
+          <div class="range-item">
+            <span><strong>Upper Limit (ULN):</strong> ${labHigh.toFixed(2)} ${labUnits}</span>
+          </div>
+        `;
+      } else {
+        rangeInfoHTML = '<div style="color: #64748b;">No normal range available</div>';
+      }
+
+      // Build data details table
+      let dataDetailsHTML = `
+        <table class="data-details-table">
+          <thead>
+            <tr>
+              <th>Visit</th>
+              <th>Study Day</th>
+              <th>Value</th>
+              <th>Status</th>
+              <th>LLN</th>
+              <th>ULN</th>
+              ${data.some(r => r.RecordDate) ? '<th>Date</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      data.forEach(row => {
+        const hasValue = Number.isFinite(row.Value);
+        const status = getStatus(row.Value);
+        const statusClass = status === 'Normal' ? 'status-normal' : (status === 'High' ? 'status-high' : (status === 'Low' ? 'status-low' : ''));
+        const studyDayDisplay = row.StudyDay !== null && row.StudyDay !== undefined ? row.StudyDay : '-';
+        dataDetailsHTML += `
+          <tr>
+            <td>${row.FolderDisplay}</td>
+            <td>${studyDayDisplay}</td>
+            <td>${hasValue ? row.Value.toFixed(2) : '-'} ${labUnits}</td>
+            <td class="${statusClass}">${status}</td>
+            <td>${hasLow ? labLow.toFixed(2) : '-'}</td>
+            <td>${hasHigh ? labHigh.toFixed(2) : '-'}</td>
+            ${row.RecordDate ? `<td>${formatDate(row.RecordDate)}</td>` : '<td></td>'}
+          </tr>
+        `;
+      });
+      dataDetailsHTML += '</tbody></table>';
+
+      const shortName = getAnalyteShortName(analyteName);
+      const doseGroup = data[0]?.ARM || 'Unknown';
+
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+      card.innerHTML = `
+        <div class="chart-main">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">${analyteName} <span class="chart-units">${labUnits || 'No units'}</span></div>
+              <div class="chart-subtitle">Subject: ${subject}</div>
+            </div>
+            <div class="chart-header-right">
+              <div class="chart-dose">Dose Group: ${doseGroup}</div>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-${shortName}-${subject.replace(/[^a-zA-Z0-9]/g, '_')}"></canvas>
+          </div>
+        </div>
+        <div class="chart-info-panel">
+          <div class="info-section">
+            <div class="info-section-title">Lab Normal Range</div>
+            <div class="range-info">${rangeInfoHTML}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-section-title">Data Details</div>
+            ${dataDetailsHTML}
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+
+      // Create chart
+      const ctx = card.querySelector('canvas').getContext('2d');
+      
+      // Filter data based on mode
+      let chartData = numericData;
+      if (xAxisMode === 'studydays') {
+        // Only include data with valid StudyDay
+        chartData = numericData.filter(r => r.StudyDay !== null && r.StudyDay !== undefined);
+        // Sort by StudyDay for proper line connection
+        chartData.sort((a, b) => a.StudyDay - b.StudyDay);
+      }
+
+      const labels = chartData.map(r => r.FolderDisplay);
+      const values = chartData.map(r => r.Value);
+
+      // Calculate Y axis range
+      let allValues = [...values];
+      if (hasLow) allValues.push(labLow);
+      if (hasHigh) allValues.push(labHigh);
+      const minVal = Math.min(...allValues.filter(v => isFinite(v)));
+      const maxVal = Math.max(...allValues.filter(v => isFinite(v)));
+      const padding = (maxVal - minVal) * 0.15 || 1;
+      // Round Y-axis bounds to whole numbers
+      const yMin = Math.max(0, Math.floor(minVal - padding));
+      const yMax = Math.ceil(maxVal + padding);
+
+      // Build annotations
+      const annotations = {};
+      if (hasLow && hasHigh) {
+        annotations.normalRange = {
+          type: 'box',
+          yMin: labLow,
+          yMax: labHigh,
+          backgroundColor: 'rgba(34, 197, 94, 0.15)',
+          borderColor: 'rgba(34, 197, 94, 0.4)',
+          borderWidth: 1
+        };
+        annotations.llnLine = {
+          type: 'line',
+          yMin: labLow,
+          yMax: labLow,
+          borderColor: '#22c55e',
+          borderWidth: 1,
+          borderDash: [4, 4]
+        };
+        annotations.ulnLine = {
+          type: 'line',
+          yMin: labHigh,
+          yMax: labHigh,
+          borderColor: '#22c55e',
+          borderWidth: 1,
+          borderDash: [4, 4]
+        };
+      }
+
+      // Point colors based on status
+      const pointColors = chartData.map(r => {
+        const status = getStatus(r.Value);
+        if (status === 'High') return '#dc2626';
+        if (status === 'Low') return '#2563eb';
+        return '#22c55e';
+      });
+
+      // Build chart configuration based on mode
+      let chartConfig;
+      
+      if (xAxisMode === 'studydays') {
+        // Study Days mode: numeric x-axis with scatter points connected by lines
+        const studyDays = chartData.map(r => r.StudyDay);
+        const maxStudyDay = Math.max(...studyDays, 0);
+        const minStudyDay = Math.min(...studyDays, 0);
+        const xMax = Math.ceil((maxStudyDay + 14) / 10) * 10;
+        const xMin = Math.floor((minStudyDay - 7) / 10) * 10;
+        
+        // Prepare data points with x,y coordinates
+        const dataPoints = chartData.map((r, idx) => ({
+          x: r.StudyDay,
+          y: r.Value,
+          folder: r.FolderDisplay
+        }));
+        
+        chartConfig = {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: `${analyteName} (${labUnits})`,
+              data: dataPoints,
+              borderColor: '#64748b',
+              backgroundColor: 'rgba(100, 116, 139, 0.1)',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              pointBackgroundColor: pointColors,
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              tension: 0,
+              fill: false,
+              showLine: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                callbacks: {
+                  title: function(context) {
+                    const point = context[0].raw;
+                    return `Visit: ${point.folder}`;
+                  },
+                  label: function(context) {
+                    const point = context.raw;
+                    const status = getStatus(point.y);
+                    return [
+                      `Study Day: ${point.x}`,
+                      `Value: ${point.y.toFixed(2)} ${labUnits}`,
+                      `Status: ${status}`
+                    ];
+                  }
+                }
+              },
+              annotation: { annotations: annotations }
+            },
+            scales: {
+              x: {
+                type: 'linear',
+                min: xMin,
+                max: xMax,
+                grid: { color: '#f1f5f9' },
+                ticks: { 
+                  color: '#1e293b', 
+                  font: { size: 11 },
+                  stepSize: 7
+                },
+                title: {
+                  display: true,
+                  text: 'Study Day (Day 0 = C0D1/Screening)',
+                  color: '#1e293b',
+                  font: { size: 11 }
+                }
+              },
+              y: {
+                min: yMin,
+                max: yMax,
+                grid: { color: '#f1f5f9' },
+                ticks: { color: '#1e293b', font: { size: 11 } },
+                title: {
+                  display: true,
+                  text: `Value (${labUnits})`,
+                  color: '#1e293b',
+                  font: { size: 12 }
+                }
+              }
+            }
+          }
+        };
+      } else {
+        // Visits mode: categorical x-axis (original behavior)
+        chartConfig = {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: `${analyteName} (${labUnits})`,
+              data: values,
+              borderColor: '#64748b',
+              backgroundColor: 'rgba(100, 116, 139, 0.1)',
+              borderWidth: 2,
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              pointBackgroundColor: pointColors,
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              tension: 0.1,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                callbacks: {
+                  label: function(context) {
+                    const value = context.parsed.y;
+                    const status = getStatus(value);
+                    return [`Value: ${value.toFixed(2)} ${labUnits}`, `Status: ${status}`];
+                  }
+                }
+              },
+              annotation: { annotations: annotations }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#1e293b', font: { size: 11 }, maxRotation: 45 }
+              },
+              y: {
+                min: yMin,
+                max: yMax,
+                grid: { color: '#f1f5f9' },
+                ticks: { color: '#1e293b', font: { size: 11 } },
+                title: {
+                  display: true,
+                  text: `Value (${labUnits})`,
+                  color: '#1e293b',
+                  font: { size: 12 }
+                }
+              }
+            }
+          }
+        };
+      }
+
+      const chart = new Chart(ctx, chartConfig);
+
+      charts[`${shortName}-${subject}`] = chart;
+    }
+
+    function updateStats(data, selectedAnalyte) {
+      const filteredByAnalyte = selectedAnalyte !== 'all' 
+        ? data.filter(r => r.AnalyteName === selectedAnalyte) 
+        : data;
+
+      document.getElementById('statPatients').textContent = [...new Set(data.map(r => r.Subject))].length;
+      document.getElementById('statAnalytes').textContent = [...new Set(data.map(r => r.AnalyteName))].length;
+      document.getElementById('statRecords').textContent = filteredByAnalyte.length;
+
+      const abnormal = filteredByAnalyte.filter(r => {
+        const low = r.Low;
+        const high = r.High;
+        const value = r.Value;
+        return (Number.isFinite(low) && Number.isFinite(value) && value < low) ||
+               (Number.isFinite(high) && Number.isFinite(value) && value > high);
+      }).length;
+      document.getElementById('statAbnormal').textContent = abnormal;
+    }
+
+    // ============================================================================
+    // Initialize
+    // ============================================================================
+    window.addEventListener('DOMContentLoaded', function() {
+      if (typeof initBlockExportDialog === 'function') {
+        initBlockExportDialog();
+        setBlockExportPrefix('Lab_Original');
+      }
+      loadLabData();
+    });
+  </script>
+</body>
+</html>

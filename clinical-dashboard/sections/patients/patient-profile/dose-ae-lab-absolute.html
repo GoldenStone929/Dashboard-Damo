@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dose & AE & Lab - absolute</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="../../../assets/js/chart-export.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../../../assets/js/block-export.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0; padding: 0; background: #f5f5f5; color: #333;
+    }
+    .lab-plots-container { max-width: 100%; margin: 0 auto; padding: 20px; }
+    .page-title { font-size: 28px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; }
+    .page-subtitle { font-size: 14px; color: #7F8C8D; margin-bottom: 20px; }
+    .controls-panel {
+      background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;
+      padding: 15px 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    .control-group label { font-weight: 600; color: #2C3E50; font-size: 13px; }
+    .control-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; min-width: 200px; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+    .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    .checkbox-group label { font-size: 13px; color: #34495E; }
+    .info-panel { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; }
+    .info-panel h4 { margin: 0 0 10px 0; color: #1565c0; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .info-item { display: flex; gap: 8px; }
+    .info-label { font-weight: 600; color: #1565c0; }
+    .info-value { color: #34495E; }
+    .plots-wrapper { display: flex; flex-direction: column; gap: 30px; }
+    .plot-section { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; position: relative; }
+    .plot-header { display: flex !important; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .plot-title { font-size: 16px; font-weight: bold; color: #2C3E50; text-align: center; flex: 1; }
+    .plot-subtitle { font-size: 19px; color: #7F8C8D; margin-bottom: 15px; text-align: center; }
+    .chart-wrapper { position: relative; width: 100%; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; background: #fff; }
+    .export-btn { 
+      background: #dc3545 !important; color: white !important; border: none !important; 
+      padding: 8px 16px !important; border-radius: 4px !important; cursor: pointer !important; 
+      font-size: 14px !important; font-weight: bold !important;
+      transition: background 0.2s; margin-left: 10px !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    }
+    .export-btn:hover { background: #c82333 !important; }
+    .chart-export-dialog { 
+      display: none; position: fixed; z-index: 1000; left: 50%; top: 50%; 
+      transform: translate(-50%, -50%); background: white; padding: 20px; 
+      border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+      min-width: 300px; 
+    }
+    .chart-export-dialog.active { display: block; }
+    .chart-export-dialog h3 { margin-top: 0; margin-bottom: 15px; }
+    .chart-export-dialog .form-group { margin-bottom: 15px; }
+    .chart-export-dialog label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .chart-export-dialog input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .chart-export-dialog .button-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .chart-export-dialog button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+    .chart-export-dialog .btn-primary { background: #4285f4; color: white; }
+    .chart-export-dialog .btn-secondary { background: #e0e0e0; color: #333; }
+    .chart-export-dialog-overlay {
+      display: none; position: fixed; z-index: 999; left: 0; top: 0; 
+      width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+    }
+    .chart-export-dialog-overlay.active { display: block; }
+    .no-data-message { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: #7F8C8D; font-size: 18px; }
+    .no-data-message .icon { font-size: 48px; margin-bottom: 10px; }
+    .loading-message { text-align: center; padding: 40px; color: #7F8C8D; }
+  </style>
+  <link rel="stylesheet" href="../../../assets/css/base.css">
+</head>
+<body>
+  <header id="global-nav"></header>
+  <nav class="local-tabs">
+    <button class="local-tab" onclick="location.href='../patient-list.html'">Patient List</button>
+    <button class="local-tab" onclick="location.href='summary.html'+location.search">Summary</button>
+    <button class="local-tab" onclick="location.href='medical-history.html'+location.search">Medical History</button>
+    <button class="local-tab" onclick="location.href='visit-compliance.html'+location.search">Visit Compliance</button>
+    <button class="local-tab" onclick="location.href='dose-ae-lab.html'+location.search">Dose & AE & Lab (normalized)</button>
+    <button class="local-tab active">Dose & AE & Lab (absolute)</button>
+    <button class="local-tab" onclick="location.href='dosing-history.html'+location.search">Dosing History</button>
+    <button class="local-tab" onclick="location.href='ae-teae.html'+location.search">TEAE</button>
+    <button class="local-tab" onclick="location.href='cm-timeline.html'+location.search">CM Timeline</button>
+    <button class="local-tab" onclick="location.href='cm-prior-tx.html'+location.search">Prior Tx</button>
+    <button class="local-tab" onclick="location.href='vitals.html'+location.search">Vitals</button>
+    <button class="local-tab" onclick="location.href='ecg-qtcf.html'+location.search">ECG/QTcF</button>
+    <button class="local-tab" onclick="location.href='labs.html'+location.search">Labs</button>
+  </nav>
+  <main class="page-content" style="padding: 20px;">
+    <div class="lab-plots-container">
+      <h1 class="page-title">Dose & Lab</h1>
+      <p class="page-subtitle">Laboratory values (absolute) with daily dosing</p>
+
+      <div class="controls-panel">
+        <div class="control-group">
+          <label>Select Patient</label>
+          <select id="patientSelect"><option value="">-- Select Patient --</option></select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="showDosing" checked>
+          <label for="showDosing">Show Daily Dosing</label>
+        </div>
+        <div class="control-group">
+          <label>Y-axis Scale</label>
+          <select id="yAxisScale">
+            <option value="linear">Linear</option>
+            <option value="log2">Log 2</option>
+            <option value="log10">Log 10</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-panel" id="infoPanel" style="display: none;">
+        <h4>📋 Patient Information</h4>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Patient ID:</span><span class="info-value" id="infoPatientId">-</span></div>
+          <div class="info-item"><span class="info-label">Total Lab Records:</span><span class="info-value" id="infoRecords">-</span></div>
+          <div class="info-item"><span class="info-label">Visits/Cycles:</span><span class="info-value" id="infoVisits">-</span></div>
+          <div class="info-item"><span class="info-label">Date Range:</span><span class="info-value" id="infoDateRange">-</span></div>
+          <div class="info-item"><span class="info-label">Dosing Period:</span><span class="info-value" id="infoDosingRange">-</span></div>
+        </div>
+      </div>
+
+      <div class="plots-wrapper" id="plotsWrapper" style="display: none;">
+        <div class="plot-section" id="exportBlockBILI">
+          <div class="plot-header">
+            <div class="plot-title" id="plotBILI-title">Bilirubin (BILI)</div>
+            <button class="export-btn" onclick="showBlockExportDialog('exportBlockBILI', 'BILI')">Export</button>
+          </div>
+          <div class="plot-subtitle" id="plotBILI-subtitle"></div>
+          <div class="chart-wrapper" id="chartWrapperBILI">
+            <canvas id="chartBILI"></canvas>
+          </div>
+          <div class="dose-source-text" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+
+        <div class="plot-section" id="exportBlockAST">
+          <div class="plot-header">
+            <div class="plot-title" id="plotAST-title">Aspartate Aminotransferase (AST)</div>
+            <button class="export-btn" onclick="showBlockExportDialog('exportBlockAST', 'AST')">Export</button>
+          </div>
+          <div class="plot-subtitle" id="plotAST-subtitle"></div>
+          <div class="chart-wrapper" id="chartWrapperAST">
+            <canvas id="chartAST"></canvas>
+          </div>
+          <div class="dose-source-text" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+
+        <div class="plot-section" id="exportBlockALT">
+          <div class="plot-header">
+            <div class="plot-title" id="plotALT-title">Alanine Aminotransferase (ALT)</div>
+            <button class="export-btn" onclick="showBlockExportDialog('exportBlockALT', 'ALT')">Export</button>
+          </div>
+          <div class="plot-subtitle" id="plotALT-subtitle"></div>
+          <div class="chart-wrapper" id="chartWrapperALT">
+            <canvas id="chartALT"></canvas>
+          </div>
+          <div class="dose-source-text" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+
+        <div class="plot-section" id="exportBlockALP">
+          <div class="plot-header">
+            <div class="plot-title" id="plotALP-title">Alkaline Phosphatase (ALP)</div>
+            <button class="export-btn" onclick="showBlockExportDialog('exportBlockALP', 'ALP')">Export</button>
+          </div>
+          <div class="plot-subtitle" id="plotALP-subtitle"></div>
+          <div class="chart-wrapper" id="chartWrapperALP">
+            <canvas id="chartALP"></canvas>
+          </div>
+          <div class="dose-source-text" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+
+        <div class="plot-section" id="exportBlockALB">
+          <div class="plot-header">
+            <div class="plot-title" id="plotALB-title">Albumin (ALB)</div>
+            <button class="export-btn" onclick="showBlockExportDialog('exportBlockALB', 'ALB')">Export</button>
+          </div>
+          <div class="plot-subtitle" id="plotALB-subtitle"></div>
+          <div class="chart-wrapper" id="chartWrapperALB">
+            <canvas id="chartALB"></canvas>
+          </div>
+          <div class="dose-source-text" style="font-size: 11px; color: #666; margin-top: 4px; text-align: center; font-style: italic;"></div>
+        </div>
+      </div>
+
+      <div class="no-data-message" id="noDataMessage">
+        <div class="icon">📊</div>
+        <div>Please select a patient to view laboratory value trends</div>
+      </div>
+
+      <div class="loading-message" id="loadingMessage" style="display: none;">
+        Loading data...
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ========================================================================
+    // Configuration
+    // ========================================================================
+    const DATA_PATHS = {
+      lab: '../../../data/lab.csv',
+      lblc: '../../../data/lblc.csv',
+      ecclin: '../../../data/ecclin.csv',
+      ecsd: '../../../data/ecsd.csv',
+      ecad: '../../../data/ecad.csv',
+      ecmd: '../../../data/ecmd.csv',
+      ae: '../../../data/ae.csv'
+    };
+
+    // ========================================================================
+    // Constants
+    // ========================================================================
+    const ANALYTE_NAMES = {
+      BILI: "Bilirubin; BILI", AST: "Aspartate Aminotransferase; AST",
+      ALT: "Alanine Aminotransferase; ALT", ALP: "Alkaline Phosphatase; ALP", ALB: "Albumin; ALB"
+    };
+    const PLOT_ANALYTES = ['BILI', 'AST', 'ALT', 'ALP', 'ALB'];
+    const ANALYTE_COLORS = { BILI: '#e74c3c', AST: '#3498db', ALT: '#2ecc71', ALP: '#f39c12', ALB: '#9b59b6' };
+    const X_AXIS_PADDING_DAYS = 7;
+
+    // ========================================================================
+    // State
+    // ========================================================================
+    const state = {
+      labData: [], lblcData: [], ecclinData: [], ecsdData: [], ecmdData: [], ecadData: [],
+      patients: [], currentPatient: null, charts: {},
+      c0d1Dates: {}, dailyDoses: {}, doseSource: {}, 
+      usvMappings: {}, // Cache for USV date mappings per patient
+      dataLoaded: false
+    };
+
+    // ========================================================================
+    // Data Loading
+    // ========================================================================
+    async function loadCSV(path) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(path, {
+          download: true, header: true, skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    // ========================================================================
+    // Lab Range Imputation
+    // ========================================================================
+    function imputeLabRanges(labData) {
+      const labHighLookup = {};
+      const labLowLookup = {};
+      
+      labData.forEach(row => {
+        const key = `${row.Subject}|||${row.AnalyteName}`;
+        if (!(key in labHighLookup) && row.LabHigh && parseFloat(row.LabHigh) > 0) {
+          labHighLookup[key] = parseFloat(row.LabHigh);
+        }
+        if (!(key in labLowLookup) && row.LabLow && parseFloat(row.LabLow) > 0) {
+          labLowLookup[key] = parseFloat(row.LabLow);
+        }
+      });
+      
+      let imputedCount = 0;
+      labData.forEach(row => {
+        const key = `${row.Subject}|||${row.AnalyteName}`;
+        if ((!row.LabHigh || parseFloat(row.LabHigh) <= 0 || isNaN(parseFloat(row.LabHigh))) && labHighLookup[key]) {
+          row.LabHigh = labHighLookup[key];
+          imputedCount++;
+        }
+        if ((!row.LabLow || parseFloat(row.LabLow) <= 0 || isNaN(parseFloat(row.LabLow))) && labLowLookup[key]) {
+          row.LabLow = labLowLookup[key];
+        }
+      });
+      
+      console.log(`Imputed ${imputedCount} missing LabHigh values`);
+      return labData;
+    }
+
+    async function loadAllData() {
+      document.getElementById('loadingMessage').style.display = 'block';
+      document.getElementById('noDataMessage').style.display = 'none';
+      
+      try {
+        const [lab, lblc, ecclin, ecsd, ecad, ecmd] = await Promise.all([
+          loadCSV(DATA_PATHS.lab), loadCSV(DATA_PATHS.lblc), loadCSV(DATA_PATHS.ecclin),
+          loadCSV(DATA_PATHS.ecsd), loadCSV(DATA_PATHS.ecad), loadCSV(DATA_PATHS.ecmd)
+        ]);
+
+        imputeLabRanges(lab);
+
+        state.labData = lab; state.lblcData = lblc; state.ecclinData = ecclin; state.ecsdData = ecsd;
+        state.ecadData = ecad; state.ecmdData = ecmd;
+
+        console.log('Data loaded:', {
+          lab: lab.length,
+          lblc: lblc.length,
+          ecclin: ecclin.length,
+          ecsd: ecsd.length,
+          ecad: ecad.length,
+          ecmd: ecmd.length
+        });
+
+        // Build USV mappings for all patients
+        buildAllUSVMappings();
+
+        const patientSet = new Set();
+        state.labData.forEach(r => { if (r.Subject) patientSet.add(r.Subject); });
+        state.patients = Array.from(patientSet).sort();
+
+        state.dataLoaded = true;
+        populatePatientSelect();
+        
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('loadingMessage').innerHTML = `
+          <div style="color: #e74c3c;">
+            <p>Error loading data files. Please check the file paths:</p>
+            <ul style="text-align: left; display: inline-block;">
+              ${Object.entries(DATA_PATHS).map(([k,v]) => `<li>${k}: ${v}</li>`).join('')}
+            </ul>
+          </div>`;
+      }
+    }
+
+    // ========================================================================
+    // USV Date Mapping Functions
+    // ========================================================================
+    
+    /**
+     * Build USV date mapping for a single patient
+     * Returns: { dateToUSV: { 'YYYY-MM-DD': 'USV1', ... }, usvToDate: { 'USV1': Date, ... }, usvDates: [Date, ...] }
+     */
+    function buildUSVDateMapping(patientId) {
+      // Get all USV records from lblc.csv for this patient
+      const usvRecords = state.lblcData
+        .filter(r => r.Subject === patientId && r.Folder && r.Folder.toUpperCase() === 'USV')
+        .map(r => ({
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null,
+          originalRow: r
+        }))
+        .filter(r => r.date !== null);
+      
+      // Add dateKey after filtering
+      usvRecords.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      // Sort by date chronologically
+      usvRecords.sort((a, b) => a.date - b.date);
+      
+      // Assign USV1, USV2, USV3... to unique dates
+      const dateToUSV = {};
+      const usvToDate = {};
+      const usvDates = [];
+      let usvIndex = 1;
+      
+      usvRecords.forEach(r => {
+        if (!dateToUSV[r.dateKey]) {
+          const usvName = `USV${usvIndex}`;
+          dateToUSV[r.dateKey] = usvName;
+          usvToDate[usvName] = r.date;
+          usvDates.push(r.date);
+          usvIndex++;
+        }
+      });
+      
+      console.log(`USV mapping for patient ${patientId}:`, {
+        totalUSVRecords: usvRecords.length,
+        uniqueDates: Object.keys(dateToUSV).length,
+        mapping: dateToUSV
+      });
+      
+      return { dateToUSV, usvToDate, usvDates };
+    }
+    
+    /**
+     * Build USV mappings for all patients
+     */
+    function buildAllUSVMappings() {
+      const patients = new Set();
+      state.lblcData.forEach(r => { if (r.Subject) patients.add(r.Subject); });
+      
+      patients.forEach(patientId => {
+        state.usvMappings[patientId] = buildUSVDateMapping(patientId);
+      });
+      
+      console.log('USV mappings built for all patients:', Object.keys(state.usvMappings).length);
+    }
+    
+    /**
+     * Get USV mapping for a patient (with caching)
+     */
+    function getUSVMapping(patientId) {
+      if (!state.usvMappings[patientId]) {
+        state.usvMappings[patientId] = buildUSVDateMapping(patientId);
+      }
+      return state.usvMappings[patientId];
+    }
+
+    function populatePatientSelect() {
+      const select = document.getElementById('patientSelect');
+      select.innerHTML = '<option value="">-- Select Patient --</option>' + 
+        state.patients.map(p => `<option value="${p}">${p}</option>`).join('');
+      
+      if (state.patients.length > 0) {
+        // Try to get patient ID from URL parameter
+        const params = new URLSearchParams(window.location.search);
+        const patientIdFromUrl = params.get('id');
+        let selectedPatient = patientIdFromUrl && state.patients.includes(patientIdFromUrl) 
+          ? patientIdFromUrl 
+          : state.patients[0];
+        
+        // If URL has invalid patient ID, use first patient and update URL
+        if (patientIdFromUrl && !state.patients.includes(patientIdFromUrl)) {
+          selectedPatient = state.patients[0];
+          history.replaceState(null, '', `?id=${selectedPatient}`);
+        } else if (!patientIdFromUrl) {
+          // If no URL parameter, use first patient and update URL
+          history.replaceState(null, '', `?id=${selectedPatient}`);
+        }
+        
+        select.value = selectedPatient;
+        state.currentPatient = selectedPatient;
+        
+        setTimeout(() => {
+          renderCharts();
+        }, 50);
+      }
+    }
+
+    // ========================================================================
+    // Utility Functions
+    // ========================================================================
+    function parseDate(dateStr) {
+      if (!dateStr) return null;
+      const str = String(dateStr).trim();
+      const match = str.match(/^(\d{1,2})([A-Z]{3})(\d{4})/i);
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthStr = match[2].toUpperCase();
+        const year = parseInt(match[3]);
+        const months = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+        const month = months[monthStr];
+        if (month !== undefined) return new Date(year, month, day);
+      }
+      return null;
+    }
+
+    function dateToKey(date) {
+      if (!date) return null;
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+
+    function formatDateShort(date) {
+      if (!date) return '';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${date.getDate()}${months[date.getMonth()]}${date.getFullYear()}`;
+    }
+
+    function formatDateForECAD(date) {
+      if (!date) return '';
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day}${month}${year}:00:00:00.000`;
+    }
+
+    function calculateStudyDay(targetDate, c0d1Date) {
+      if (!targetDate || !c0d1Date) return null;
+      return Math.round((targetDate - c0d1Date) / (1000 * 60 * 60 * 24));
+    }
+
+    function studyDayToDate(studyDay, c0d1Date) {
+      if (!c0d1Date || studyDay === null) return null;
+      const result = new Date(c0d1Date);
+      result.setDate(result.getDate() + studyDay);
+      return result;
+    }
+
+    function getC0D1Date(patientId) {
+      if (state.c0d1Dates[patientId]) return state.c0d1Dates[patientId];
+      const patientLblc = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => ({ folder: r.Folder, date: parseDate(r.LBDAT_INT) }))
+        .filter(r => r.folder && r.date);
+      const c0d1 = patientLblc.find(f => f.folder.toUpperCase().includes('C0D1'));
+      if (c0d1 && c0d1.date) { state.c0d1Dates[patientId] = c0d1.date; return c0d1.date; }
+      patientLblc.sort((a,b) => a.date - b.date);
+      if (patientLblc.length > 0) { state.c0d1Dates[patientId] = patientLblc[0].date; return patientLblc[0].date; }
+      return null;
+    }
+
+    /**
+     * Get folder order with USV renamed to USV1, USV2, USV3...
+     */
+    function getFolderOrder(patientId) {
+      const { dateToUSV } = getUSVMapping(patientId);
+      
+      // Get all folders from lblc.csv with dates
+      const patientLblc = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => ({ 
+          folder: r.Folder, 
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null
+        }))
+        .filter(r => r.folder && r.date);
+      
+      // Add dateKey
+      patientLblc.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      // Sort by date
+      patientLblc.sort((a, b) => a.date - b.date);
+      
+      // Build ordered list with USV renamed
+      const ordered = [];
+      const seen = new Set();
+      
+      patientLblc.forEach(r => {
+        const folderUpper = r.folder.toUpperCase();
+        
+        if (folderUpper === 'USV') {
+          // Rename USV to USV1, USV2, etc. based on date
+          const renamedFolder = dateToUSV[r.dateKey];
+          if (renamedFolder && !seen.has(renamedFolder)) {
+            seen.add(renamedFolder);
+            ordered.push(renamedFolder);
+          }
+        } else {
+          // Non-USV folders: keep unique
+          if (!seen.has(r.folder)) {
+            seen.add(r.folder);
+            ordered.push(r.folder);
+          }
+        }
+      });
+      
+      return ordered;
+    }
+
+    /**
+     * Get folder data with dates, USV renamed to USV1, USV2, USV3...
+     */
+    function getFolderData(patientId) {
+      const { dateToUSV, usvToDate } = getUSVMapping(patientId);
+      
+      // Get all folders from lblc.csv with dates
+      const patientLblc = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => ({ 
+          folder: r.Folder, 
+          date: parseDate(r.LBDAT_INT),
+          dateKey: null,
+          originalFolder: r.Folder
+        }))
+        .filter(r => r.folder && r.date);
+      
+      // Add dateKey
+      patientLblc.forEach(r => {
+        r.dateKey = dateToKey(r.date);
+      });
+      
+      // Sort by date
+      patientLblc.sort((a, b) => a.date - b.date);
+      
+      // Build unique list with USV renamed
+      const unique = [];
+      const seen = new Set();
+      
+      patientLblc.forEach(r => {
+        const folderUpper = r.folder.toUpperCase();
+        
+        if (folderUpper === 'USV') {
+          // Rename USV to USV1, USV2, etc. based on date
+          const renamedFolder = dateToUSV[r.dateKey];
+          if (renamedFolder && !seen.has(renamedFolder)) {
+            seen.add(renamedFolder);
+            unique.push({ 
+              folder: renamedFolder, 
+              date: r.date, 
+              originalFolder: r.folder,
+              dateKey: r.dateKey
+            });
+          }
+        } else {
+          // Non-USV folders: keep unique
+          if (!seen.has(r.folder)) {
+            seen.add(r.folder);
+            unique.push({ 
+              folder: r.folder, 
+              date: r.date, 
+              originalFolder: r.folder,
+              dateKey: r.dateKey
+            });
+          }
+        }
+      });
+      
+      return unique;
+    }
+
+    function getDateRange(patientId) {
+      const dates = state.lblcData.filter(r => r.Subject === patientId)
+        .map(r => parseDate(r.LBDAT_INT)).filter(d => d);
+      if (dates.length === 0) return '-';
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+      const fmt = d => d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+      return `${fmt(minDate)} - ${fmt(maxDate)}`;
+    }
+
+    // ========================================================================
+    // Dosing Functions
+    // ========================================================================
+    function calculateDailyDose(dose, freq) {
+      if (!dose || isNaN(dose)) return 0;
+      const f = String(freq || '').toUpperCase().trim();
+      if (f === 'BID') return dose * 2;
+      if (f === 'QD') return dose;
+      if (f === 'ONCE') return dose;
+      return dose;
+    }
+
+    function getDatesBetween(startDate, endDate) {
+      const dates = [];
+      if (!startDate || !endDate) return dates;
+      const current = new Date(startDate); const end = new Date(endDate);
+      while (current <= end) { dates.push(new Date(current)); current.setDate(current.getDate() + 1); }
+      return dates;
+    }
+
+    function calculatePatientDailyDoses(patientId) {
+      if (state.dailyDoses[patientId] && state.doseSource[patientId]) {
+        return { dailyDoseMap: state.dailyDoses[patientId], source: state.doseSource[patientId] };
+      }
+      const dailyDoseMap = {};
+      let doseSource = '';
+      
+      const patientLblcDates = state.lblcData
+        .filter(r => r.Subject === patientId)
+        .map(r => parseDate(r.LBDAT_INT))
+        .filter(d => d);
+      const latestLblcDate = patientLblcDates.length > 0 ? new Date(Math.max(...patientLblcDates)) : null;
+      
+      let startDate = null;
+      let dose = 0;
+      let freq = '';
+      
+      const ecclinRecords = state.ecclinData
+        .filter(r => r.Subject === patientId)
+        .map(r => ({ row: r, date: parseDate(r.ECSTDAT_INT) }))
+        .filter(r => r.date)
+        .sort((a, b) => a.date - b.date);
+      
+      if (ecclinRecords.length > 0 && latestLblcDate) {
+        const earliestEcclin = ecclinRecords[0];
+        startDate = earliestEcclin.date;
+        
+        const matchingEcsd = state.ecsdData.find(ecsdRow => {
+          if (ecsdRow.Subject !== patientId) return false;
+          const ecsdStartDate = parseDate(ecsdRow.ECSTDAT_INT);
+          return ecsdStartDate && dateToKey(ecsdStartDate) === dateToKey(startDate);
+        });
+        
+        if (matchingEcsd) {
+          dose = parseFloat(matchingEcsd.ECDSTXT || 0);
+          freq = matchingEcsd.ECDOSFRQ_STD || '';
+          doseSource = 'Start date: ecclin.csv; Dose amount: ecsd.csv';
+        } else {
+          startDate = null;
+        }
+      }
+      
+      if (!startDate && latestLblcDate) {
+        const ecsdRecords = state.ecsdData
+          .filter(r => r.Subject === patientId)
+          .map(r => ({ row: r, date: parseDate(r.ECSTDAT_INT) }))
+          .filter(r => r.date)
+          .sort((a, b) => a.date - b.date);
+        
+        if (ecsdRecords.length > 0) {
+          const earliestEcsd = ecsdRecords[0];
+          startDate = earliestEcsd.date;
+          dose = parseFloat(earliestEcsd.row.ECDSTXT || 0);
+          freq = earliestEcsd.row.ECDOSFRQ_STD || '';
+          doseSource = 'Start date: ecsd.csv; Dose amount: ecsd.csv';
+        }
+      }
+      
+      if (startDate && latestLblcDate && dose > 0) {
+        if (freq.toUpperCase() === 'ONCE') {
+          const dk = dateToKey(startDate);
+          dailyDoseMap[dk] = { dose: calculateDailyDose(dose, freq), source: 'scheduled' };
+        } else {
+          getDatesBetween(startDate, latestLblcDate).forEach(d => {
+            const dk = dateToKey(d);
+            dailyDoseMap[dk] = { dose: calculateDailyDose(dose, freq), source: 'scheduled' };
+          });
+        }
+      }
+
+      state.ecadData.filter(r => r.Subject === patientId).forEach(row => {
+        const startDate = parseDate(row.ECSTDAT_INT);
+        const endDate = parseDate(row.ECENDAT_INT);
+        const dose = parseFloat(row.ECDSTXT || 0);
+        const freq = row.ECDOSFRQ_STD || '';
+        if (!startDate) return;
+        getDatesBetween(startDate, endDate || startDate).forEach(d => {
+          const dk = dateToKey(d);
+          if (!dailyDoseMap[dk]) dailyDoseMap[dk] = { dose: 0, source: 'adjusted' };
+          dailyDoseMap[dk].dose = calculateDailyDose(dose, freq);
+          dailyDoseMap[dk].source = 'adjusted';
+        });
+      });
+
+      state.ecmdData.filter(r => r.Subject === patientId).forEach(row => {
+        const startDate = parseDate(row.ECSTDAT_INT);
+        const endDate = parseDate(row.ECENDAT_INT);
+        if (!startDate) return;
+        getDatesBetween(startDate, endDate || startDate).forEach(d => {
+          const dk = dateToKey(d);
+          if (!dailyDoseMap[dk]) dailyDoseMap[dk] = { dose: 0, source: 'missed' };
+          dailyDoseMap[dk].dose = 0;
+          dailyDoseMap[dk].source = 'missed';
+        });
+      });
+
+      state.dailyDoses[patientId] = dailyDoseMap;
+      state.doseSource[patientId] = doseSource;
+      return { dailyDoseMap, source: doseSource };
+    }
+
+    function getDosingDateRange(patientId) {
+      const allDates = [];
+      [...state.ecclinData, ...state.ecsdData, ...state.ecadData, ...state.ecmdData]
+        .filter(r => r.Subject === patientId)
+        .forEach(r => {
+          const s = parseDate(r.ECSTDAT_INT); const e = parseDate(r.ECENDAT_INT);
+          if (s) allDates.push(s); if (e) allDates.push(e);
+        });
+      state.lblcData.filter(r => r.Subject === patientId).forEach(r => {
+        const d = parseDate(r.LBDAT_INT);
+        if (d) allDates.push(d);
+      });
+      if (allDates.length === 0) return { minDate: null, maxDate: null, range: '-' };
+      const minDate = new Date(Math.min(...allDates));
+      const maxDate = new Date(Math.max(...allDates));
+      const fmt = d => d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+      return { minDate, maxDate, range: `${fmt(minDate)} - ${fmt(maxDate)}` };
+    }
+
+    function getStudyDayRange(patientId) {
+      const c0d1Date = getC0D1Date(patientId);
+      if (!c0d1Date) return { minDay: 0, maxDay: 100, maxDate: null };
+      
+      const dosingRange = getDosingDateRange(patientId);
+      let minDay = 0, maxDay = 0;
+      let latestDate = c0d1Date;
+      
+      if (dosingRange.minDate) {
+        minDay = Math.min(minDay, calculateStudyDay(dosingRange.minDate, c0d1Date) || 0);
+        maxDay = Math.max(maxDay, calculateStudyDay(dosingRange.maxDate, c0d1Date) || 0);
+        if (dosingRange.maxDate > latestDate) latestDate = dosingRange.maxDate;
+      }
+      
+      getFolderData(patientId).forEach(f => {
+        const sd = calculateStudyDay(f.date, c0d1Date);
+        if (sd !== null) { minDay = Math.min(minDay, sd); maxDay = Math.max(maxDay, sd); }
+        if (f.date > latestDate) latestDate = f.date;
+      });
+      
+      const maxDayWithPadding = maxDay + X_AXIS_PADDING_DAYS;
+      const maxDate = studyDayToDate(maxDayWithPadding, c0d1Date);
+      
+      if (minDay < -30) minDay = -30;
+      
+      return { minDay, maxDay: maxDayWithPadding, maxDate, actualMaxDay: maxDay };
+    }
+
+    function getDailyDosesByStudyDay(patientId) {
+      const c0d1Date = getC0D1Date(patientId);
+      if (!c0d1Date) return { doses: {}, source: '' };
+      const { dailyDoseMap, source } = calculatePatientDailyDoses(patientId);
+      const result = {};
+      Object.entries(dailyDoseMap).forEach(([dk, info]) => {
+        const [y,m,d] = dk.split('-').map(Number);
+        const sd = calculateStudyDay(new Date(y, m-1, d), c0d1Date);
+        if (sd !== null) result[sd] = info;
+      });
+      return { doses: result, source };
+    }
+
+    // ========================================================================
+    // Data Processing - UPDATED for USV handling
+    // ========================================================================
+    
+    /**
+     * Get analyte data with proper USV handling
+     * - Non-USV: get from lab.csv, match folder with lblc.csv for date
+     * - USV: get from lab.csv, assign date from lblc.csv USV records in order
+     */
+    function getAnalyteData(patientId, analyteName, folderOrder) {
+      const { dateToUSV, usvToDate, usvDates } = getUSVMapping(patientId);
+      const folderData = getFolderData(patientId);
+      
+      // Build folder -> date mapping for non-USV folders
+      const folderDateMap = {};
+      folderData.forEach(f => {
+        folderDateMap[f.folder] = f.date;
+      });
+      
+      // Get all lab records for this patient and analyte
+      const patientLabRecords = state.labData.filter(r => 
+        r.Subject === patientId && 
+        r.AnalyteName === analyteName && 
+        !isNaN(parseFloat(r.NumericValue))
+      );
+      
+      // Separate USV and non-USV records
+      const usvRecords = patientLabRecords.filter(r => r.Folder && r.Folder.toUpperCase() === 'USV');
+      const nonUSVRecords = patientLabRecords.filter(r => !r.Folder || r.Folder.toUpperCase() !== 'USV');
+      
+      // Process non-USV records
+      const processedData = [];
+      
+      nonUSVRecords.forEach(r => {
+        const folder = r.Folder;
+        const date = folderDateMap[folder] || null;
+        
+        if (folderOrder.includes(folder)) {
+          processedData.push({
+            folder: folder,
+            value: parseFloat(r.NumericValue),
+            labHigh: parseFloat(r.LabHigh),
+            labLow: parseFloat(r.LabLow),
+            labUnits: r.LabUnits,
+            date: date
+          });
+        }
+      });
+      
+      // Process USV records - assign dates from lblc.csv USV records in order
+      // Assumption: USV records in lab.csv are in the same chronological order as USV dates in lblc.csv
+      usvRecords.forEach((r, idx) => {
+        // Get the corresponding USV date (by index)
+        const usvDate = idx < usvDates.length ? usvDates[idx] : null;
+        const dateKey = usvDate ? dateToKey(usvDate) : null;
+        const renamedFolder = dateKey && dateToUSV[dateKey] ? dateToUSV[dateKey] : `USV${idx + 1}`;
+        
+        if (folderOrder.includes(renamedFolder)) {
+          processedData.push({
+            folder: renamedFolder,
+            value: parseFloat(r.NumericValue),
+            labHigh: parseFloat(r.LabHigh),
+            labLow: parseFloat(r.LabLow),
+            labUnits: r.LabUnits,
+            date: usvDate
+          });
+        }
+      });
+      
+      // For each folder, keep the highest value
+      const folderMap = {};
+      processedData.forEach(r => {
+        if (!folderMap[r.folder] || r.value > folderMap[r.folder].value) {
+          folderMap[r.folder] = r;
+        }
+      });
+      
+      // Sort by folder order
+      const result = Object.values(folderMap).sort((a, b) => 
+        folderOrder.indexOf(a.folder) - folderOrder.indexOf(b.folder)
+      );
+      
+      console.log(`Analyte data for ${patientId} - ${analyteName}:`, {
+        totalLabRecords: patientLabRecords.length,
+        usvRecords: usvRecords.length,
+        nonUSVRecords: nonUSVRecords.length,
+        processedData: processedData.length,
+        resultData: result.length,
+        folders: result.map(r => r.folder)
+      });
+      
+      return result;
+    }
+
+    function calculateXULN(data) {
+      return data.filter(r => !isNaN(r.labHigh) && r.labHigh > 0).map(r => ({ ...r, xULN: r.value / r.labHigh }));
+    }
+
+    // ========================================================================
+    // Chart Rendering
+    // ========================================================================
+    function destroyCharts() {
+      Object.values(state.charts).forEach(c => { if (c && c.destroy) c.destroy(); });
+      state.charts = {};
+    }
+
+    function renderAnalyteChart(patientId, folderOrder, analyteKey, analyteName, color, canvasId, wrapperId, titleId, subtitleId) {
+      const showDosing = document.getElementById('showDosing').checked;
+      const yAxisScale = document.getElementById('yAxisScale').value;
+      const canvas = document.getElementById(canvasId);
+      const wrapper = document.getElementById(wrapperId);
+      if (!canvas) return;
+
+      const data = getAnalyteData(patientId, analyteName, folderOrder);
+      const titleEl = document.getElementById(titleId);
+      const plotSection = titleEl ? titleEl.closest('.plot-section') : null;
+      
+      if (data.length === 0) {
+        if (state.charts[canvasId]) state.charts[canvasId].destroy();
+        if (plotSection) plotSection.style.display = 'none';
+        return;
+      }
+
+      if (plotSection) {
+        plotSection.style.display = 'block';
+        const plotHeader = plotSection.querySelector('.plot-header');
+        if (plotHeader) {
+          plotHeader.style.display = 'flex';
+          const exportBtn = plotHeader.querySelector('.export-btn');
+          if (exportBtn) {
+            exportBtn.style.display = 'block';
+            exportBtn.style.visibility = 'visible';
+            exportBtn.style.opacity = '1';
+          }
+        }
+      }
+      const labUnits = data.find(d => d.labUnits)?.labUnits || '';
+      document.getElementById(subtitleId).textContent = `Units: ${labUnits}`;
+
+      const c0d1Date = getC0D1Date(patientId);
+      const folderData = getFolderData(patientId);
+      const folderDateMap = {}; 
+      folderData.forEach(f => folderDateMap[f.folder] = f.date);
+      
+      // Also add dates from data itself (for USV)
+      data.forEach(d => {
+        if (d.date && !folderDateMap[d.folder]) {
+          folderDateMap[d.folder] = d.date;
+        }
+      });
+      
+      const folderStudyDayMap = {};
+      folderOrder.forEach(f => {
+        const d = folderDateMap[f];
+        if (d && c0d1Date) { 
+          const sd = calculateStudyDay(d, c0d1Date); 
+          if (sd !== null) folderStudyDayMap[f] = sd; 
+        }
+      });
+
+      const allValues = data.map(d => d.value);
+      const maxValue = Math.max(...allValues);
+      let yMax = maxValue;
+      if (yAxisScale === 'linear') {
+        const padding = Math.max(maxValue * 0.25, maxValue * 0.1);
+        yMax = maxValue + padding;
+      } else {
+        yMax = maxValue * 1.3;
+      }
+      
+      let yMin = Math.min(...allValues) * 0.85;
+      if (yAxisScale !== 'linear') {
+        if (yMin <= 0) yMin = Math.min(...allValues.filter(v => v > 0)) * 0.5 || 0.1;
+        if (yMax <= 0) yMax = 1;
+      } else {
+        if (yMin < 0) yMin = 0;
+      }
+
+      const { minDay, maxDay, maxDate, actualMaxDay } = getStudyDayRange(patientId);
+
+      const baseHeight = 560;
+      wrapper.style.height = baseHeight + 'px';
+
+      const { doses: studyDayDoses, source: doseSource } = getDailyDosesByStudyDay(patientId);
+      const doseValues = Object.values(studyDayDoses).map(d => d.dose);
+      const maxDose = doseValues.length > 0 ? Math.max(...doseValues) : 100;
+
+      if (plotSection) {
+        const doseSourceEl = plotSection.querySelector('.dose-source-text');
+        if (doseSourceEl) {
+          doseSourceEl.textContent = doseSource ? `Initial dose: ${doseSource}` : '';
+        }
+      }
+
+      const datasets = [];
+      if (showDosing) {
+        const doseLineData = [];
+        for (let d = minDay; d <= actualMaxDay; d++) {
+          const info = studyDayDoses[d];
+          const doseValue = info ? info.dose : 0;
+          doseLineData.push({ x: d, y: doseValue });
+        }
+        datasets.push({ 
+          type: 'line', 
+          label: 'Daily Dose', 
+          data: doseLineData, 
+          backgroundColor: 'rgba(66,133,244,0.2)', 
+          borderColor: 'rgba(66,133,244,0.8)', 
+          borderWidth: 2,
+          fill: 'origin',
+          stepped: 'before',
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          yAxisID: 'yDose', 
+          order: 2 
+        });
+      }
+
+      // Use date from data for USV folders
+      const chartData = data.filter(d => {
+        // Check if we have study day for this folder
+        if (folderStudyDayMap[d.folder] !== undefined) return true;
+        // For USV folders with date in data, calculate study day
+        if (d.date && c0d1Date) {
+          const sd = calculateStudyDay(d.date, c0d1Date);
+          if (sd !== null) {
+            folderStudyDayMap[d.folder] = sd;
+            return true;
+          }
+        }
+        return false;
+      }).map(d => ({ 
+        x: folderStudyDayMap[d.folder], 
+        y: d.value, 
+        folder: d.folder, 
+        labUnits: d.labUnits,
+        date: d.date
+      })).sort((a,b) => a.x - b.x);
+      
+      datasets.push({ 
+        type: 'line', 
+        label: analyteKey, 
+        data: chartData, 
+        borderColor: color, 
+        backgroundColor: color, 
+        borderWidth: 2, 
+        pointBackgroundColor: color, 
+        pointRadius: 5, 
+        fill: false, 
+        tension: 0, 
+        yAxisID: 'y', 
+        order: 1 
+      });
+
+      if (state.charts[canvasId]) state.charts[canvasId].destroy();
+
+      const endDateLabel = `${maxDay}`;
+      const topPadding = 50;
+
+      const scales = {
+        x: { 
+          type: 'linear', min: Math.min(minDay, -30), max: maxDay, 
+          title: { display: true, text: 'Study Days (C0D1 = Day 0)', font: { size: 19, weight: 'bold' } }, 
+          ticks: { 
+            stepSize: 7, 
+            font: { size: 14 },
+            callback: function(v) {
+              if (v === maxDay) return endDateLabel;
+              if (v % 7 === 0) return `${v}`;
+              return '';
+            },
+            maxRotation: 45, autoSkip: false
+          }, 
+          grid: { display: false },
+          afterBuildTicks: function(axis) {
+            const ticks = axis.ticks;
+            const axisMin = axis.min;
+            const firstLabel = Math.ceil(axisMin / 7) * 7;
+            if (ticks.length === 0 || ticks[0].value !== firstLabel) {
+              ticks.unshift({ value: firstLabel });
+            }
+            if (ticks.length && ticks[ticks.length - 1].value !== maxDay) {
+              ticks.push({ value: maxDay });
+            }
+          }
+        },
+        y: { 
+          type: yAxisScale === 'linear' ? 'linear' : 'logarithmic',
+          position: 'left', 
+          min: yMin, 
+          max: yMax,
+          ...(yAxisScale !== 'linear' ? { base: yAxisScale === 'log2' ? 2 : 10 } : {}),
+          title: { display: true, text: `${analyteKey} (${labUnits})`, font: { size: 19, weight: 'bold' } }, 
+          ticks: { font: { size: 14 } }, 
+          grid: { color: '#e0e0e0' } 
+        }
+      };
+      if (showDosing) {
+        scales.yDose = { 
+          type: 'linear', 
+          position: 'right', 
+          min: 0, 
+          max: maxDose * 1.1, 
+          title: { display: true, text: 'Daily Dose (mg)', font: { size: 19, weight: 'bold' } }, 
+          ticks: { font: { size: 14 }, callback: function(value) { return Math.round(value); } }, 
+          grid: { drawOnChartArea: false } 
+        };
+      }
+
+      const plugins = [
+        { id: 'xAxisDots', afterDraw: chart => {
+          const ctx = chart.ctx;
+          const xAxis = chart.scales.x;
+          const ca = chart.chartArea;
+          ctx.save();
+          ctx.fillStyle = '#666';
+          xAxis.ticks.forEach(tick => {
+            if (tick.label && tick.label !== '') {
+              const x = xAxis.getPixelForValue(tick.value);
+              if (x >= ca.left && x <= ca.right) {
+                ctx.beginPath();
+                ctx.arc(x, ca.bottom, 3, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+          ctx.restore();
+        } }
+      ];
+
+      state.charts[canvasId] = new Chart(canvas, {
+        data: { datasets },
+        options: { 
+          responsive: true, maintainAspectRatio: false, 
+          layout: { padding: { top: topPadding, right: 50, bottom: 60, left: 50 } }, 
+          plugins: { 
+            legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 14 } } }, 
+            tooltip: { 
+              callbacks: { 
+                title: ctx => { 
+                  const sd = ctx[0].parsed.x; 
+                  const dp = ctx[0].raw; 
+                  const date = dp?.date || (c0d1Date ? studyDayToDate(sd, c0d1Date) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  if (dp?.folder) {
+                    return `Study Day ${sd} (${dp.folder})${dateStr ? ` - ${dateStr}` : ''}`;
+                  }
+                  return `Study Day ${sd}${dateStr ? ` (${dateStr})` : ''}`;
+                }, 
+                label: ctx => {
+                  const sd = ctx.parsed.x;
+                  const dp = ctx.raw;
+                  const date = dp?.date || (c0d1Date ? studyDayToDate(sd, c0d1Date) : null);
+                  const dateStr = date ? formatDateShort(date) : '';
+                  if (ctx.dataset.label.includes('Dose')) {
+                    return `${ctx.dataset.label}: ${ctx.parsed.y} mg${dateStr ? ` (${dateStr})` : ''}`;
+                  }
+                  const units = ctx.raw?.labUnits || '';
+                  return `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} ${units}${dateStr ? ` (${dateStr})` : ''}`;
+                }
+              } 
+            } 
+          }, 
+          scales
+        },
+        plugins
+      });
+    }
+
+    function renderCharts() {
+      const patientId = state.currentPatient;
+      if (!patientId) {
+        document.getElementById('plotsWrapper').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+        document.getElementById('infoPanel').style.display = 'none';
+        return;
+      }
+
+      delete state.dailyDoses[patientId];
+      delete state.c0d1Dates[patientId];
+
+      const folderOrder = getFolderOrder(patientId);
+      if (folderOrder.length === 0) {
+        document.getElementById('plotsWrapper').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'flex';
+        return;
+      }
+
+      const patientRecords = state.labData.filter(r => r.Subject === patientId).length;
+      const dosingRange = getDosingDateRange(patientId);
+
+      document.getElementById('infoPatientId').textContent = patientId;
+      document.getElementById('infoRecords').textContent = patientRecords;
+      document.getElementById('infoVisits').textContent = folderOrder.length;
+      document.getElementById('infoDateRange').textContent = getDateRange(patientId);
+      document.getElementById('infoDosingRange').textContent = dosingRange.range;
+
+      document.getElementById('infoPanel').style.display = 'block';
+      document.getElementById('plotsWrapper').style.display = 'flex';
+      document.getElementById('noDataMessage').style.display = 'none';
+
+      destroyCharts();
+      
+      renderAnalyteChart(patientId, folderOrder, 'BILI', ANALYTE_NAMES.BILI, ANALYTE_COLORS.BILI, 'chartBILI', 'chartWrapperBILI', 'plotBILI-title', 'plotBILI-subtitle');
+      renderAnalyteChart(patientId, folderOrder, 'AST', ANALYTE_NAMES.AST, ANALYTE_COLORS.AST, 'chartAST', 'chartWrapperAST', 'plotAST-title', 'plotAST-subtitle');
+      renderAnalyteChart(patientId, folderOrder, 'ALT', ANALYTE_NAMES.ALT, ANALYTE_COLORS.ALT, 'chartALT', 'chartWrapperALT', 'plotALT-title', 'plotALT-subtitle');
+      renderAnalyteChart(patientId, folderOrder, 'ALP', ANALYTE_NAMES.ALP, ANALYTE_COLORS.ALP, 'chartALP', 'chartWrapperALP', 'plotALP-title', 'plotALP-subtitle');
+      renderAnalyteChart(patientId, folderOrder, 'ALB', ANALYTE_NAMES.ALB, ANALYTE_COLORS.ALB, 'chartALB', 'chartWrapperALB', 'plotALB-title', 'plotALB-subtitle');
+    }
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (state.currentPatient) renderCharts();
+      }, 250);
+    });
+
+    function init() {
+      document.getElementById('patientSelect').addEventListener('change', e => { 
+        state.currentPatient = e.target.value || null;
+        // Update URL parameter when patient selection changes
+        if (state.currentPatient) {
+          history.replaceState(null, '', `?id=${state.currentPatient}`);
+        } else {
+          history.replaceState(null, '', window.location.pathname);
+        }
+        renderCharts(); 
+      });
+      document.getElementById('showDosing').addEventListener('change', renderCharts);
+      document.getElementById('yAxisScale').addEventListener('change', renderCharts);
+
+      loadAllData();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initChartExportDialog === 'function') {
+        initChartExportDialog();
+      }
+      if (typeof initBlockExportDialog === 'function') {
+        initBlockExportDialog();
+        setBlockExportPrefix('Patient_Lab_Absolute');
+      }
+      init();
+    });
+  </script>
+  <script src="../../../assets/js/nav.js"></script>
+  <script>
+    if (typeof renderNav === 'function') {
+      renderNav('patients', 'pp-dose-ae-lab-absolute', '../../../');
+    }
+  </script>
+</body>
+</html>
