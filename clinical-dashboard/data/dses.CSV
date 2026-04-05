@@ -1,0 +1,201 @@
+Subject,SUBJID,USUBJID,DSSTDAT_INT,DSES_DSDECOD,DSES_DSDECOD_STD,DSTERM,DSAENO,DSAENO_STD,DSESDAT_RAW,CSV
+101-1001,101-1001,BH-30643-101-1001,12MAY2025:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,12 MAY 2025,dses.CSV
+102-1002,102-1002,BH-30643-102-1002,31JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,31 JUL 2025,dses.CSV
+103-1003,103-1003,BH-30643-103-1003,28JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,28 JUN 2025,dses.CSV
+104-1004,104-1004,BH-30643-104-1004,10MAY2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 MAY 2025,dses.CSV
+105-1005,105-1005,BH-30643-105-1005,07MAY2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 MAY 2025,dses.CSV
+106-1006,106-1006,BH-30643-106-1006,09JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,09 JUN 2025,dses.CSV
+107-1007,107-1007,BH-30643-107-1007,13JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 JUN 2025,dses.CSV
+108-1008,108-1008,BH-30643-108-1008,29MAY2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 MAY 2025,dses.CSV
+109-1009,109-1009,BH-30643-109-1009,24MAY2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,24 MAY 2025,dses.CSV
+110-1010,110-1010,BH-30643-110-1010,17JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 JUL 2025,dses.CSV
+101-1011,101-1011,BH-30643-101-1011,19JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 JUN 2025,dses.CSV
+102-1012,102-1012,BH-30643-102-1012,04JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 JUN 2025,dses.CSV
+103-1013,103-1013,BH-30643-103-1013,03AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 AUG 2025,dses.CSV
+104-1014,104-1014,BH-30643-104-1014,15MAY2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 MAY 2025,dses.CSV
+105-1015,105-1015,BH-30643-105-1015,09JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,09 JUN 2025,dses.CSV
+106-1016,106-1016,BH-30643-106-1016,02JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,02 JUL 2025,dses.CSV
+107-1017,107-1017,BH-30643-107-1017,05JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 JUN 2025,dses.CSV
+108-1018,108-1018,BH-30643-108-1018,20JUN2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,20 JUN 2025,dses.CSV
+109-1019,109-1019,BH-30643-109-1019,15JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 JUN 2025,dses.CSV
+110-1020,110-1020,BH-30643-110-1020,10JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 JUN 2025,dses.CSV
+101-1021,101-1021,BH-30643-101-1021,29JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 JUL 2025,dses.CSV
+102-1022,102-1022,BH-30643-102-1022,20JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,20 JUL 2025,dses.CSV
+103-1023,103-1023,BH-30643-103-1023,06JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 JUL 2025,dses.CSV
+104-1024,104-1024,BH-30643-104-1024,17JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 JUN 2025,dses.CSV
+105-1025,105-1025,BH-30643-105-1025,09JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,09 JUL 2025,dses.CSV
+106-1026,106-1026,BH-30643-106-1026,27JUN2025:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,27 JUN 2025,dses.CSV
+107-1027,107-1027,BH-30643-107-1027,13JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 JUL 2025,dses.CSV
+108-1028,108-1028,BH-30643-108-1028,19JUN2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 JUN 2025,dses.CSV
+109-1029,109-1029,BH-30643-109-1029,12JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,12 JUL 2025,dses.CSV
+110-1030,110-1030,BH-30643-110-1030,24AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,24 AUG 2025,dses.CSV
+101-1031,101-1031,BH-30643-101-1031,18AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 AUG 2025,dses.CSV
+102-1032,102-1032,BH-30643-102-1032,16SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 SEP 2025,dses.CSV
+103-1033,103-1033,BH-30643-103-1033,14SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,14 SEP 2025,dses.CSV
+104-1034,104-1034,BH-30643-104-1034,08JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,08 JUL 2025,dses.CSV
+105-1035,105-1035,BH-30643-105-1035,16SEP2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,16 SEP 2025,dses.CSV
+106-1036,106-1036,BH-30643-106-1036,29JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 JUL 2025,dses.CSV
+107-1037,107-1037,BH-30643-107-1037,16AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 AUG 2025,dses.CSV
+108-1038,108-1038,BH-30643-108-1038,13JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 JUL 2025,dses.CSV
+109-1039,109-1039,BH-30643-109-1039,26AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,26 AUG 2025,dses.CSV
+110-1040,110-1040,BH-30643-110-1040,24SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,24 SEP 2025,dses.CSV
+101-1041,101-1041,BH-30643-101-1041,30JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,30 JUL 2025,dses.CSV
+102-1042,102-1042,BH-30643-102-1042,10OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 OCT 2025,dses.CSV
+103-1043,103-1043,BH-30643-103-1043,04AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 AUG 2025,dses.CSV
+104-1044,104-1044,BH-30643-104-1044,03AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 AUG 2025,dses.CSV
+105-1045,105-1045,BH-30643-105-1045,24JUL2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,24 JUL 2025,dses.CSV
+106-1046,106-1046,BH-30643-106-1046,13AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 AUG 2025,dses.CSV
+107-1047,107-1047,BH-30643-107-1047,12SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,12 SEP 2025,dses.CSV
+108-1048,108-1048,BH-30643-108-1048,21SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 SEP 2025,dses.CSV
+109-1049,109-1049,BH-30643-109-1049,07SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 SEP 2025,dses.CSV
+110-1050,110-1050,BH-30643-110-1050,13AUG2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 AUG 2025,dses.CSV
+101-1051,101-1051,BH-30643-101-1051,03OCT2025:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,03 OCT 2025,dses.CSV
+102-1052,102-1052,BH-30643-102-1052,13AUG2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,13 AUG 2025,dses.CSV
+103-1053,103-1053,BH-30643-103-1053,13SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 SEP 2025,dses.CSV
+104-1054,104-1054,BH-30643-104-1054,21OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 OCT 2025,dses.CSV
+105-1055,105-1055,BH-30643-105-1055,27SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,27 SEP 2025,dses.CSV
+106-1056,106-1056,BH-30643-106-1056,10SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 SEP 2025,dses.CSV
+107-1057,107-1057,BH-30643-107-1057,03SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 SEP 2025,dses.CSV
+108-1058,108-1058,BH-30643-108-1058,06SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 SEP 2025,dses.CSV
+109-1059,109-1059,BH-30643-109-1059,07OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 OCT 2025,dses.CSV
+110-1060,110-1060,BH-30643-110-1060,31OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,31 OCT 2025,dses.CSV
+101-1061,101-1061,BH-30643-101-1061,25SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,25 SEP 2025,dses.CSV
+102-1062,102-1062,BH-30643-102-1062,04OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 OCT 2025,dses.CSV
+103-1063,103-1063,BH-30643-103-1063,03NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 NOV 2025,dses.CSV
+104-1064,104-1064,BH-30643-104-1064,28NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,28 NOV 2025,dses.CSV
+105-1065,105-1065,BH-30643-105-1065,31OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,31 OCT 2025,dses.CSV
+106-1066,106-1066,BH-30643-106-1066,03NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 NOV 2025,dses.CSV
+107-1067,107-1067,BH-30643-107-1067,06SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 SEP 2025,dses.CSV
+108-1068,108-1068,BH-30643-108-1068,17SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 SEP 2025,dses.CSV
+109-1069,109-1069,BH-30643-109-1069,22SEP2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,22 SEP 2025,dses.CSV
+110-1070,110-1070,BH-30643-110-1070,20NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,20 NOV 2025,dses.CSV
+101-1071,101-1071,BH-30643-101-1071,08OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,08 OCT 2025,dses.CSV
+102-1072,102-1072,BH-30643-102-1072,14OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,14 OCT 2025,dses.CSV
+103-1073,103-1073,BH-30643-103-1073,10DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 DEC 2025,dses.CSV
+104-1074,104-1074,BH-30643-104-1074,25OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,25 OCT 2025,dses.CSV
+105-1075,105-1075,BH-30643-105-1075,07DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 DEC 2025,dses.CSV
+106-1076,106-1076,BH-30643-106-1076,17DEC2025:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,17 DEC 2025,dses.CSV
+107-1077,107-1077,BH-30643-107-1077,01NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,01 NOV 2025,dses.CSV
+108-1078,108-1078,BH-30643-108-1078,29NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 NOV 2025,dses.CSV
+109-1079,109-1079,BH-30643-109-1079,02OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,02 OCT 2025,dses.CSV
+110-1080,110-1080,BH-30643-110-1080,16SEP2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 SEP 2025,dses.CSV
+101-1081,101-1081,BH-30643-101-1081,16NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 NOV 2025,dses.CSV
+102-1082,102-1082,BH-30643-102-1082,08NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,08 NOV 2025,dses.CSV
+103-1083,103-1083,BH-30643-103-1083,15NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 NOV 2025,dses.CSV
+104-1084,104-1084,BH-30643-104-1084,21OCT2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 OCT 2025,dses.CSV
+105-1085,105-1085,BH-30643-105-1085,19DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 DEC 2025,dses.CSV
+106-1086,106-1086,BH-30643-106-1086,02DEC2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,02 DEC 2025,dses.CSV
+107-1087,107-1087,BH-30643-107-1087,08DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,08 DEC 2025,dses.CSV
+108-1088,108-1088,BH-30643-108-1088,13NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 NOV 2025,dses.CSV
+109-1089,109-1089,BH-30643-109-1089,05NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 NOV 2025,dses.CSV
+110-1090,110-1090,BH-30643-110-1090,23NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,23 NOV 2025,dses.CSV
+101-1091,101-1091,BH-30643-101-1091,27NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,27 NOV 2025,dses.CSV
+102-1092,102-1092,BH-30643-102-1092,18JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 JAN 2026,dses.CSV
+103-1093,103-1093,BH-30643-103-1093,24NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,24 NOV 2025,dses.CSV
+104-1094,104-1094,BH-30643-104-1094,25DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,25 DEC 2025,dses.CSV
+105-1095,105-1095,BH-30643-105-1095,11DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,11 DEC 2025,dses.CSV
+106-1096,106-1096,BH-30643-106-1096,20DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,20 DEC 2025,dses.CSV
+107-1097,107-1097,BH-30643-107-1097,13DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 DEC 2025,dses.CSV
+108-1098,108-1098,BH-30643-108-1098,09JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,09 JAN 2026,dses.CSV
+109-1099,109-1099,BH-30643-109-1099,30DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,30 DEC 2025,dses.CSV
+110-1100,110-1100,BH-30643-110-1100,05JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 JAN 2026,dses.CSV
+101-1101,101-1101,BH-30643-101-1101,09DEC2025:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,09 DEC 2025,dses.CSV
+102-1102,102-1102,BH-30643-102-1102,28DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,28 DEC 2025,dses.CSV
+103-1103,103-1103,BH-30643-103-1103,16NOV2025:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,16 NOV 2025,dses.CSV
+104-1104,104-1104,BH-30643-104-1104,09JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,09 JAN 2026,dses.CSV
+105-1105,105-1105,BH-30643-105-1105,21JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 JAN 2026,dses.CSV
+106-1106,106-1106,BH-30643-106-1106,29JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 JAN 2026,dses.CSV
+107-1107,107-1107,BH-30643-107-1107,27NOV2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,27 NOV 2025,dses.CSV
+108-1108,108-1108,BH-30643-108-1108,04FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 FEB 2026,dses.CSV
+109-1109,109-1109,BH-30643-109-1109,05DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 DEC 2025,dses.CSV
+110-1110,110-1110,BH-30643-110-1110,26FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,26 FEB 2026,dses.CSV
+101-1111,101-1111,BH-30643-101-1111,30DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,30 DEC 2025,dses.CSV
+102-1112,102-1112,BH-30643-102-1112,06FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 FEB 2026,dses.CSV
+103-1113,103-1113,BH-30643-103-1113,22JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 JAN 2026,dses.CSV
+104-1114,104-1114,BH-30643-104-1114,06DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 DEC 2025,dses.CSV
+105-1115,105-1115,BH-30643-105-1115,23JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,23 JAN 2026,dses.CSV
+106-1116,106-1116,BH-30643-106-1116,19JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 JAN 2026,dses.CSV
+107-1117,107-1117,BH-30643-107-1117,28DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,28 DEC 2025,dses.CSV
+108-1118,108-1118,BH-30643-108-1118,26FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,26 FEB 2026,dses.CSV
+109-1119,109-1119,BH-30643-109-1119,30DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,30 DEC 2025,dses.CSV
+110-1120,110-1120,BH-30643-110-1120,18FEB2026:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,18 FEB 2026,dses.CSV
+101-1121,101-1121,BH-30643-101-1121,05MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 MAR 2026,dses.CSV
+102-1122,102-1122,BH-30643-102-1122,29JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 JAN 2026,dses.CSV
+103-1123,103-1123,BH-30643-103-1123,21FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 FEB 2026,dses.CSV
+104-1124,104-1124,BH-30643-104-1124,11FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,11 FEB 2026,dses.CSV
+105-1125,105-1125,BH-30643-105-1125,23JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,23 JAN 2026,dses.CSV
+106-1126,106-1126,BH-30643-106-1126,26MAR2026:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,26 MAR 2026,dses.CSV
+107-1127,107-1127,BH-30643-107-1127,31JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,31 JAN 2026,dses.CSV
+108-1128,108-1128,BH-30643-108-1128,15MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 MAR 2026,dses.CSV
+109-1129,109-1129,BH-30643-109-1129,16FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 FEB 2026,dses.CSV
+110-1130,110-1130,BH-30643-110-1130,30DEC2025:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,30 DEC 2025,dses.CSV
+101-1131,101-1131,BH-30643-101-1131,19FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 FEB 2026,dses.CSV
+102-1132,102-1132,BH-30643-102-1132,18JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 JAN 2026,dses.CSV
+103-1133,103-1133,BH-30643-103-1133,06APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 APR 2026,dses.CSV
+104-1134,104-1134,BH-30643-104-1134,13FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 FEB 2026,dses.CSV
+105-1135,105-1135,BH-30643-105-1135,20JAN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,20 JAN 2026,dses.CSV
+106-1136,106-1136,BH-30643-106-1136,22MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 MAR 2026,dses.CSV
+107-1137,107-1137,BH-30643-107-1137,24MAR2026:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,24 MAR 2026,dses.CSV
+108-1138,108-1138,BH-30643-108-1138,16APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 APR 2026,dses.CSV
+109-1139,109-1139,BH-30643-109-1139,27MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,27 MAR 2026,dses.CSV
+110-1140,110-1140,BH-30643-110-1140,15MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 MAR 2026,dses.CSV
+101-1141,101-1141,BH-30643-101-1141,06FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 FEB 2026,dses.CSV
+102-1142,102-1142,BH-30643-102-1142,04APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 APR 2026,dses.CSV
+103-1143,103-1143,BH-30643-103-1143,07APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 APR 2026,dses.CSV
+104-1144,104-1144,BH-30643-104-1144,02MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,02 MAR 2026,dses.CSV
+105-1145,105-1145,BH-30643-105-1145,02APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,02 APR 2026,dses.CSV
+106-1146,106-1146,BH-30643-106-1146,07FEB2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 FEB 2026,dses.CSV
+107-1147,107-1147,BH-30643-107-1147,29MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 MAR 2026,dses.CSV
+108-1148,108-1148,BH-30643-108-1148,17MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 MAR 2026,dses.CSV
+109-1149,109-1149,BH-30643-109-1149,10MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 MAR 2026,dses.CSV
+110-1150,110-1150,BH-30643-110-1150,16APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 APR 2026,dses.CSV
+101-1151,101-1151,BH-30643-101-1151,07APR2026:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,07 APR 2026,dses.CSV
+102-1152,102-1152,BH-30643-102-1152,10MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 MAY 2026,dses.CSV
+103-1153,103-1153,BH-30643-103-1153,29APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,29 APR 2026,dses.CSV
+104-1154,104-1154,BH-30643-104-1154,04APR2026:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,04 APR 2026,dses.CSV
+105-1155,105-1155,BH-30643-105-1155,04APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 APR 2026,dses.CSV
+106-1156,106-1156,BH-30643-106-1156,14MAR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,14 MAR 2026,dses.CSV
+107-1157,107-1157,BH-30643-107-1157,05APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 APR 2026,dses.CSV
+108-1158,108-1158,BH-30643-108-1158,06MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 MAY 2026,dses.CSV
+109-1159,109-1159,BH-30643-109-1159,13APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 APR 2026,dses.CSV
+110-1160,110-1160,BH-30643-110-1160,22MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 MAY 2026,dses.CSV
+101-1161,101-1161,BH-30643-101-1161,07MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 MAY 2026,dses.CSV
+102-1162,102-1162,BH-30643-102-1162,16MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 MAY 2026,dses.CSV
+103-1163,103-1163,BH-30643-103-1163,16APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 APR 2026,dses.CSV
+104-1164,104-1164,BH-30643-104-1164,01APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,01 APR 2026,dses.CSV
+105-1165,105-1165,BH-30643-105-1165,15APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,15 APR 2026,dses.CSV
+106-1166,106-1166,BH-30643-106-1166,10MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 MAY 2026,dses.CSV
+107-1167,107-1167,BH-30643-107-1167,20APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,20 APR 2026,dses.CSV
+108-1168,108-1168,BH-30643-108-1168,19MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,19 MAY 2026,dses.CSV
+109-1169,109-1169,BH-30643-109-1169,10JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 JUN 2026,dses.CSV
+110-1170,110-1170,BH-30643-110-1170,16JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,16 JUN 2026,dses.CSV
+101-1171,101-1171,BH-30643-101-1171,30MAR2026:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,30 MAR 2026,dses.CSV
+102-1172,102-1172,BH-30643-102-1172,11APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,11 APR 2026,dses.CSV
+103-1173,103-1173,BH-30643-103-1173,18JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 JUN 2026,dses.CSV
+104-1174,104-1174,BH-30643-104-1174,17APR2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 APR 2026,dses.CSV
+105-1175,105-1175,BH-30643-105-1175,12MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,12 MAY 2026,dses.CSV
+106-1176,106-1176,BH-30643-106-1176,11APR2026:00:00:00.000,Death,Death,Synthetic end-of-study disposition,Y,Y,11 APR 2026,dses.CSV
+107-1177,107-1177,BH-30643-107-1177,22JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 JUN 2026,dses.CSV
+108-1178,108-1178,BH-30643-108-1178,03JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,03 JUN 2026,dses.CSV
+109-1179,109-1179,BH-30643-109-1179,10MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,10 MAY 2026,dses.CSV
+110-1180,110-1180,BH-30643-110-1180,14JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,14 JUN 2026,dses.CSV
+101-1181,101-1181,BH-30643-101-1181,18MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 MAY 2026,dses.CSV
+102-1182,102-1182,BH-30643-102-1182,07MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,07 MAY 2026,dses.CSV
+103-1183,103-1183,BH-30643-103-1183,01MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,01 MAY 2026,dses.CSV
+104-1184,104-1184,BH-30643-104-1184,22MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 MAY 2026,dses.CSV
+105-1185,105-1185,BH-30643-105-1185,12MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,12 MAY 2026,dses.CSV
+106-1186,106-1186,BH-30643-106-1186,14JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,14 JUN 2026,dses.CSV
+107-1187,107-1187,BH-30643-107-1187,06JUL2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,06 JUL 2026,dses.CSV
+108-1188,108-1188,BH-30643-108-1188,17JUL2026:00:00:00.000,Lost to follow-up,Lost to follow-up,Synthetic end-of-study disposition,N,N,17 JUL 2026,dses.CSV
+109-1189,109-1189,BH-30643-109-1189,05JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,05 JUN 2026,dses.CSV
+110-1190,110-1190,BH-30643-110-1190,13JUL2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,13 JUL 2026,dses.CSV
+101-1191,101-1191,BH-30643-101-1191,31MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,31 MAY 2026,dses.CSV
+102-1192,102-1192,BH-30643-102-1192,21MAY2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,21 MAY 2026,dses.CSV
+103-1193,103-1193,BH-30643-103-1193,26JUL2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,26 JUL 2026,dses.CSV
+104-1194,104-1194,BH-30643-104-1194,02JUL2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,02 JUL 2026,dses.CSV
+105-1195,105-1195,BH-30643-105-1195,22JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,22 JUN 2026,dses.CSV
+106-1196,106-1196,BH-30643-106-1196,17JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,17 JUN 2026,dses.CSV
+107-1197,107-1197,BH-30643-107-1197,23JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,23 JUN 2026,dses.CSV
+108-1198,108-1198,BH-30643-108-1198,04JUL2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,04 JUL 2026,dses.CSV
+109-1199,109-1199,BH-30643-109-1199,12AUG2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,12 AUG 2026,dses.CSV
+110-1200,110-1200,BH-30643-110-1200,18JUN2026:00:00:00.000,Study completed,Study completed,Synthetic end-of-study disposition,N,N,18 JUN 2026,dses.CSV

@@ -1,0 +1,351 @@
+SUBJID,USUBJID,DDDAT_INT,DDEVAL,AUTOPIND_DDORRES,PRCDTH_DDORRES_STD,OTHER_PRCDTH_DDORRES,Dose,Evaluation,Reason
+102-1002,BH-30643-102-1002,26MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1002,BH-30643-102-1002,17APR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1003,BH-30643-103-1003,19APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1003,BH-30643-103-1003,24MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1004,BH-30643-104-1004,22FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1004,BH-30643-104-1004,07MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1004,BH-30643-104-1004,15MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1006,BH-30643-106-1006,20FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1006,BH-30643-106-1006,04APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1007,BH-30643-107-1007,18APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1007,BH-30643-107-1007,31MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1008,BH-30643-108-1008,02MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1008,BH-30643-108-1008,08FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1008,BH-30643-108-1008,02FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1010,BH-30643-110-1010,15FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1010,BH-30643-110-1010,27MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1011,BH-30643-101-1011,31MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1011,BH-30643-101-1011,01APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1012,BH-30643-102-1012,24FEB2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1012,BH-30643-102-1012,28MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1012,BH-30643-102-1012,14APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1014,BH-30643-104-1014,20MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1014,BH-30643-104-1014,04MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1015,BH-30643-105-1015,10MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1015,BH-30643-105-1015,16MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1016,BH-30643-106-1016,10APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1016,BH-30643-106-1016,14MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1016,BH-30643-106-1016,13MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1018,BH-30643-108-1018,10MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1018,BH-30643-108-1018,22MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1019,BH-30643-109-1019,06APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1019,BH-30643-109-1019,19MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1020,BH-30643-110-1020,25MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1020,BH-30643-110-1020,01APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1020,BH-30643-110-1020,23MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1022,BH-30643-102-1022,22MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1022,BH-30643-102-1022,27MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1023,BH-30643-103-1023,02MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1023,BH-30643-103-1023,10APR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1024,BH-30643-104-1024,04APR2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1024,BH-30643-104-1024,31MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1024,BH-30643-104-1024,19MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1026,BH-30643-106-1026,02JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1026,BH-30643-106-1026,21MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1027,BH-30643-107-1027,21MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1027,BH-30643-107-1027,31MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1028,BH-30643-108-1028,11APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1028,BH-30643-108-1028,06MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1028,BH-30643-108-1028,07APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1030,BH-30643-110-1030,08APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1030,BH-30643-110-1030,14JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1031,BH-30643-101-1031,12APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1031,BH-30643-101-1031,28APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1032,BH-30643-102-1032,30MAR2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1032,BH-30643-102-1032,05APR2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1032,BH-30643-102-1032,17MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1034,BH-30643-104-1034,29MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1034,BH-30643-104-1034,08APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1035,BH-30643-105-1035,23JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1035,BH-30643-105-1035,22MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1036,BH-30643-106-1036,15JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1036,BH-30643-106-1036,13JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1036,BH-30643-106-1036,12APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1038,BH-30643-108-1038,05APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1038,BH-30643-108-1038,01MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1039,BH-30643-109-1039,31MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1039,BH-30643-109-1039,24MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1040,BH-30643-110-1040,10MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1040,BH-30643-110-1040,08MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1040,BH-30643-110-1040,14JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1042,BH-30643-102-1042,23APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1042,BH-30643-102-1042,30MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1043,BH-30643-103-1043,14JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1043,BH-30643-103-1043,27MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1044,BH-30643-104-1044,11JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1044,BH-30643-104-1044,20MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1044,BH-30643-104-1044,08JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1046,BH-30643-106-1046,12JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1046,BH-30643-106-1046,27MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1047,BH-30643-107-1047,29APR2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1047,BH-30643-107-1047,13JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1048,BH-30643-108-1048,16MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1048,BH-30643-108-1048,30MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1048,BH-30643-108-1048,26MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1050,BH-30643-110-1050,24MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1050,BH-30643-110-1050,08JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1051,BH-30643-101-1051,09JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1051,BH-30643-101-1051,16JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1052,BH-30643-102-1052,31MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1052,BH-30643-102-1052,30JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1052,BH-30643-102-1052,25JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1054,BH-30643-104-1054,17JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1054,BH-30643-104-1054,12JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1055,BH-30643-105-1055,09JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1055,BH-30643-105-1055,04AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1056,BH-30643-106-1056,13MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1056,BH-30643-106-1056,21MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1056,BH-30643-106-1056,25MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1058,BH-30643-108-1058,18JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1058,BH-30643-108-1058,03JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1059,BH-30643-109-1059,18MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1059,BH-30643-109-1059,13JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1060,BH-30643-110-1060,19MAY2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1060,BH-30643-110-1060,30JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1060,BH-30643-110-1060,23JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1062,BH-30643-102-1062,31JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1062,BH-30643-102-1062,05JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1063,BH-30643-103-1063,22JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1063,BH-30643-103-1063,19JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1064,BH-30643-104-1064,28JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1064,BH-30643-104-1064,15JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1064,BH-30643-104-1064,12JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1066,BH-30643-106-1066,31JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1066,BH-30643-106-1066,09AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1067,BH-30643-107-1067,15JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1067,BH-30643-107-1067,03JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1068,BH-30643-108-1068,14JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1068,BH-30643-108-1068,07JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1068,BH-30643-108-1068,15JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1070,BH-30643-110-1070,11AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1070,BH-30643-110-1070,11JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1071,BH-30643-101-1071,12JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1071,BH-30643-101-1071,12JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1072,BH-30643-102-1072,11AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1072,BH-30643-102-1072,08JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1072,BH-30643-102-1072,30JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1074,BH-30643-104-1074,11JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1074,BH-30643-104-1074,19JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1075,BH-30643-105-1075,10SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1075,BH-30643-105-1075,27JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1076,BH-30643-106-1076,16AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1076,BH-30643-106-1076,01AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1076,BH-30643-106-1076,04SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1078,BH-30643-108-1078,19JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1078,BH-30643-108-1078,23JUN2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1079,BH-30643-109-1079,06SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1079,BH-30643-109-1079,01JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1080,BH-30643-110-1080,09SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1080,BH-30643-110-1080,03JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1080,BH-30643-110-1080,15JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1082,BH-30643-102-1082,27AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1082,BH-30643-102-1082,25JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1083,BH-30643-103-1083,22AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1083,BH-30643-103-1083,16SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1084,BH-30643-104-1084,27JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1084,BH-30643-104-1084,19AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1084,BH-30643-104-1084,31JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1086,BH-30643-106-1086,23SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1086,BH-30643-106-1086,29JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1087,BH-30643-107-1087,09AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1087,BH-30643-107-1087,16JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1088,BH-30643-108-1088,28SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1088,BH-30643-108-1088,16SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1088,BH-30643-108-1088,15AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1090,BH-30643-110-1090,25JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1090,BH-30643-110-1090,16SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1091,BH-30643-101-1091,23SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1091,BH-30643-101-1091,15JUL2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1092,BH-30643-102-1092,10AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1092,BH-30643-102-1092,25AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1092,BH-30643-102-1092,21AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1094,BH-30643-104-1094,10SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1094,BH-30643-104-1094,22SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1095,BH-30643-105-1095,31AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1095,BH-30643-105-1095,02AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1096,BH-30643-106-1096,10SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1096,BH-30643-106-1096,30SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1096,BH-30643-106-1096,06AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1098,BH-30643-108-1098,21AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1098,BH-30643-108-1098,18OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1099,BH-30643-109-1099,30AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1099,BH-30643-109-1099,19SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1100,BH-30643-110-1100,03SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1100,BH-30643-110-1100,16SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1100,BH-30643-110-1100,12AUG2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1102,BH-30643-102-1102,12SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1102,BH-30643-102-1102,04NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1103,BH-30643-103-1103,10SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1103,BH-30643-103-1103,17SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1104,BH-30643-104-1104,11SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1104,BH-30643-104-1104,21OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1104,BH-30643-104-1104,23OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1106,BH-30643-106-1106,07NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1106,BH-30643-106-1106,21SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1107,BH-30643-107-1107,11OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1107,BH-30643-107-1107,11OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1108,BH-30643-108-1108,06SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1108,BH-30643-108-1108,27SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1108,BH-30643-108-1108,27OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1110,BH-30643-110-1110,04OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1110,BH-30643-110-1110,04SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1111,BH-30643-101-1111,09SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1111,BH-30643-101-1111,02SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1112,BH-30643-102-1112,19NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1112,BH-30643-102-1112,07OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1112,BH-30643-102-1112,16OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1114,BH-30643-104-1114,03NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1114,BH-30643-104-1114,22NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1115,BH-30643-105-1115,01OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1115,BH-30643-105-1115,14NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1116,BH-30643-106-1116,19OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1116,BH-30643-106-1116,07SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1116,BH-30643-106-1116,08SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1118,BH-30643-108-1118,24OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1118,BH-30643-108-1118,27SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1119,BH-30643-109-1119,25OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1119,BH-30643-109-1119,17SEP2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1120,BH-30643-110-1120,29OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1120,BH-30643-110-1120,14NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1120,BH-30643-110-1120,30OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1122,BH-30643-102-1122,11OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1122,BH-30643-102-1122,09DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1123,BH-30643-103-1123,17NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1123,BH-30643-103-1123,22NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1124,BH-30643-104-1124,10NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1124,BH-30643-104-1124,05NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1124,BH-30643-104-1124,03DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1126,BH-30643-106-1126,27OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1126,BH-30643-106-1126,04OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1127,BH-30643-107-1127,19DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1127,BH-30643-107-1127,25OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1128,BH-30643-108-1128,12NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1128,BH-30643-108-1128,09OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1128,BH-30643-108-1128,05NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1130,BH-30643-110-1130,16NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1130,BH-30643-110-1130,14DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1131,BH-30643-101-1131,29DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1131,BH-30643-101-1131,29DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1132,BH-30643-102-1132,10NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1132,BH-30643-102-1132,07DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1132,BH-30643-102-1132,28DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1134,BH-30643-104-1134,03DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1134,BH-30643-104-1134,09DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1135,BH-30643-105-1135,11NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1135,BH-30643-105-1135,15OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1136,BH-30643-106-1136,17NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1136,BH-30643-106-1136,03DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1136,BH-30643-106-1136,28NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1138,BH-30643-108-1138,25DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1138,BH-30643-108-1138,05NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1139,BH-30643-109-1139,15DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1139,BH-30643-109-1139,11NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1140,BH-30643-110-1140,31OCT2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1140,BH-30643-110-1140,07DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1140,BH-30643-110-1140,30NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1142,BH-30643-102-1142,10DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1142,BH-30643-102-1142,08JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1143,BH-30643-103-1143,20JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1143,BH-30643-103-1143,24NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1144,BH-30643-104-1144,24NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1144,BH-30643-104-1144,07DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1144,BH-30643-104-1144,11NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1146,BH-30643-106-1146,05DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1146,BH-30643-106-1146,24JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1147,BH-30643-107-1147,08JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1147,BH-30643-107-1147,04DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1148,BH-30643-108-1148,01JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1148,BH-30643-108-1148,24JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1148,BH-30643-108-1148,04JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1150,BH-30643-110-1150,14DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1150,BH-30643-110-1150,24NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1151,BH-30643-101-1151,27NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1151,BH-30643-101-1151,25NOV2025:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1152,BH-30643-102-1152,06FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1152,BH-30643-102-1152,10JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1152,BH-30643-102-1152,03FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1154,BH-30643-104-1154,28JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1154,BH-30643-104-1154,10FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1155,BH-30643-105-1155,25DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1155,BH-30643-105-1155,04JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1156,BH-30643-106-1156,21FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1156,BH-30643-106-1156,17DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1156,BH-30643-106-1156,27JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1158,BH-30643-108-1158,01DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1158,BH-30643-108-1158,20DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1159,BH-30643-109-1159,23DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1159,BH-30643-109-1159,01DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1160,BH-30643-110-1160,18FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1160,BH-30643-110-1160,16DEC2025:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1160,BH-30643-110-1160,05FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1162,BH-30643-102-1162,03MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1162,BH-30643-102-1162,13JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1163,BH-30643-103-1163,15FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1163,BH-30643-103-1163,20JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1164,BH-30643-104-1164,23FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1164,BH-30643-104-1164,14JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1164,BH-30643-104-1164,02JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1166,BH-30643-106-1166,22FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1166,BH-30643-106-1166,07MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1167,BH-30643-107-1167,14FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1167,BH-30643-107-1167,24FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1168,BH-30643-108-1168,20FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1168,BH-30643-108-1168,24FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1168,BH-30643-108-1168,17FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1170,BH-30643-110-1170,26JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1170,BH-30643-110-1170,21JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1171,BH-30643-101-1171,30JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1171,BH-30643-101-1171,01MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1172,BH-30643-102-1172,08FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1172,BH-30643-102-1172,22FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1172,BH-30643-102-1172,07JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1174,BH-30643-104-1174,22JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1174,BH-30643-104-1174,24FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1175,BH-30643-105-1175,12JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1175,BH-30643-105-1175,12MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1176,BH-30643-106-1176,10FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1176,BH-30643-106-1176,09FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1176,BH-30643-106-1176,18FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1178,BH-30643-108-1178,28MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1178,BH-30643-108-1178,12FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1179,BH-30643-109-1179,30JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1179,BH-30643-109-1179,03MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1180,BH-30643-110-1180,30MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1180,BH-30643-110-1180,01MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1180,BH-30643-110-1180,11FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+102-1182,BH-30643-102-1182,19FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+102-1182,BH-30643-102-1182,28MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+103-1183,BH-30643-103-1183,20FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+103-1183,BH-30643-103-1183,23MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1184,BH-30643-104-1184,20FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
+104-1184,BH-30643-104-1184,07MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+104-1184,BH-30643-104-1184,09FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+106-1186,BH-30643-106-1186,28FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+106-1186,BH-30643-106-1186,26JAN2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+107-1187,BH-30643-107-1187,02FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Neutropenia,Dose reduction,Dose reduction,Adverse event
+107-1187,BH-30643-107-1187,18APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1188,BH-30643-108-1188,23FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Rash,Dose reduction,Dose reduction,Adverse event
+108-1188,BH-30643-108-1188,18FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+108-1188,BH-30643-108-1188,03MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+110-1190,BH-30643-110-1190,06FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+110-1190,BH-30643-110-1190,09APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+101-1191,BH-30643-101-1191,19FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Nausea,Dose reduction,Dose reduction,Adverse event
+101-1191,BH-30643-101-1191,25MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1192,BH-30643-102-1192,04MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Fatigue,Dose reduction,Dose reduction,Adverse event
+102-1192,BH-30643-102-1192,13APR2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+102-1192,BH-30643-102-1192,18APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+104-1194,BH-30643-104-1194,08FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+104-1194,BH-30643-104-1194,14APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+105-1195,BH-30643-105-1195,08APR2026:00:00:00.000,Dose reduction,Y,Adverse event,AST increased,Dose reduction,Dose reduction,Adverse event
+105-1195,BH-30643-105-1195,06MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1196,BH-30643-106-1196,26MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Anemia,Dose reduction,Dose reduction,Adverse event
+106-1196,BH-30643-106-1196,04APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+106-1196,BH-30643-106-1196,16MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+108-1198,BH-30643-108-1198,18MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+108-1198,BH-30643-108-1198,25MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+109-1199,BH-30643-109-1199,01MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Headache,Dose reduction,Dose reduction,Adverse event
+109-1199,BH-30643-109-1199,19MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1200,BH-30643-110-1200,26FEB2026:00:00:00.000,Dose reduction,Y,Adverse event,Vomiting,Dose reduction,Dose reduction,Adverse event
+110-1200,BH-30643-110-1200,26APR2026:00:00:00.000,Dose reduction,Y,Adverse event,Diarrhea,Dose reduction,Dose reduction,Adverse event
+110-1200,BH-30643-110-1200,08MAR2026:00:00:00.000,Dose reduction,Y,Adverse event,ALT increased,Dose reduction,Dose reduction,Adverse event
